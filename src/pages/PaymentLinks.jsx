@@ -1,6 +1,8 @@
+
+
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Link2, Plus, Trash, Copy, CheckCircle } from 'phosphor-react';
+import { Link, Plus, Trash } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -127,7 +129,7 @@ function LinkCard({ link, onDelete }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', marginBottom: '0.75rem' }}>
-        <Link2 size={14} color="var(--teal)" />
+        <Link size={14} color="var(--teal)" />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.url}</span>
         <CopyButton text={link.url} />
       </div>
@@ -179,7 +181,7 @@ export default function PaymentLinks() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><Spinner size={32} /></div>
       ) : links.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-          <Link2 size={40} color="var(--border-light)" style={{ marginBottom: '1rem' }} />
+          <Link size={40} color="var(--border-light)" style={{ marginBottom: '1rem' }} />
           <div style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>No payment links yet.</div>
           <p style={{ fontSize: '0.85rem', maxWidth: 360, margin: '0 auto 1.5rem' }}>Create a shareable link that anyone can use to pay you — your clients, customers, or pool members.</p>
           <Button onClick={() => setShowCreate(true)}>Create your first link</Button>
