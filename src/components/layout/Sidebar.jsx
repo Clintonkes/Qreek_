@@ -2,15 +2,24 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   ChartPieSlice, Lightning, Wallet, Users, Bell, GearSix, SignOut,
+  Buildings, Link as LinkIcon,
 } from 'phosphor-react';
 import useAuthStore from '../../store/authStore.js';
 
-const NAV = [
+const NAV_MAIN = [
   { to: '/dashboard', icon: ChartPieSlice, label: 'Dashboard' },
   { to: '/trade',     icon: Lightning,     label: 'Trade' },
   { to: '/wallet',    icon: Wallet,        label: 'Wallet' },
   { to: '/pools',     icon: Users,         label: 'Pools' },
   { to: '/alerts',    icon: Bell,          label: 'Alerts' },
+];
+
+const NAV_ENTERPRISE = [
+  { to: '/enterprise',    icon: Buildings, label: 'Enterprise' },
+  { to: '/payment-links', icon: LinkIcon,  label: 'Pay Links' },
+];
+
+const NAV_BOTTOM = [
   { to: '/settings',  icon: GearSix,       label: 'Settings' },
 ];
 
@@ -34,10 +43,9 @@ export default function Sidebar() {
         </span>
       </div>
 
-      <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {NAV.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to} to={to}
+      <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
+        {NAV_MAIN.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.6rem 0.75rem', borderRadius: 'var(--radius)',
@@ -48,8 +56,45 @@ export default function Sidebar() {
               transition: 'var(--trans-fast)', textDecoration: 'none',
             })}
           >
-            <Icon size={18} weight="duotone" />
-            {label}
+            <Icon size={18} weight="duotone" />{label}
+          </NavLink>
+        ))}
+
+        <div style={{ margin: '0.75rem 0 0.25rem', padding: '0 0.75rem' }}>
+          <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Enterprise</span>
+        </div>
+
+        {NAV_ENTERPRISE.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              padding: '0.6rem 0.75rem', borderRadius: 'var(--radius)',
+              color: isActive ? 'var(--amber)' : 'var(--text-2)',
+              background: isActive ? 'var(--amber-faint)' : 'transparent',
+              borderLeft: isActive ? '2px solid var(--amber)' : '2px solid transparent',
+              fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: '0.9rem',
+              transition: 'var(--trans-fast)', textDecoration: 'none',
+            })}
+          >
+            <Icon size={18} weight="duotone" />{label}
+          </NavLink>
+        ))}
+
+        <div style={{ flex: 1 }} />
+
+        {NAV_BOTTOM.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              padding: '0.6rem 0.75rem', borderRadius: 'var(--radius)',
+              color: isActive ? 'var(--teal)' : 'var(--text-2)',
+              background: isActive ? 'var(--teal-faint)' : 'transparent',
+              borderLeft: isActive ? '2px solid var(--teal)' : '2px solid transparent',
+              fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: '0.9rem',
+              transition: 'var(--trans-fast)', textDecoration: 'none',
+            })}
+          >
+            <Icon size={18} weight="duotone" />{label}
           </NavLink>
         ))}
       </nav>

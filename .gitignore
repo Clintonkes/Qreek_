@@ -33,6 +33,7 @@ logs/
 .env.local
 .env.production
 .env
+.env.example
 
 # Data and models
 ai/data/*.csv
@@ -57,3 +58,5 @@ Thumbs.db
 # Testing
 coverage/
 ai/cache/
+
+Qreek_Finance_Investor_Document.html
