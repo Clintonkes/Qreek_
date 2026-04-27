@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+*.egg-info/
+*.egg
+.pytest_cache/
+*.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+out/
+build/
+web/
+
+# Logs
+ai/logs/*.log
+*.log
+logs/
+
+# Environment variables
+.env.local
+.env.production
+.env
+
+# Data and models
+ai/data/*.csv
+*.model
+*.bin
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+ai/cache/
