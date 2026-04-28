@@ -1,3 +1,4 @@
+// PayrollRunDetail.jsx shows the full breakdown of one payroll batch and its entry-level outcomes.
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, ArrowLeft, DownloadSimple } from 'phosphor-react';

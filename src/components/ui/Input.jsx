@@ -1,3 +1,4 @@
+// Input.jsx wraps a native input with label and error messaging so form fields stay consistent.
 import React from 'react';
 
 export default function Input({ label, error, style, containerStyle, ...props }) {

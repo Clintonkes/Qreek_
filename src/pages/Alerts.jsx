@@ -1,3 +1,4 @@
+// Alerts.jsx is a legacy market alert page retained in the repo for compatibility with older flows.
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Trash } from 'phosphor-react';

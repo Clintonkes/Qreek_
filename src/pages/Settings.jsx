@@ -1,3 +1,4 @@
+// Settings.jsx gives the signed-in user a place to manage profile-adjacent security and payout details.
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';

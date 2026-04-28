@@ -1,3 +1,4 @@
+// PoolDetail.jsx drills into a single payment pool, including members, requests, and payout activity.
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';

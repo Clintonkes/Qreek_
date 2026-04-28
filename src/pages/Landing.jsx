@@ -1,3 +1,5 @@
+// Landing.jsx is the public marketing page that introduces Qreek's pool-powered payment flows
+// and helps new visitors understand the solo, enterprise, and communal use cases.
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';

@@ -1,3 +1,4 @@
+// Wallet.jsx is a legacy balance page retained while the product shifts toward payment-first dashboards.
 import React, { useEffect, useState } from 'react';
 import AppShell from '../components/layout/AppShell.jsx';
 import BalanceCard from '../components/wallet/BalanceCard.jsx';

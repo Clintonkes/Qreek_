@@ -1,3 +1,5 @@
+// Pools.jsx lets authenticated users create, join, and browse payment pools
+// that power group collections and coordinated disbursement flows.
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';

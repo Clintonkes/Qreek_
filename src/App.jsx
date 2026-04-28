@@ -1,3 +1,5 @@
+// App.jsx wires the public and authenticated pages together, applies page transitions,
+// and guards private routes so users only see the dashboard after authentication.
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -25,6 +27,7 @@ const pageVariants = {
   exit:    { opacity: 0, y: -8, transition: { duration: 0.2 } },
 };
 
+// PageWrap gives each route a shared motion treatment so navigation feels smoother.
 function PageWrap({ children }) {
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -33,16 +36,19 @@ function PageWrap({ children }) {
   );
 }
 
+// PrivateRoute blocks access to dashboard pages unless a token already exists in state.
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
+// PublicRoute keeps signed-in users out of the login and signup screens.
 function PublicRoute({ children }) {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 }
 
+// LoadingScreen keeps the suspense fallback on-brand while lazy routes load in.
 function LoadingScreen() {
   return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg)' }}>

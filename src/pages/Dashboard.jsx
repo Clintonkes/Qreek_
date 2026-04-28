@@ -1,3 +1,5 @@
+// Dashboard.jsx gives signed-in users a payment-first summary of pools, links,
+// and enterprise payout activity so they can choose the next action quickly.
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Buildings, Link as LinkIcon, Users } from 'phosphor-react';
@@ -9,6 +11,7 @@ import { getLinks } from '../api/paymentLinks.js';
 import { getCompany, getAnalytics } from '../api/payroll.js';
 import useAuthStore from '../store/authStore.js';
 
+// greeting personalizes the dashboard header based on the user's local time of day.
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -16,10 +19,12 @@ function greeting() {
   return 'Good evening';
 }
 
+// fmtNgn keeps NGN figures readable anywhere the dashboard surfaces money values.
 function fmtNgn(value) {
   return `₦${(value || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 }
 
+// StatCard is a compact summary tile used for the top-level health indicators.
 function StatCard({ label, value, sub, accent = 'var(--teal)' }) {
   return (
     <div style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
@@ -35,10 +40,12 @@ function StatCard({ label, value, sub, accent = 'var(--teal)' }) {
 }
 
 export default function Dashboard() {
+  // Pull lightweight auth context so the page can greet the current user by name.
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const firstName = user?.name?.split(' ')[0] || '';
 
+  // Keep each backend slice separate so the dashboard can fail softly if one endpoint is unavailable.
   const [loading, setLoading] = useState(true);
   const [pools, setPools] = useState([]);
   const [links, setLinks] = useState([]);
@@ -46,6 +53,7 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
+    // Load the main payment data in parallel, then enrich enterprise metrics only if a company exists.
     Promise.allSettled([getPools(), getLinks(), getCompany()])
       .then(async ([poolsResult, linksResult, companyResult]) => {
         const nextPools = poolsResult.status === 'fulfilled' ? poolsResult.value.pools || [] : [];
@@ -66,6 +74,7 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Derive lightweight dashboard figures once the remote data has loaded.
   const activeLinks = links.filter(link => link.is_active);
   const totalCollected = links.reduce((sum, link) => sum + (link.total_collected || 0), 0);
   const totalMembers = pools.reduce((sum, pool) => sum + (pool.member_count || 0), 0);
@@ -96,6 +105,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size={36} /></div>
       ) : (
         <>
+          {/* Hero summary surfaces the most important collection totals before lower-detail cards. */}
           <div style={{ background: 'linear-gradient(135deg, rgba(0,212,170,0.16), rgba(245,166,35,0.08), rgba(255,255,255,0.02))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <div>
@@ -126,6 +136,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Stat cards translate the broader dataset into quick-glance operational indicators. */}
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
             <StatCard label="Payment pools" value={activePools} sub="Active money groups" accent="var(--teal)" />
             <StatCard label="Contributors" value={totalMembers} sub="Members across joined pools" accent="var(--green)" />
@@ -133,6 +144,7 @@ export default function Dashboard() {
             <StatCard label="Enterprise" value={company ? (company.is_verified ? 'Verified' : 'Active') : 'Not set'} sub={company ? `${analytics?.runs_history?.length || 0} payroll runs recorded` : 'Set up business payouts when ready'} accent="var(--blue)" />
           </section>
 
+          {/* Activity lists help users jump into recent pools and collection links without extra searching. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
             <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -185,6 +197,7 @@ export default function Dashboard() {
             </section>
           </div>
 
+          {/* Action cards turn the dashboard into a launch point for the main payment workflows. */}
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             {[
               { title: 'Open payment pools', desc: 'Create or join a pool for family, teams, or contribution circles.', to: '/pools', icon: Users, accent: 'var(--teal)' },

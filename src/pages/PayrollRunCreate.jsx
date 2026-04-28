@@ -1,3 +1,4 @@
+// PayrollRunCreate.jsx assembles a payroll batch, previews totals, and hands off execution.
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';

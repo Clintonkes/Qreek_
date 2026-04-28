@@ -1,3 +1,4 @@
+// Enterprise.jsx is the business operations home for payroll and structured team payouts.
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';

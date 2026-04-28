@@ -1,3 +1,4 @@
+// PayrollRuns.jsx lists previously prepared payroll batches so operators can review status over time.
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lightning, Clock, CheckCircle, XCircle, Warning } from 'phosphor-react';

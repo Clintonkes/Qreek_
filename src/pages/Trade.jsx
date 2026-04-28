@@ -1,3 +1,4 @@
+// Trade.jsx is a legacy route kept for compatibility; the main product now centers payment flows instead.
 import React, { useState } from 'react';
 import AppShell from '../components/layout/AppShell.jsx';
 import TradeChat from '../components/trading/TradeChat.jsx';

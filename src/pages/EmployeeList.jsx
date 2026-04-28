@@ -1,3 +1,4 @@
+// EmployeeList.jsx manages the enterprise roster used for payroll and related payout flows.
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';

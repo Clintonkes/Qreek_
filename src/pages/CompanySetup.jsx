@@ -1,3 +1,5 @@
+// CompanySetup.jsx walks a business owner through the minimum company details
+// needed to activate enterprise payment and payroll features.
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';

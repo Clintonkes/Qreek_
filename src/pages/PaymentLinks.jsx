@@ -1,5 +1,5 @@
-
-
+// PaymentLinks.jsx manages shareable collection links so users can accept payments
+// into their own payment workflows without exposing raw bank details every time.
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Link, Plus, Trash } from 'phosphor-react';

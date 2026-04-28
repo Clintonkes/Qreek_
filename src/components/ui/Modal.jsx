@@ -1,3 +1,4 @@
+// Modal.jsx provides the shared overlay and dialog shell used for confirmations and focused actions.
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'phosphor-react';
