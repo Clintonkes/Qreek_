@@ -1,12 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChartPieSlice, Lightning, Wallet, Users, Buildings } from 'phosphor-react';
+import { ChartPieSlice, Link as LinkIcon, Users, Buildings } from 'phosphor-react';
 
 const NAV = [
   { to: '/dashboard',  icon: ChartPieSlice, label: 'Home' },
-  { to: '/trade',      icon: Lightning,     label: 'Trade' },
-  { to: '/wallet',     icon: Wallet,        label: 'Wallet' },
   { to: '/pools',      icon: Users,         label: 'Pools' },
+  { to: '/payment-links', icon: LinkIcon,   label: 'Links' },
   { to: '/enterprise', icon: Buildings,     label: 'Business' },
 ];
 

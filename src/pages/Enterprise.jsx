@@ -63,22 +63,22 @@ export default function Enterprise() {
     <AppShell title="Enterprise">
       <div style={{ maxWidth: 560, margin: '4rem auto', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢</div>
-        <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem' }}>Set up your company</h1>
+        <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem' }}>Set up your enterprise payment pool</h1>
         <p style={{ color: 'var(--text-2)', marginBottom: '2rem', lineHeight: 1.7 }}>
-          Pay your team in minutes. Add employees, run payroll, send bulk NGN to any Nigerian bank at just 0.3% fee. No delays, no hidden charges.
+          Organize salaries, vendor settlements, and recurring team payouts from one Qreek pool. Add employees, stage funds, and run structured disbursements to any Nigerian bank.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 320, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-            <span style={{ fontSize: '1.1rem' }}>✅</span> Salaries to any Nigerian bank
+            <span style={{ fontSize: '1.1rem' }}>✅</span> Salaries and vendor payouts from one pool
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-            <span style={{ fontSize: '1.1rem' }}>✅</span> 0.3% flat fee — no surprises
+            <span style={{ fontSize: '1.1rem' }}>✅</span> 0.3% payout fee with cleaner visibility
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
             <span style={{ fontSize: '1.1rem' }}>✅</span> Bulk import up to 500 employees
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-            <span style={{ fontSize: '1.1rem' }}>✅</span> PIN-secured payroll execution
+            <span style={{ fontSize: '1.1rem' }}>✅</span> PIN-secured payout execution
           </div>
         </div>
         <Button style={{ marginTop: '2rem', padding: '0.85rem 2rem', fontSize: '1rem' }} onClick={() => navigate('/enterprise/setup')}>

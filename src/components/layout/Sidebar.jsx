@@ -1,17 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  ChartPieSlice, Lightning, Wallet, Users, Bell, GearSix, SignOut,
+  ChartPieSlice, Users, GearSix, SignOut,
   Buildings, Link as LinkIcon,
 } from 'phosphor-react';
 import useAuthStore from '../../store/authStore.js';
 
 const NAV_MAIN = [
   { to: '/dashboard', icon: ChartPieSlice, label: 'Dashboard' },
-  { to: '/trade',     icon: Lightning,     label: 'Trade' },
-  { to: '/wallet',    icon: Wallet,        label: 'Wallet' },
   { to: '/pools',     icon: Users,         label: 'Pools' },
-  { to: '/alerts',    icon: Bell,          label: 'Alerts' },
+  { to: '/payment-links', icon: LinkIcon,  label: 'Payment Links' },
 ];
 
 const NAV_ENTERPRISE = [
@@ -39,7 +37,7 @@ export default function Sidebar() {
     }}>
       <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem' }}>
-          Qreek<span style={{ color: 'var(--teal)' }}>Finance</span>
+          Qreek<span style={{ color: 'var(--teal)' }}>Pay</span>
         </span>
       </div>
 
