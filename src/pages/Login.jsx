@@ -7,6 +7,8 @@ import { login } from '../api/auth.js';
 import useAuthStore from '../store/authStore.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
+import PhoneInput from '../components/ui/PhoneInput.jsx';
+import { validatePhoneNumber, formatPhoneNumber } from '../lib/utils.js';
 
 export default function Login() {
   const { setAuth } = useAuthStore();
@@ -25,16 +27,28 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!form.phone) errs.phone = 'Phone number required';
+
+    if (!form.phone) {
+      errs.phone = 'Phone number required';
+    } else if (!validatePhoneNumber(form.phone)) {
+      errs.phone = 'Invalid phone number. Include country code (e.g., +1234567890)';
+    }
     if (!form.pin) errs.pin = 'PIN required';
+
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
 
+    const normalizedPhone = formatPhoneNumber(form.phone);
+    if (!normalizedPhone) {
+      setErrors({ phone: 'Invalid phone number format' });
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await login({ phone: form.phone, pin: form.pin });
+      const data = await login({ phone: normalizedPhone, pin: form.pin });
       setAuth({ token: data.token, user: data.user });
       sessionStorage.removeItem('qreek_signup_phone');
       navigate('/dashboard');
@@ -79,13 +93,10 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <Input
+          <PhoneInput
             label="Phone number"
-            type="tel"
-            autoComplete="tel"
             value={form.phone}
-            onChange={e => set('phone', e.target.value)}
-            placeholder="+2348012345678"
+            onChange={v => set('phone', v)}
             error={errors.phone}
           />
           <Input

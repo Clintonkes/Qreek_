@@ -6,6 +6,8 @@ import { toast } from 'react-hot-toast';
 import { register } from '../api/auth.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
+import PhoneInput from '../components/ui/PhoneInput.jsx';
+import { validatePhoneNumber, formatPhoneNumber } from '../lib/utils.js';
 
 function StepDots({ current, total }) {
   return (
@@ -56,7 +58,14 @@ export default function Register() {
     const errs = {};
     if (!form.firstName.trim()) errs.firstName = 'First name required';
     if (!form.lastName.trim()) errs.lastName = 'Last name required';
-    if (!form.phone.trim()) errs.phone = 'Phone number required';
+    if (!form.phone.trim()) {
+      errs.phone = 'Phone number required';
+    } else {
+      // Validate international phone format
+      if (!validatePhoneNumber(form.phone)) {
+        errs.phone = 'Invalid phone number. Include country code (e.g., +1234567890)';
+      }
+    }
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
@@ -66,6 +75,20 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate phone format again before sending
+    if (!validatePhoneNumber(form.phone)) {
+      setErrors({ phone: 'Invalid phone number. Include country code (e.g., +1234567890)' });
+      setStep(1);
+      return;
+    }
+    const normalizedPhone = formatPhoneNumber(form.phone);
+    if (!normalizedPhone) {
+      setErrors({ phone: 'Invalid phone number format' });
+      setStep(1);
+      return;
+    }
+
     const errs = {};
     if (!form.pin || form.pin.length < 4) errs.pin = 'PIN must be at least 4 digits';
     if (form.pin !== form.confirmPin) errs.confirmPin = 'PINs do not match';
@@ -77,16 +100,24 @@ export default function Register() {
     setLoading(true);
     try {
       const data = await register({
-        phone: form.phone,
+        phone: normalizedPhone,
         firstName: form.firstName,
         lastName: form.lastName,
         pin: form.pin,
       });
-      sessionStorage.setItem('qreek_signup_phone', data.user?.phone || form.phone);
+      sessionStorage.setItem('qreek_signup_phone', data.user?.phone || normalizedPhone);
       toast.success('Account created. Log in with your phone number and PIN.');
-      navigate('/login', { replace: true, state: { phone: data.user?.phone || form.phone, fromSignup: true } });
+      navigate('/login', { replace: true, state: { phone: data.user?.phone || normalizedPhone, fromSignup: true } });
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Registration failed');
+      const msg = err.response?.data?.detail || 'Registration failed';
+      // Check if error is about phone already registered/duplicate
+      const msgLower = msg.toLowerCase();
+      if (msgLower.includes('phone') && (msgLower.includes('already') || msgLower.includes('registered') || msgLower.includes('exist') || msgLower.includes('duplicate'))) {
+        setErrors({ phone: msg });
+        setStep(1);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -128,15 +159,12 @@ export default function Register() {
               <Input label="First name" value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Emeka" error={errors.firstName} autoFocus />
               <Input label="Last name" value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Obi" error={errors.lastName} />
             </div>
-            <Input
+            <PhoneInput
               label="Phone number"
-              type="tel"
-              autoComplete="tel"
               value={form.phone}
-              onChange={e => set('phone', e.target.value)}
-              placeholder="+2348012345678"
+              onChange={v => set('phone', v)}
               error={errors.phone}
-              hint="Nigerian format; we'll normalise it automatically"
+              hint="International format: include country code (e.g., +1234567890)"
             />
             <Button type="submit" fullWidth>Continue →</Button>
           </form>

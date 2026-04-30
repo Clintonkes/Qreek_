@@ -51,7 +51,29 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
     <Modal open={open} onClose={onClose} title="Create payment link" maxWidth={520}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Q1 Invoice Payment" />
-        <Input label="Description (optional)" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Payment for January design services" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)' }}>
+            Description (optional)
+          </label>
+          <textarea
+            value={form.description}
+            onChange={e => {
+              set('description', e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            placeholder="Payment for January design services"
+            rows={3}
+            style={{
+              resize: 'none',
+              overflow: 'hidden',
+              minHeight: 76,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          />
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-2)' }}>

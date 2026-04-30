@@ -1,14 +1,17 @@
-// App.jsx wires the public and authenticated pages together, applies page transitions,
-// and guards private routes so users only see the dashboard after authentication.
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import useAuthStore from './store/authStore.js';
 import Spinner from './components/ui/Spinner.jsx';
+import PrivateLayout from './components/layout/PrivateLayout.jsx';
 
-const Landing          = lazy(() => import('./pages/Landing.jsx'));
-const Login            = lazy(() => import('./pages/Login.jsx'));
-const Register         = lazy(() => import('./pages/Register.jsx'));
+// Public pages — tiny bundles, load fast
+const Landing  = lazy(() => import('./pages/Landing.jsx'));
+const Login    = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+
+// Private pages — lazy-loaded individually so only the needed page loads
 const Dashboard        = lazy(() => import('./pages/Dashboard.jsx'));
 const Pools            = lazy(() => import('./pages/Pools.jsx'));
 const PoolDetail       = lazy(() => import('./pages/PoolDetail.jsx'));
@@ -21,68 +24,97 @@ const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
 const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
 const PaymentLinks     = lazy(() => import('./pages/PaymentLinks.jsx'));
 
-const pageVariants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
-  exit:    { opacity: 0, y: -8, transition: { duration: 0.2 } },
+function FullPageSpinner() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
+      <Spinner size={40} />
+    </div>
+  );
+}
+
+// Guards unauthenticated users away from private routes
+function AuthGuard() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+// Keeps logged-in users off the login / register screens
+function GuestGuard() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+}
+
+// Animated wrapper — only the page content animates, not the sidebar
+const variants = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' } },
+  exit:    { opacity: 0, transition: { duration: 0.15 } },
 };
 
-// PageWrap gives each route a shared motion treatment so navigation feels smoother.
-function PageWrap({ children }) {
+function AnimatedPage({ children }) {
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div variants={variants} initial="initial" animate="animate" exit="exit">
       {children}
     </motion.div>
   );
 }
 
-// PrivateRoute blocks access to dashboard pages unless a token already exists in state.
-function PrivateRoute({ children }) {
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-}
-
-// PublicRoute keeps signed-in users out of the login and signup screens.
-function PublicRoute({ children }) {
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
-}
-
-// LoadingScreen keeps the suspense fallback on-brand while lazy routes load in.
-function LoadingScreen() {
+// Wraps all private pages with the animated transition
+function AnimatedOutlet() {
+  const location = useLocation();
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg)' }}>
-      <Spinner size={40} />
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div key={location.pathname} variants={variants} initial="initial" animate="animate" exit="exit">
+        <Suspense fallback={
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+            <Spinner size={28} />
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<LoadingScreen />}>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<PageWrap><Landing /></PageWrap>} />
-            <Route path="/login"    element={<PublicRoute><PageWrap><Login /></PageWrap></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><PageWrap><Register /></PageWrap></PublicRoute>} />
-            <Route path="/dashboard"              element={<PrivateRoute><PageWrap><Dashboard /></PageWrap></PrivateRoute>} />
-            <Route path="/pools"                  element={<PrivateRoute><PageWrap><Pools /></PageWrap></PrivateRoute>} />
-            <Route path="/pools/:poolId"           element={<PrivateRoute><PageWrap><PoolDetail /></PageWrap></PrivateRoute>} />
-            <Route path="/settings"               element={<PrivateRoute><PageWrap><Settings /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise"             element={<PrivateRoute><PageWrap><Enterprise /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise/setup"       element={<PrivateRoute><PageWrap><CompanySetup /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise/employees"   element={<PrivateRoute><PageWrap><EmployeeList /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise/payroll"     element={<PrivateRoute><PageWrap><PayrollRuns /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise/payroll/run" element={<PrivateRoute><PageWrap><PayrollRunCreate /></PageWrap></PrivateRoute>} />
-            <Route path="/enterprise/payroll/:runId" element={<PrivateRoute><PageWrap><PayrollRunDetail /></PageWrap></PrivateRoute>} />
-            <Route path="/payment-links"          element={<PrivateRoute><PageWrap><PaymentLinks /></PageWrap></PrivateRoute>} />
-            <Route path="/trade"                  element={<Navigate to="/dashboard" replace />} />
-            <Route path="/wallet"                 element={<Navigate to="/dashboard" replace />} />
-            <Route path="/alerts"                 element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
+      <Suspense fallback={<FullPageSpinner />}>
+        <Routes>
+          {/* ── Public routes ─────────────────────────────────── */}
+          <Route path="/" element={<Landing />} />
+          <Route element={<GuestGuard />}>
+            <Route path="/login"    element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Route>
+
+          {/* ── Private routes — PrivateLayout mounts ONCE ────── */}
+          {/* Sidebar, TopBar, MobileNav never unmount on navigation */}
+          <Route element={<AuthGuard />}>
+            <Route element={<PrivateLayout />}>
+              <Route element={<AnimatedOutlet />}>
+                <Route path="/dashboard"                 element={<Dashboard />} />
+                <Route path="/pools"                     element={<Pools />} />
+                <Route path="/pools/:poolId"             element={<PoolDetail />} />
+                <Route path="/settings"                  element={<Settings />} />
+                <Route path="/enterprise"                element={<Enterprise />} />
+                <Route path="/enterprise/setup"          element={<CompanySetup />} />
+                <Route path="/enterprise/employees"      element={<EmployeeList />} />
+                <Route path="/enterprise/payroll"        element={<PayrollRuns />} />
+                <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
+                <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
+                <Route path="/payment-links"             element={<PaymentLinks />} />
+              </Route>
+            </Route>
+          </Route>
+
+          {/* Legacy redirects */}
+          <Route path="/trade"  element={<Navigate to="/dashboard" replace />} />
+          <Route path="/wallet" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/alerts" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"       element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
     </BrowserRouter>
   );
