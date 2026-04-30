@@ -23,17 +23,17 @@ export default function PrivateLayout() {
           .qs-sidebar { display: flex !important; }
           .qs-topbar  { display: none !important; }
           .qs-mobnav  { display: none !important; }
-          .qs-main    { padding: 2rem !important; padding-bottom: 2rem !important; }
+          .qs-main    { padding: 2rem !important; padding-bottom: 2rem !important; padding-left: calc(280px + 2rem) !important; }
         }
         @media (max-width: 639px) {
           .qs-main { padding: 0.875rem; padding-bottom: calc(0.875rem + 80px); }
         }
       `}</style>
 
-      {/* Sidebar — never unmounts */}
-      <div className="qs-sidebar" style={{ flexShrink: 0 }}>
-        <Sidebar />
-      </div>
+       {/* Sidebar — never unmounts */}
+       <div className="qs-sidebar" style={{ flexShrink: 0 }}>
+         <Sidebar />
+       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div className="qs-topbar">
