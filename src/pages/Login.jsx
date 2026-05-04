@@ -1,6 +1,6 @@
 // Login.jsx handles returning-user access by collecting the stored phone number and PIN,
 // then handing the authenticated session to the global auth store.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { login } from '../api/auth.js';
@@ -11,13 +11,17 @@ import PhoneInput from '../components/ui/PhoneInput.jsx';
 import { validatePhoneNumber, formatPhoneNumber } from '../lib/utils.js';
 
 export default function Login() {
-  const { setAuth } = useAuthStore();
+  const { setAuth, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const initialPhone = location.state?.phone || sessionStorage.getItem('qreek_signup_phone') || '';
   const [form, setForm] = useState({ phone: initialPhone, pin: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    logout();
+  }, [logout]);
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));

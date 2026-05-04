@@ -57,7 +57,7 @@ function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit employee' : 'Add employee'} maxWidth={520}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Full name *" value={form.name} onChange={e => set('name', e.target.value)} error={errors.name} placeholder="Emeka Johnson" />
           <Input label="Email" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="emeka@company.com" />
           <Input label="Phone" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+234 801 234 5678" />
@@ -217,12 +217,12 @@ export default function EmployeeList() {
           {employees.length === 0 ? 'No employees yet. Add your first employee to get started.' : 'No employees match your search.'}
         </div>
       ) : (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span>Employee</span><span>Bank</span><span>Department</span><span>Salary / mo</span><span>Actions</span>
           </div>
           {filtered.map((emp, i) => (
-            <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center', opacity: emp.is_active ? 1 : 0.5 }}>
+            <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center', opacity: emp.is_active ? 1 : 0.5 }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{emp.name}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{emp.job_title || emp.email || emp.phone || '—'}</div>

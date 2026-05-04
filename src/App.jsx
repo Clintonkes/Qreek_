@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import useAuthStore from './store/authStore.js';
+import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
 import Spinner from './components/ui/Spinner.jsx';
 import PrivateLayout from './components/layout/PrivateLayout.jsx';
 
@@ -35,15 +35,10 @@ function FullPageSpinner() {
 // Guards unauthenticated users away from private routes
 function AuthGuard() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  return isAuthenticated && hasStoredActiveSession() ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 // Keeps logged-in users off the login / register screens
-function GuestGuard() {
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
-}
-
 // Animated wrapper — only the page content animates, not the sidebar
 const variants = {
   initial: { opacity: 0, y: 6 },
@@ -84,10 +79,8 @@ export default function App() {
         <Routes>
           {/* ── Public routes ─────────────────────────────────── */}
           <Route path="/" element={<Landing />} />
-          <Route element={<GuestGuard />}>
-            <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* ── Private routes — PrivateLayout mounts ONCE ────── */}
           {/* Sidebar, TopBar, MobileNav never unmount on navigation */}

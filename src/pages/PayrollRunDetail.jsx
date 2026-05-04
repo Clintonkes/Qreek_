@@ -132,12 +132,12 @@ export default function PayrollRunDetail() {
           </div>
         )}
 
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '0', padding: '0.6rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', minWidth: 700, gap: '0', padding: '0.6rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase' }}>
             <span>Employee</span><span>Gross</span><span>Net</span><span>Reference</span><span>Status</span>
           </div>
           {entries.map((entry, i) => (
-            <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '0', padding: '0.85rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+            <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', minWidth: 700, gap: '0', padding: '0.85rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{entry.employee_name}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{entry.bank_name} {entry.bank_account}</div>

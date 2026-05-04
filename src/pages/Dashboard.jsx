@@ -145,7 +145,7 @@ export default function Dashboard() {
           </section>
 
           {/* Activity lists help users jump into recent pools and collection links without extra searching. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-7">
             <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', fontFamily: 'var(--font-display)' }}>Recent pools</h2>

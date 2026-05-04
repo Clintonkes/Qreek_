@@ -113,7 +113,7 @@ export default function Enterprise() {
         <StatCard icon={Buildings}label="Status"        value={company.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.3% payroll fee" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <h3 style={{ fontSize: '0.95rem' }}>Recent payroll runs</h3>
@@ -146,8 +146,8 @@ export default function Enterprise() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-        <Link to="/enterprise/employees" style={{ flex: 1, minWidth: 200, textDecoration: 'none' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+        <Link to="/enterprise/employees" style={{ textDecoration: 'none' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'var(--trans-fast)' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -159,7 +159,7 @@ export default function Enterprise() {
             <ArrowRight size={16} color="var(--text-3)" />
           </div>
         </Link>
-        <Link to="/payment-links" style={{ flex: 1, minWidth: 200, textDecoration: 'none' }}>
+        <Link to="/payment-links" style={{ textDecoration: 'none' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'var(--trans-fast)' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}

@@ -84,7 +84,7 @@ function SendModal({ open, onClose, poolId, banks, onSent }) {
           </div>
         )}
         <Input label="Recipient name *" value={form.recipient_name} onChange={e => set('recipient_name', e.target.value)} error={errors.recipient_name} placeholder="Emeka Johnson" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} error={errors.bank_account} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
           <div>
             <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: errors.bank_code ? 'var(--red)' : 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>

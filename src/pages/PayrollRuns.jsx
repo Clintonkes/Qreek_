@@ -41,7 +41,7 @@ function RunCard({ run }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.15rem' }}>Total net</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', color: 'var(--teal)' }}>{FMT(run.total_net)}</div>
@@ -97,7 +97,7 @@ export default function PayrollRuns() {
           <Button onClick={() => navigate('/enterprise/payroll/run')}>Run your first payroll</Button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {runs.map(run => <RunCard key={run.id} run={run} />)}
         </div>
       )}

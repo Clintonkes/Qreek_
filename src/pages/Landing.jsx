@@ -215,11 +215,9 @@ function UseCasePanel({ active, onSelect }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
+        className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4"
         style={{
           position: 'relative',
-          display: 'grid',
-          gridTemplateColumns: '1.1fr 0.9fr',
-          gap: '1rem',
         }}
       >
         <div
@@ -296,10 +294,8 @@ function UseCasePanel({ active, onSelect }) {
           </div>
 
           <div
+            className="grid grid-cols-1 sm:grid-cols-3 gap-3"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: '0.75rem',
             }}
           >
             {[
@@ -390,14 +386,12 @@ function UseCasePanel({ active, onSelect }) {
           </div>
 
           <div
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             style={{
               background: 'rgba(7, 17, 33, 0.9)',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '22px',
               padding: '1rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: '0.75rem',
             }}
           >
             {[

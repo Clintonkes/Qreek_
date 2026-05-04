@@ -70,7 +70,7 @@ export default function Settings() {
       <h1 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Settings</h1>
 
       <Section title="Profile">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.25rem' }}>Full name</div>
             <div style={{ fontWeight: 500 }}>{user?.name || '—'}</div>
