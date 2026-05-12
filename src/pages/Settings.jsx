@@ -18,6 +18,17 @@ function Section({ title, children }) {
   );
 }
 
+/**
+ * Settings component - User-centric management of security and financial preferences.
+ * Features:
+ * - Profile overview (Name, Phone, KYC status).
+ * - Default bank account management for Naira payouts.
+ * - Security PIN updates with mandatory verification of the current PIN.
+ * - Referral code sharing.
+ * - Device session termination (Logout).
+ *
+ * @returns {JSX.Element}
+ */
 export default function Settings() {
   const { user, logout, updateUser } = useAuthStore();
   const navigate = useNavigate();

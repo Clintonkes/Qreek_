@@ -39,6 +39,16 @@ function StatCard({ label, value, sub, accent = 'var(--teal)' }) {
   );
 }
 
+/**
+ * Dashboard component - The primary landing page for authenticated users.
+ * Aggregates and displays a summary of:
+ * - Investment pools and membership statistics.
+ * - Payment links and collection performance.
+ * - Enterprise payroll metrics (if applicable).
+ * Provides quick-access navigation to core application features.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Dashboard() {
   // Pull lightweight auth context so the page can greet the current user by name.
   const { user } = useAuthStore();

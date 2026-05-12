@@ -44,6 +44,15 @@ function StepIndicator({ current }) {
   );
 }
 
+/**
+ * CompanySetup component - A multi-step onboarding wizard for businesses.
+ * Guides the user through:
+ * 1. Entering core company details (Name, Industry, RC Number).
+ * 2. Providing contact information (Email, Address).
+ * 3. Reviewing and confirming the setup to activate payroll/enterprise features.
+ *
+ * @returns {JSX.Element}
+ */
 export default function CompanySetup() {
   const navigate = useNavigate();
   const [step,    setStep]    = useState(0);

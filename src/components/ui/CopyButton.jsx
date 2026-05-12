@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { CopySimple, Check } from 'phosphor-react';
 
+/**
+ * CopyButton component - Provides a one-click action to copy text to the clipboard.
+ * Displays a checkmark icon briefly as visual confirmation.
+ *
+ * @param {Object} props
+ * @param {string} props.text - The string to be copied to the clipboard.
+ * @param {Object} [props.style] - Custom styles for the button.
+ * @returns {JSX.Element}
+ */
 export default function CopyButton({ text, style }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {

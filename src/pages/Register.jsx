@@ -2,6 +2,7 @@
 // so the first authenticated step mirrors the same sign-in flow used afterward.
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import { register } from '../api/auth.js';
 import Button from '../components/ui/Button.jsx';
@@ -41,6 +42,16 @@ function StepDots({ current, total }) {
   );
 }
 
+/**
+ * Register component - Manages the new user registration lifecycle.
+ * Implements a two-step funnel:
+ * 1. Identity & Contact: Collects names and an international phone number (validated/normalized).
+ * 2. Security: Collects and confirms a numeric PIN (4-6 digits).
+ * Includes deduplication logic to handle existing phone numbers and
+ * auto-navigates to login upon successful account creation.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Register() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -134,6 +145,7 @@ export default function Register() {
         padding: '1rem',
       }}
     >
+      <Link to="/" style={{ position: 'fixed', top: '1.25rem', left: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-2)', fontSize: '0.85rem', textDecoration: 'none' }}><ArrowLeft size={16} /> Home</Link>
       <div
         style={{
           width: '100%',
@@ -207,3 +219,4 @@ export default function Register() {
     </div>
   );
 }
+

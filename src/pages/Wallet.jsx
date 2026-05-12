@@ -10,6 +10,15 @@ import { getPortfolioValue, getHistory } from '../api/wallet.js';
 const COINS = ['NGN','USDT','USDC','BTC','ETH','BNB','SOL'];
 const FILTERS = ['all','sell','buy','crypto_send','pool_trade','bridge'];
 
+/**
+ * Wallet component - Provides a comprehensive view of the user's financial holdings.
+ * Displays:
+ * - Real-time balances for NGN and multiple cryptocurrencies (USDT, BTC, etc.).
+ * - Estimated NGN valuation for crypto assets.
+ * - Paginated and filterable transaction history (Sell, Buy, Send, Pool Trades, Bridge).
+ *
+ * @returns {JSX.Element}
+ */
 export default function Wallet() {
   const [portfolio, setPortfolio] = useState(null);
   const [history,   setHistory]   = useState([]);

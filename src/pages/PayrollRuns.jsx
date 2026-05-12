@@ -69,6 +69,13 @@ function RunCard({ run }) {
   );
 }
 
+/**
+ * PayrollRuns component - Lists historical and active payroll batches for an enterprise.
+ * Provides a status-coded summary (Pending, Processing, Completed, Partial, Failed)
+ * for each run, showing employee counts, total net payouts, and fees.
+ *
+ * @returns {JSX.Element}
+ */
 export default function PayrollRuns() {
   const [runs,    setRuns]    = useState([]);
   const [loading, setLoading] = useState(true);

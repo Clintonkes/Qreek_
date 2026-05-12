@@ -43,6 +43,16 @@ function RateTicker({ rates }) {
   );
 }
 
+/**
+ * Trade component - Provides a unified interface for manual trading operations.
+ * Includes a live rate ticker and multiple tabs for:
+ * - Interactive chat trading (WebSocket-based).
+ * - Direct cryptocurrency selling (sell for NGN).
+ * - Direct cryptocurrency buying (pay NGN for crypto).
+ * - Direct cryptocurrency transfers (send to another user).
+ *
+ * @returns {JSX.Element}
+ */
 export default function Trade() {
   const [tab, setTab] = useState('chat');
   const rates = useRatesStore(s => s.rates);

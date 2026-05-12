@@ -3,15 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
-import Spinner from './components/ui/Spinner.jsx';
 import PrivateLayout from './components/layout/PrivateLayout.jsx';
 
-// Public pages — tiny bundles, load fast
-const Landing  = lazy(() => import('./pages/Landing.jsx'));
-const Login    = lazy(() => import('./pages/Login.jsx'));
-const Register = lazy(() => import('./pages/Register.jsx'));
-
-// Private pages — lazy-loaded individually so only the needed page loads
+const Landing    = lazy(() => import('./pages/Landing.jsx'));
+const Login      = lazy(() => import('./pages/Login.jsx'));
+const Register   = lazy(() => import('./pages/Register.jsx'));
+const ForgotPin  = lazy(() => import('./pages/ForgotPin.jsx'));
 const Dashboard        = lazy(() => import('./pages/Dashboard.jsx'));
 const Pools            = lazy(() => import('./pages/Pools.jsx'));
 const PoolDetail       = lazy(() => import('./pages/PoolDetail.jsx'));
@@ -24,47 +21,32 @@ const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
 const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
 const PaymentLinks     = lazy(() => import('./pages/PaymentLinks.jsx'));
 
-function FullPageSpinner() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
-      <Spinner size={40} />
-    </div>
-  );
-}
-
-// Guards unauthenticated users away from private routes
+/**
+ * AuthGuard component that protects routes requiring authentication.
+ * Redirects to the login page if the user is not authenticated or has no active session.
+ */
 function AuthGuard() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   return isAuthenticated && hasStoredActiveSession() ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-// Keeps logged-in users off the login / register screens
-// Animated wrapper — only the page content animates, not the sidebar
 const variants = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' } },
-  exit:    { opacity: 0, transition: { duration: 0.15 } },
+  initial: { opacity: 0, y: 5 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' } },
+  exit:    { opacity: 0,        transition: { duration: 0.12 } },
 };
 
-function AnimatedPage({ children }) {
-  return (
-    <motion.div variants={variants} initial="initial" animate="animate" exit="exit">
-      {children}
-    </motion.div>
-  );
-}
-
-// Wraps all private pages with the animated transition
+// No spinner fallback — pages render instantly from cache on subsequent visits
+/**
+ * AnimatedOutlet component that provides page transition animations using Framer Motion.
+ * Wraps the react-router-dom Outlet to animate route changes.
+ */
 function AnimatedOutlet() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
       <motion.div key={location.pathname} variants={variants} initial="initial" animate="animate" exit="exit">
-        <Suspense fallback={
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-            <Spinner size={28} />
-          </div>
-        }>
+        <Suspense fallback={null}>
           <Outlet />
         </Suspense>
       </motion.div>
@@ -72,18 +54,20 @@ function AnimatedOutlet() {
   );
 }
 
+/**
+ * Main App component that defines the application structure and routing.
+ * Configures public routes, protected routes (via AuthGuard), and layout wrappers.
+ */
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<FullPageSpinner />}>
+      <Suspense fallback={null}>
         <Routes>
-          {/* ── Public routes ─────────────────────────────────── */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login"    element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/"           element={<Landing />} />
+          <Route path="/login"      element={<Login />} />
+          <Route path="/register"   element={<Register />} />
+          <Route path="/forgot-pin" element={<ForgotPin />} />
 
-          {/* ── Private routes — PrivateLayout mounts ONCE ────── */}
-          {/* Sidebar, TopBar, MobileNav never unmount on navigation */}
           <Route element={<AuthGuard />}>
             <Route element={<PrivateLayout />}>
               <Route element={<AnimatedOutlet />}>
@@ -102,7 +86,6 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Legacy redirects */}
           <Route path="/trade"  element={<Navigate to="/dashboard" replace />} />
           <Route path="/wallet" element={<Navigate to="/dashboard" replace />} />
           <Route path="/alerts" element={<Navigate to="/dashboard" replace />} />

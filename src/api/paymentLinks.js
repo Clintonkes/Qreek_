@@ -1,7 +1,36 @@
 import client from './client.js';
 
+/**
+ * Payment Link creation API.
+ * @param {Object} d - Link details (title, description, amount, bank account).
+ * @returns {Promise<Object>} The created link data.
+ */
 export const createLink  = (d)      => client.post('/payment-links', d).then(r => r.data);
+
+/**
+ * Lists all payment links created by the current user.
+ * @returns {Promise<Object>} A list of payment links.
+ */
 export const getLinks    = ()       => client.get('/payment-links').then(r => r.data);
+
+/**
+ * Public link resolution API.
+ * @param {string} code - The unique code of the payment link.
+ * @returns {Promise<Object>} The resolved link details.
+ */
 export const resolveLink = (code)   => client.get(`/payment-links/resolve/${code}`).then(r => r.data);
+
+/**
+ * Payment processing API for links.
+ * @param {string} code - The unique code of the payment link.
+ * @param {Object} d - Payment details (amount, payer info, PIN).
+ * @returns {Promise<Object>} The payment confirmation and reference.
+ */
 export const payLink     = (code, d)=> client.post(`/payment-links/pay/${code}`, d).then(r => r.data);
+
+/**
+ * Link deactivation API.
+ * @param {string} id - The ID of the payment link to delete/deactivate.
+ * @returns {Promise<Object>} Success message.
+ */
 export const deleteLink  = (id)     => client.delete(`/payment-links/${id}`).then(r => r.data);

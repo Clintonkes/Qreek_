@@ -17,6 +17,16 @@ function fmtRate(rate, coin) {
   return `₦${rate.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 }
 
+/**
+ * Alerts component - Manages custom cryptocurrency price alerts.
+ * Features:
+ * - Setting target price thresholds for specific coins (BTC, ETH, USDT, etc.).
+ * - Automatic direction detection (Above/Below) based on current market rates.
+ * - Real-time comparison showing how far (%) current rates are from the target.
+ * - Persistent listing and deletion of active alerts.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Alerts() {
   const rates = useRatesStore(s => s.rates);
   const [alerts,   setAlerts]   = useState([]);

@@ -60,3 +60,11 @@ coverage/
 ai/cache/
 
 Qreek_Finance_Investor_Document.html
+
+Qreek_Finace_Complete_Guide.html
+# Internal documents — never commit to git
+Qreek_Finance_*.html
+Qreek_Finance_*.pdf
+Qreek_Finance_*.docx
+*_Investor_Document*
+*_Complete_Guide*

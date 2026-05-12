@@ -1,5 +1,13 @@
 import React from 'react';
 
+/**
+ * Spinner component - A lightweight SVG loading indicator with rotation animation.
+ *
+ * @param {Object} props
+ * @param {number} [props.size=24] - The width and height of the spinner in pixels.
+ * @param {string} [props.color='var(--teal)'] - The stroke color of the spinner.
+ * @returns {JSX.Element}
+ */
 export default function Spinner({ size = 24, color = 'var(--teal)' }) {
   return (
     <svg

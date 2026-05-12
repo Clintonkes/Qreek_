@@ -3,6 +3,18 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'phosphor-react';
 
+/**
+ * Modal component - A shared overlay and dialog shell for confirmations and focused actions.
+ * Includes Framer Motion animations and handles clicks outside/escape key for closing.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is currently visible.
+ * @param {Function} props.onClose - Callback function to close the modal.
+ * @param {string} [props.title] - The title text displayed in the header.
+ * @param {React.ReactNode} props.children - The content to be rendered inside the modal body.
+ * @param {number} [props.maxWidth=480] - The maximum width of the modal dialog in pixels.
+ * @returns {JSX.Element}
+ */
 export default function Modal({ open, onClose, title, children, maxWidth = 480 }) {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose?.(); };

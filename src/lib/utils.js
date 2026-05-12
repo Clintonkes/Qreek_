@@ -3,7 +3,13 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
-// Combines conditional class names and resolves Tailwind conflicts in one step.
+/**
+ * Combines conditional class names and resolves Tailwind CSS conflicts.
+ * Uses clsx for conditional logic and tailwind-merge to ensure the last class wins.
+ *
+ * @param {...(string|Object|Array|undefined|null)} inputs - Class names or conditional objects.
+ * @returns {string} - The merged and resolved class string.
+ */
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }

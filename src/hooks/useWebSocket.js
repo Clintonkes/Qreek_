@@ -4,6 +4,13 @@ import useTradeStore from '../store/tradeStore.js';
 
 const WS_BASE = import.meta.env.VITE_WS_URL || '';
 
+/**
+ * Custom hook for managing the WebSocket connection to the Qreek trade interface.
+ * Handles automatic connection, message parsing, state updates (messages/workflow steps),
+ * and background reconnection logic.
+ *
+ * @returns {Object} { send: Function, connected: boolean, connecting: boolean }
+ */
 export function useWebSocket() {
   const token      = useAuthStore(s => s.token);
   const addMessage = useTradeStore(s => s.addMessage);
@@ -14,6 +21,9 @@ export function useWebSocket() {
   const [connected,  setConnected]  = useState(false);
   const [connecting, setConnecting] = useState(false);
 
+  /**
+   * Establishes the WebSocket connection with the authenticated token.
+   */
   const connect = useCallback(() => {
     if (!token || !mounted.current) return;
     setConnecting(true);
@@ -54,6 +64,10 @@ export function useWebSocket() {
     };
   }, [connect]);
 
+  /**
+   * Sends a text message to the server via the active WebSocket.
+   * @param {string} text - The message string to send.
+   */
   const send = useCallback((text) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(text);

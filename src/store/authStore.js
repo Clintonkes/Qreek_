@@ -9,6 +9,9 @@ export const AUTH_STORAGE_KEYS = {
   lastActivity: 'qreek_session_last_activity',
 };
 
+/**
+ * Clears all authentication-related items from local storage.
+ */
 export function clearStoredSession() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.token);
   localStorage.removeItem(AUTH_STORAGE_KEYS.refreshToken);
@@ -16,15 +19,29 @@ export function clearStoredSession() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.lastActivity);
 }
 
+/**
+ * Checks if the session has expired based on the last activity timestamp.
+ * @param {number|string} lastActivity - The timestamp of the last activity.
+ * @param {number} [now=Date.now()] - The current timestamp.
+ * @returns {boolean} True if the session has expired.
+ */
 export function isSessionExpired(lastActivity, now = Date.now()) {
   const lastActiveAt = Number(lastActivity);
   return !lastActiveAt || now - lastActiveAt > SESSION_TIMEOUT_MS;
 }
 
+/**
+ * Updates the last activity timestamp in local storage.
+ * @param {number} [now=Date.now()] - The timestamp to set.
+ */
 export function markSessionActivity(now = Date.now()) {
   localStorage.setItem(AUTH_STORAGE_KEYS.lastActivity, String(now));
 }
 
+/**
+ * Checks if there is a valid, non-expired session stored in local storage.
+ * @returns {boolean} True if a valid session exists.
+ */
 export function hasStoredActiveSession() {
   const token = localStorage.getItem(AUTH_STORAGE_KEYS.token);
   const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.refreshToken);
@@ -51,6 +68,10 @@ const stored = (() => {
   }
 })();
 
+/**
+ * Zustand store for managing authentication state.
+ * Handles token storage, session validation, and user profile management.
+ */
 const useAuthStore = create(set => ({
   token:           stored.token,
   refreshToken:    stored.refreshToken,

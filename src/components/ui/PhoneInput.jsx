@@ -1,41 +1,62 @@
-import React, { useState, useRef } from 'react';
-import { parsePhoneNumberFromString, getCountries, getCountryCallingCode } from 'libphonenumber-js';
+import React, { useState, useRef, useEffect } from 'react';
+import { parsePhoneNumber, getCountries, getCountryCallingCode, AsYouType } from 'libphonenumber-js';
 
-// Top countries shown first
 const PRIORITY = ['NG', 'GB', 'US', 'CA', 'GH', 'KE', 'ZA', 'DE', 'NL', 'SE', 'FR', 'AE'];
-
-const FLAG = (code) => {
-  // Convert ISO 3166-1 alpha-2 to flag emoji
-  return code.toUpperCase().replace(/./g, c =>
-    String.fromCodePoint(127397 + c.charCodeAt())
-  );
-};
-
+const FLAG = code => code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()));
 const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 
 function buildList() {
-  const all = getCountries();
+  const all      = getCountries();
   const priority = PRIORITY.filter(c => all.includes(c));
-  const rest = all
-    .filter(c => !PRIORITY.includes(c))
-    .sort((a, b) => COUNTRY_NAMES.of(a).localeCompare(COUNTRY_NAMES.of(b)));
+  const rest     = all.filter(c => !PRIORITY.includes(c)).sort((a, b) =>
+    COUNTRY_NAMES.of(a).localeCompare(COUNTRY_NAMES.of(b))
+  );
   return [...priority, 'DIVIDER', ...rest];
 }
-
 const COUNTRIES = buildList();
 
-export default function PhoneInput({ label, value = '', onChange, error, placeholder = '800 000 0000' }) {
-  const [country, setCountry] = useState('NG');
-  const [number,  setNumber]  = useState('');
+// Parse an E.164 string (+2348012345678) back into { country, localNumber }
+function parseE164(e164) {
+  if (!e164 || !e164.startsWith('+')) return { country: 'NG', localNumber: '' };
+  try {
+    const parsed = parsePhoneNumber(e164);
+    if (parsed) {
+      return {
+        country:     parsed.country || 'NG',
+        localNumber: parsed.nationalNumber || '',
+      };
+    }
+  } catch {}
+  return { country: 'NG', localNumber: e164.replace(/^\+\d{1,4}/, '') };
+}
+
+export default function PhoneInput({ label, value = '', onChange, error, placeholder }) {
+  const initial = parseE164(value);
+  const [country, setCountry] = useState(initial.country || 'NG');
+  const [number,  setNumber]  = useState(initial.localNumber || '');
   const [open,    setOpen]    = useState(false);
   const [search,  setSearch]  = useState('');
-  const dropRef = useRef(null);
+  const dropRef   = useRef(null);
+  const inputRef  = useRef(null);
+  const initiated = useRef(false);
+
+  // Sync once when an initial E.164 value is provided (e.g. from sessionStorage)
+  useEffect(() => {
+    if (!initiated.current && value && value.startsWith('+')) {
+      const p = parseE164(value);
+      setCountry(p.country || 'NG');
+      setNumber(p.localNumber || '');
+      initiated.current = true;
+    }
+  }, [value]);
 
   const dial = getCountryCallingCode(country);
+  const placeholder_ = placeholder || (country === 'NG' ? '0801 234 5678' : '');
 
   const emit = (c, n) => {
-    const raw = `+${getCountryCallingCode(c)}${n.replace(/\D/g, '')}`;
-    onChange?.(raw);
+    const digits = n.replace(/\D/g, '');
+    if (!digits) { onChange?.(''); return; }
+    onChange?.(`+${getCountryCallingCode(c)}${digits}`);
   };
 
   const handleCountry = (c) => {
@@ -43,13 +64,23 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
     setOpen(false);
     setSearch('');
     emit(c, number);
+    inputRef.current?.focus();
   };
 
   const handleNumber = (e) => {
-    const n = e.target.value.replace(/[^\d\s\-().]/g, '');
-    setNumber(n);
-    emit(country, n);
+    const raw = e.target.value;
+    setNumber(raw);
+    emit(country, raw);
   };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const filtered = COUNTRIES.filter(c => {
     if (c === 'DIVIDER') return true;
@@ -66,11 +97,18 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
           {label}
         </label>
       )}
-      <div style={{ display: 'flex', gap: '0', position: 'relative' }}>
-        {/* Country selector */}
+
+      {/* Helper text */}
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: '-0.1rem 0 0.1rem' }}>
+        Select your country, then type your number <em>without</em> the country code
+      </p>
+
+      <div style={{ display: 'flex', position: 'relative' }} ref={dropRef}>
+        {/* Country flag + dial code button */}
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
+          aria-label="Select country code"
           style={{
             display: 'flex', alignItems: 'center', gap: '0.4rem',
             padding: '0.75rem 0.75rem',
@@ -86,15 +124,17 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
         >
           <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{FLAG(country)}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--teal)' }}>+{dial}</span>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginLeft: '0.1rem' }}>▼</span>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{open ? '▲' : '▼'}</span>
         </button>
 
-        {/* Number input */}
+        {/* Local number input */}
         <input
+          ref={inputRef}
           type="tel"
           value={number}
           onChange={handleNumber}
-          placeholder={placeholder}
+          placeholder={placeholder_}
+          aria-label="Phone number"
           style={{
             flex: 1,
             borderRadius: '0 var(--radius) var(--radius) 0',
@@ -107,15 +147,12 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
 
         {/* Dropdown */}
         {open && (
-          <div
-            ref={dropRef}
-            style={{
-              position: 'absolute', top: '100%', left: 0, zIndex: 200, marginTop: 4,
-              width: 280, maxHeight: 320, overflowY: 'auto',
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)',
-            }}
-          >
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 300,
+            width: 300, maxHeight: 320, overflowY: 'auto',
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)',
+          }}>
             <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
               <input
                 autoFocus
@@ -126,21 +163,15 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
               />
             </div>
             {filtered.map((c, i) => {
-              if (c === 'DIVIDER') return (
-                <div key="div" style={{ height: 1, background: 'var(--border)', margin: '0.25rem 0' }} />
-              );
+              if (c === 'DIVIDER') return <div key="div" style={{ height: 1, background: 'var(--border)', margin: '0.25rem 0' }} />;
               return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleCountry(c)}
+                <button key={c} type="button" onClick={() => handleCountry(c)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '0.6rem',
                     width: '100%', padding: '0.5rem 0.75rem',
                     background: c === country ? 'var(--teal-faint)' : 'transparent',
                     border: 'none', cursor: 'pointer', textAlign: 'left',
-                    color: 'var(--text)', fontSize: '0.85rem',
-                    transition: 'var(--trans-fast)',
+                    color: 'var(--text)', fontSize: '0.85rem', transition: 'var(--trans-fast)',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = c === country ? 'var(--teal-faint)' : 'transparent'; }}
@@ -154,6 +185,7 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
           </div>
         )}
       </div>
+
       {error && <span style={{ fontSize: '0.78rem', color: 'var(--red)' }}>{error}</span>}
     </div>
   );

@@ -14,6 +14,16 @@ import { getBanks } from '../api/payroll.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
+/**
+ * Modal component for creating a new payment link.
+ * Allows configuration of fixed or flexible amounts, maximum uses, and expiration.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is visible.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {Array} props.banks - List of supported banks for deposit routing.
+ * @param {Function} props.onCreated - Callback triggered after a link is successfully created.
+ */
 function CreateLinkModal({ open, onClose, banks, onCreated }) {
   const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
   const [flexible, setFlexible] = useState(false);
@@ -106,6 +116,14 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
   );
 }
 
+/**
+ * Card component to display the status and details of a specific payment link.
+ * Includes options to copy the URL and deactivate the link.
+ *
+ * @param {Object} props
+ * @param {Object} props.link - Payment link data object.
+ * @param {Function} props.onDelete - Callback when the link is deactivated.
+ */
 function LinkCard({ link, onDelete }) {
   const [deleting, setDeleting] = useState(false);
 
@@ -167,6 +185,13 @@ function LinkCard({ link, onDelete }) {
   );
 }
 
+/**
+ * PaymentLinks component - Dashboard for managing shareable payment URLs.
+ * Users can create links to collect funds directly into their designated bank accounts
+ * without sharing raw account details. Displays active links, total collections, and status.
+ *
+ * @returns {JSX.Element}
+ */
 export default function PaymentLinks() {
   const [links,    setLinks]    = useState([]);
   const [banks,    setBanks]    = useState([]);

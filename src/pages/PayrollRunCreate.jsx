@@ -15,6 +15,13 @@ const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits:
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const YEARS  = [2025, 2026, 2027];
 
+/**
+ * Renders a summary row for an individual employee within a payroll batch preview.
+ * Displays gross amount, pool fees, and the final net amount to be disbursed.
+ *
+ * @param {Object} props
+ * @param {Object} props.entry - The payroll entry data for the employee.
+ */
 function SummaryRow({ entry }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr', gap: '0', padding: '0.7rem 1rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', alignItems: 'center' }}>
@@ -29,6 +36,18 @@ function SummaryRow({ entry }) {
   );
 }
 
+/**
+ * PayrollRunCreate component - A multi-step wizard for initiating a payroll batch.
+ *
+ * Steps:
+ * 1. Setup: Select the payroll period (month/year) and add an optional note.
+ * 2. Selection: Choose which employees to include (defaults to all). Previews total cost.
+ * 3. Review & Execute: Displays fee breakdown, individual net amounts, and prompts
+ *    for the user's PIN to cryptographically authorize the payout run.
+ * 4. Success: Confirmation screen upon successful execution.
+ *
+ * @returns {JSX.Element}
+ */
 export default function PayrollRunCreate() {
   const navigate = useNavigate();
   const now      = new Date();

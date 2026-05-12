@@ -8,6 +8,16 @@ import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
 import { getCompany, getAnalytics } from '../api/payroll.js';
 
+/**
+ * A reusable UI card to display a key metric or statistic.
+ *
+ * @param {Object} props
+ * @param {React.ElementType} props.icon - Icon component to render.
+ * @param {string} props.label - Title/label for the metric.
+ * @param {string|number} props.value - Primary metric value.
+ * @param {string} [props.color='var(--teal)'] - Theme color string.
+ * @param {string} [props.sub] - Optional secondary text.
+ */
 function StatCard({ icon: Icon, label, value, color = 'var(--teal)', sub }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -21,6 +31,16 @@ function StatCard({ icon: Icon, label, value, color = 'var(--teal)', sub }) {
   );
 }
 
+/**
+ * Renders a row indicating the status, period, and total of a payroll run.
+ *
+ * @param {Object} props
+ * @param {Object} props.run - Payroll run data object.
+ * @param {string} props.run.status - Status of the run ('completed', 'partial', etc.).
+ * @param {string} props.run.period - Period or date describing the run.
+ * @param {number} [props.run.count] - Employee count for this run.
+ * @param {number} [props.run.total_net] - Total net amount.
+ */
 function RunBar({ run }) {
   const pct = run.count ? 100 : 0;
   const color = run.status === 'completed' ? 'var(--green)' : run.status === 'partial' ? 'var(--amber)' : 'var(--red)';
@@ -38,6 +58,13 @@ function RunBar({ run }) {
   );
 }
 
+/**
+ * Enterprise dashboard component for business operations.
+ * Displays aggregate metrics (total paid, employee count, payroll runs),
+ * recent payroll activities, and quick access to management features.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Enterprise() {
   const [company,   setCompany]   = useState(null);
   const [analytics, setAnalytics] = useState(null);

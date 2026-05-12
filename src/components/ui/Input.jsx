@@ -1,6 +1,20 @@
 // Input.jsx wraps a native input with label and error messaging so form fields stay consistent.
 import React, { useRef, useEffect } from 'react';
 
+/**
+ * Input component - A stylized wrapper for native input and textarea elements.
+ * Features include labels, error messages, hints, and auto-expanding textarea support.
+ *
+ * @param {Object} props
+ * @param {string} [props.label] - The label text to display above the input.
+ * @param {string} [props.error] - An error message to display below the input (turns border red).
+ * @param {string} [props.hint] - A helper message to display below the input (hidden if error is present).
+ * @param {Object} [props.style] - Custom styles for the input/textarea element.
+ * @param {Object} [props.containerStyle] - Custom styles for the outer container div.
+ * @param {boolean} [props.multiline] - If true, renders a textarea instead of an input.
+ * @param {number} [props.rows=1] - The initial number of rows for a multiline input.
+ * @returns {JSX.Element}
+ */
 export default function Input({ label, error, hint, style, containerStyle, multiline, rows = 1, ...props }) {
   const textareaRef = useRef(null);
 

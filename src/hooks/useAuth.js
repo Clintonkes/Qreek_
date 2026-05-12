@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { me } from '../api/auth.js';
 import useAuthStore from '../store/authStore.js';
 
+/**
+ * Custom hook for managing the authentication lifecycle.
+ * - Synchronizes the local user state with the server on mount if a token exists.
+ * - Monitors user activity (clicks, keydowns, etc.) to keep the session alive.
+ * - Periodically checks for session expiration and logs the user out if idle too long.
+ */
 export function useAuth() {
   const { token, updateUser, logout, touchSession, validateSession } = useAuthStore();
 

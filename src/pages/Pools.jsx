@@ -56,6 +56,15 @@ function PoolCard({ pool, onNavigate }) {
   );
 }
 
+/**
+ * Pools component - Manages the user's investment and payment pools.
+ * Features include:
+ * - Listing all pools where the user is an admin or member.
+ * - Creating new pools (Fiat or Crypto) with custom names.
+ * - Joining existing pools using a 6-character alphanumeric invite code.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Pools() {
   const navigate   = useNavigate();
   const userPhone  = useAuthStore(s => s.user?.phone);

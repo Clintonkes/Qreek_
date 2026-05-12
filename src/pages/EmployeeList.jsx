@@ -13,6 +13,17 @@ import { getEmployees, addEmployee, removeEmployee, updateEmployee, getBanks, bu
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 
+/**
+ * Modal component for adding or editing an individual employee.
+ * Handles validation of required fields like bank account and salary.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is visible.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {Function} props.onSaved - Callback triggered after a successful save.
+ * @param {Array} props.banks - List of supported banks.
+ * @param {Object} [props.editing] - Optional employee object to edit.
+ */
 function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', bank_account: '', bank_code: '', department: '', job_title: '', salary: '' });
   const [saving, setSaving] = useState(false);
@@ -83,6 +94,15 @@ function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
   );
 }
 
+/**
+ * Modal component for bulk importing employees via CSV data.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is visible.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {Function} props.onImported - Callback triggered after a successful import.
+ * @param {Array} props.banks - List of supported banks.
+ */
 function BulkImportModal({ open, onClose, onImported, banks }) {
   const [csv, setCsv]     = useState('');
   const [loading, setLoading] = useState(false);
@@ -139,6 +159,16 @@ function BulkImportModal({ open, onClose, onImported, banks }) {
   );
 }
 
+/**
+ * EmployeeList component - A management interface for a company's workforce.
+ * Provides a searchable, filterable list of employees with options for:
+ * - Adding new employees (Single or Bulk CSV).
+ * - Editing existing employee details (Salary, Bank, Role).
+ * - Removing employees from the active roster.
+ * - Real-time calculation of total monthly payroll liability.
+ *
+ * @returns {JSX.Element}
+ */
 export default function EmployeeList() {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);

@@ -8,6 +8,15 @@ const variants = {
   default:    { bg: 'var(--surface-3)',    color: 'var(--text-2)' },
 };
 
+/**
+ * Badge component - Displays a compact status indicator with color-coded backgrounds.
+ *
+ * @param {Object} props
+ * @param {('completed'|'processing'|'pending'|'failed'|'default')} [props.status='default'] - The status to represent.
+ * @param {React.ReactNode} [props.children] - Optional custom content; defaults to status text.
+ * @param {Object} [props.style] - Custom styles for the badge.
+ * @returns {JSX.Element}
+ */
 export default function Badge({ status, children, style }) {
   const v = variants[status] || variants.default;
   return (

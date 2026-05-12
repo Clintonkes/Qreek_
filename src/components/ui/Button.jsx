@@ -65,6 +65,20 @@ const styles = {
   },
 };
 
+/**
+ * Button component - A shared interactive button primitive used throughout the application.
+ * Supports multiple visual variants, loading states, and full-width layout options.
+ *
+ * @param {Object} props
+ * @param {('primary'|'secondary'|'danger'|'ghost')} [props.variant='primary'] - The visual style of the button.
+ * @param {React.ReactNode} props.children - The content to be rendered inside the button.
+ * @param {Object} [props.style] - Custom inline styles to be applied to the button.
+ * @param {boolean} [props.disabled] - Whether the button is interactive.
+ * @param {boolean} [props.fullWidth=false] - Whether the button should take up the full width of its container.
+ * @param {boolean} [props.loading=false] - Whether the button is in a loading state.
+ * @param {string} [props.type='button'] - The HTML button type.
+ * @returns {JSX.Element}
+ */
 export default function Button({
   variant = 'primary',
   children,

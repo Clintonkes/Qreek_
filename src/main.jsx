@@ -4,6 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import App from './App.jsx';
 import './index.css';
 
+/**
+ * Entry point for the React application.
+ * Initializes the root element, renders the App component, and configures global notification toasts.
+ */
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

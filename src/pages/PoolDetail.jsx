@@ -15,6 +15,15 @@ import { getBanks } from '../api/payroll.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
+/**
+ * Renders an individual activity log item for a pool.
+ * Highlights whether the current user is the sender and displays transfer status,
+ * amounts, and recipient details.
+ *
+ * @param {Object} props
+ * @param {Object} props.item - The transaction or activity record.
+ * @param {string} props.currentPhone - The active user's phone number to determine perspective.
+ */
 function ActivityItem({ item, currentPhone }) {
   const isSender = item.sender_phone === currentPhone;
   const icon     = item.status === 'completed' ? <CheckCircle size={16} color="var(--green)" weight="fill" /> : item.status === 'failed' ? <XCircle size={16} color="var(--red)" weight="fill" /> : <Clock size={16} color="var(--amber)" />;
@@ -36,6 +45,17 @@ function ActivityItem({ item, currentPhone }) {
   );
 }
 
+/**
+ * Modal to initiate a payment out of the pool to a recipient's bank account.
+ * Requires PIN authorization and dynamically calculates the 0.3% fee.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Modal visibility.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {string} props.poolId - ID of the pool sending funds.
+ * @param {Array} props.banks - List of supported Nigerian banks.
+ * @param {Function} props.onSent - Callback triggered after successful payment.
+ */
 function SendModal({ open, onClose, poolId, banks, onSent }) {
   const [form, setForm] = useState({ amount: '', recipient_name: '', bank_account: '', bank_code: '', note: '', pin: '' });
   const [saving, setSaving] = useState(false);
@@ -106,6 +126,16 @@ function SendModal({ open, onClose, poolId, banks, onSent }) {
   );
 }
 
+/**
+ * Modal for pool administrators to request payments from pool members.
+ * Creates a centralized collection request visible to all members.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Modal visibility.
+ * @param {Function} props.onClose - Callback to close the modal.
+ * @param {string} props.poolId - ID of the pool making the request.
+ * @param {Function} props.onCreated - Callback triggered when the request is created.
+ */
 function RequestModal({ open, onClose, poolId, onCreated }) {
   const [form, setForm]   = useState({ title: '', amount: '', note: '', due_date: '' });
   const [saving, setSaving] = useState(false);
@@ -143,6 +173,17 @@ function RequestModal({ open, onClose, poolId, onCreated }) {
   );
 }
 
+/**
+ * PoolDetail component - Deep dive into a specific payment pool.
+ * Includes three primary tabs:
+ * - Activity: A chronological feed of payments made from the pool.
+ * - Members: Roster of users in the pool with roles (e.g., admin).
+ * - Requests: Outstanding payment demands made by the pool admin.
+ *
+ * Administrators can broadcast payment requests, and members can send outbound payments.
+ *
+ * @returns {JSX.Element}
+ */
 export default function PoolDetail() {
   const { poolId } = useParams();
   const navigate   = useNavigate();
@@ -207,7 +248,7 @@ export default function PoolDetail() {
         </div>
 
         <div style={{ display: 'flex', gap: '0', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.25rem', marginBottom: '1.25rem' }}>
-          {[['activity', 'Activity'], ['members', 'Members'], ['requests', 'Requests']].map(([id, label]) => (
+          {[['activity', 'Activity'], ['members', 'Members'], ['requests', 'Requests'], ['protect', '🛡 Protection']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '0.5rem', border: 'none', background: tab === id ? 'var(--surface-2)' : 'transparent', color: tab === id ? 'var(--teal)' : 'var(--text-2)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 500, borderBottom: tab === id ? '2px solid var(--teal)' : '2px solid transparent', transition: 'var(--trans-fast)' }}>
               {label} {id === 'requests' && requests.length > 0 && <span style={{ background: 'var(--amber)', color: 'var(--text-inv)', borderRadius: 'var(--radius-full)', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700, marginLeft: '0.25rem' }}>{requests.length}</span>}
             </button>
@@ -267,8 +308,75 @@ export default function PoolDetail() {
         )}
       </div>
 
+        {tab === 'protect' && (
+          <ProtectionTab poolId={poolId} pool={pool} />
+        )}
+      </div>
+
       <SendModal open={showSend} onClose={() => setShowSend(false)} poolId={poolId} banks={banks} onSent={load} />
       <RequestModal open={showReq} onClose={() => setShowReq(false)} poolId={poolId} onCreated={load} />
     </AppShell>
+  );
+}
+
+function ProtectionTab({ poolId, pool }) {
+  const [desc,    setDesc]    = useState('');
+  const [txnId,   setTxnId]   = useState('');
+  const [sending, setSending] = useState(false);
+  const [done,    setDone]    = useState(false);
+
+  const handleDispute = async () => {
+    if (!desc.trim() || desc.trim().length < 10) { toast.error('Please describe the issue in at least 10 characters.'); return; }
+    setSending(true);
+    try {
+      const res = await import('../api/pools.js').then(m => m.reportDispute ? m.reportDispute(poolId, { description: desc, transaction_id: txnId || undefined }) : Promise.reject(new Error('not implemented')));
+      setDone(true);
+      toast.success('Dispute reported. Support will review within 24 hours.');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to report dispute.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
+        <div style={{ fontWeight: 700, color: 'var(--teal)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>🔐 How your money is protected</div>
+        <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {[
+            'All payments are processed by Monnify (CBN-licensed). Qreek never holds funds.',
+            'Funds go directly from the payer\'s bank to the recipient\'s bank — the admin cannot intercept them.',
+            'Every transaction is recorded on Qreek\'s immutable ledger and visible to all pool members.',
+            'Admin changes are logged with timestamp and visible to all members.',
+            'You can report any suspicious activity below and our support team will respond within 24 hours.',
+          ].map((item, i) => <li key={i} style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.65 }}>{item}</li>)}
+        </ul>
+      </div>
+
+      {done ? (
+        <div style={{ background: 'var(--green-faint)', border: '1px solid var(--green)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', textAlign: 'center', color: 'var(--green)' }}>
+          ✅ Dispute reported successfully. Reference: DISPUTE-{poolId?.slice(0,6)?.toUpperCase()}<br />
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>Our support team will contact you within 24 hours.</span>
+        </div>
+      ) : (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
+          <div style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '0.95rem' }}>🚩 Report a problem with this pool</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Transaction reference (optional)</label>
+              <input value={txnId} onChange={e => setTxnId(e.target.value)} placeholder="e.g. QRK_PS_ABC123" style={{ fontFamily: 'var(--font-mono)' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Describe the problem *</label>
+              <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={4} placeholder="Describe what happened — e.g. Admin created a payment request for an unauthorized amount..." style={{ resize: 'none' }} />
+            </div>
+            <Button onClick={handleDispute} disabled={sending || desc.trim().length < 10} variant="danger" style={{ alignSelf: 'flex-start' }}>
+              {sending ? 'Sending…' : 'Submit dispute report'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

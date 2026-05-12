@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   --bg: #060e1a;
@@ -25,8 +25,8 @@
   --text-2: #8ba4c0;
   --text-3: #4a6a8a;
   --text-inv: #060e1a;
-  --font-display: "Space Grotesk", sans-serif;
-  --font-body: "DM Sans", sans-serif;
+  --font-display: 'Montserrat', sans-serif;
+  --font-body: 'Montserrat', sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   --radius-sm: 8px;
   --radius: 12px;
@@ -151,3 +151,4 @@
   .red { color: var(--red); }
   .muted { color: var(--text-2); }
 }
+

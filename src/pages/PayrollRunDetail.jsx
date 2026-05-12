@@ -17,6 +17,13 @@ const STATUS_ICONS = {
   processing: <Clock size={16} color="var(--amber)" />,
 };
 
+/**
+ * PayrollRunDetail component - Displays comprehensive details for a specific payroll batch.
+ * Features include overall aggregate metrics (gross, fees, failed vs completed counts),
+ * a granular list of individual employee disbursement statuses, and an exportable receipt view.
+ *
+ * @returns {JSX.Element}
+ */
 export default function PayrollRunDetail() {
   const { runId }   = useParams();
   const navigate    = useNavigate();
