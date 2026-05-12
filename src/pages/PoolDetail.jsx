@@ -306,7 +306,6 @@ export default function PoolDetail() {
             ))}
           </div>
         )}
-      </div>
 
         {tab === 'protect' && (
           <ProtectionTab poolId={poolId} pool={pool} />
