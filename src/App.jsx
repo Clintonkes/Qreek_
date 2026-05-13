@@ -1,3 +1,15 @@
+/**
+ * @file App.jsx
+ * @description The root component of the Qreek Finance application.
+ * This file sets up the primary routing infrastructure, authentication guards, 
+ * and global page transitions.
+ * 
+ * Flow:
+ * 1. Orchestration: Manages the mapping of URLs to specific page components.
+ * 2. Security: Implements the AuthGuard component to protect private dashboards and management tools.
+ * 3. Navigation: Provides the high-level application layout and global state integration.
+ */
+
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +32,7 @@ const PayrollRuns      = lazy(() => import('./pages/PayrollRuns.jsx'));
 const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
 const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
 const PaymentLinks     = lazy(() => import('./pages/PaymentLinks.jsx'));
+const PublicPayment    = lazy(() => import('./pages/PublicPayment.jsx'));
 
 /**
  * AuthGuard component that protects routes requiring authentication.
@@ -55,8 +68,16 @@ function AnimatedOutlet() {
 }
 
 /**
- * Main App component that defines the application structure and routing.
- * Configures public routes, protected routes (via AuthGuard), and layout wrappers.
+ * Main App component - Root of the Qreek Finance application.
+ * Defines the application structure, configuring all public, private, and dynamic routes.
+ * 
+ * Features:
+ * - Routing Architecture: Centralizes route management for dashboards, pools, and enterprise tools.
+ * - Authentication Guards: Protects sensitive paths via the AuthGuard component.
+ * - Transitions: Implements fluid page animations using Framer Motion.
+ * - Global State: Integrates with Zustand and Session storage for session persistence.
+ *
+ * @returns {JSX.Element}
  */
 export default function App() {
   return (
@@ -67,6 +88,7 @@ export default function App() {
           <Route path="/login"      element={<Login />} />
           <Route path="/register"   element={<Register />} />
           <Route path="/forgot-pin" element={<ForgotPin />} />
+          <Route path="/p/:code"    element={<PublicPayment />} />
 
           <Route element={<AuthGuard />}>
             <Route element={<PrivateLayout />}>

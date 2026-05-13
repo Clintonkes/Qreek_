@@ -1,3 +1,16 @@
+/**
+ * @file Landing.jsx
+ * @description The primary landing page for Qreek Finance.
+ * This file serves as the marketing and educational hub, detailing the platform's core products 
+ * (Payment Pools, Payment Links, and Enterprise Payroll) while emphasizing trust and accountability.
+ * 
+ * Flow:
+ * 1. Navigation: Provides global access to product features, flows, and authentication (Sign in/Register).
+ * 2. Education: Uses trust strips and pillar cards to explain how Qreek interfaces with Monnify 
+ *    without holding user funds.
+ * 3. Conversion: Strategic CTAs direct prospective users to the registration flow.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -15,9 +28,15 @@ function Nav() {
       <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.01em' }}>
         Qreek<span style={{ color: 'var(--teal)' }}>Finance</span>
       </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Link to="/login" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.5rem 1rem', borderRadius: 'var(--radius)' }}>Sign in</Link>
-        <Link to="/register" style={{ background: 'var(--teal)', color: 'var(--text-inv)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 700, padding: '0.55rem 1.25rem', borderRadius: 'var(--radius)' }}>Get started free</Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div className="nav-links" style={{ display: 'flex', gap: '1.5rem' }}>
+          <a href="#features" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>Features</a>
+          <a href="#flows" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>Flows</a>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link to="/login" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.5rem 1rem', borderRadius: 'var(--radius)' }}>Sign in</Link>
+          <Link to="/register" style={{ background: 'var(--teal)', color: 'var(--text-inv)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 700, padding: '0.55rem 1.25rem', borderRadius: 'var(--radius)' }}>Get started free</Link>
+        </div>
       </div>
     </nav>
   );
@@ -122,9 +141,9 @@ export default function Landing() {
           no more screenshots, no more disputes, no more manual bank alerts.
           Powered by Monnify. <strong style={{ color: 'var(--text)' }}>Qreek never holds your funds.</strong>
         </p>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2rem' }}>
-          <Link to="/register" style={{ background: 'var(--teal)', color: 'var(--text-inv)', textDecoration: 'none', fontSize: '1rem', fontWeight: 800, padding: '0.85rem 2rem', borderRadius: 'var(--radius)' }}>Start free — no monthly fees</Link>
-          <Link to="/login" style={{ background: 'var(--surface-2)', color: 'var(--text)', textDecoration: 'none', fontSize: '1rem', fontWeight: 600, padding: '0.85rem 2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>Sign in</Link>
+        <div className="hero-btns" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2rem', width: '100%' }}>
+          <Link to="/register" style={{ background: 'var(--teal)', color: 'var(--text-inv)', textDecoration: 'none', fontSize: '1rem', fontWeight: 800, padding: '0.85rem 2rem', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Start with Qreek</Link>
+          <Link to="/register" style={{ background: 'var(--surface-2)', color: 'var(--text)', textDecoration: 'none', fontSize: '1rem', fontWeight: 600, padding: '0.85rem 2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Explore payment flows</Link>
         </div>
         <TrustStrip />
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', justifyContent: 'center' }}>

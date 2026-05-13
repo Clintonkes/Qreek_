@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 :root {
   --bg: #060e1a;
@@ -150,5 +150,11 @@
   .green { color: var(--green); }
   .red { color: var(--red); }
   .muted { color: var(--text-2); }
+}
+
+@media (max-width: 640px) {
+  .nav-links { display: none !important; }
+  .hero-btns { flex-direction: row !important; flex-wrap: nowrap !important; }
+  .hero-btns > a { flex: 1; padding: 0.85rem 0.5rem !important; font-size: 0.85rem !important; }
 }
 

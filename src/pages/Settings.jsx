@@ -1,4 +1,17 @@
-// Settings.jsx gives the signed-in user a place to manage profile-adjacent security and payout details.
+/**
+ * @file Settings.jsx
+ * @description Provides the user interface for managing account settings, security, and financial preferences.
+ * This file handles user profile display, default bank account configuration, security PIN updates, 
+ * and user session termination (logout).
+ * 
+ * Flow:
+ * 1. Initialization: Fetches the list of supported banks from the backend API.
+ * 2. Profile Management: Displays user identity and referral information from the global auth store.
+ * 3. Bank Configuration: Allows users to set or update their default Naira payout account via saveBank API.
+ * 4. Security Updates: Facilitates PIN changes with current PIN validation to ensure account integrity.
+ * 5. Session Control: Triggers the global logout action and redirects to the login page.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -9,6 +22,12 @@ import CopyButton from '../components/ui/CopyButton.jsx';
 import useAuthStore from '../store/authStore.js';
 import { changePin, saveBank, listBanks } from '../api/auth.js';
 
+/**
+ * Section component - A structural wrapper for categorizing setting groups.
+ * @param {Object} props
+ * @param {string} props.title - The header title for the settings section.
+ * @param {React.ReactNode} props.children - The content to render inside the section.
+ */
 function Section({ title, children }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -43,6 +62,11 @@ export default function Settings() {
     listBanks().then(d => setBanks(d.banks || [])).catch(() => {});
   }, []);
 
+  /**
+   * handleSaveBank - Processes and persists the user's default payout bank account.
+   * Flow: Validates inputs -> calls saveBank API -> updates global user state -> shows success toast.
+   * @param {React.FormEvent} e - Form submission event.
+   */
   const handleSaveBank = async (e) => {
     e.preventDefault();
     if (!bankForm.account_number || !bankForm.bank_code) { toast.error('Fill in account details'); return; }
@@ -58,6 +82,12 @@ export default function Settings() {
     }
   };
 
+  /**
+   * handleChangePin - Securely updates the user's security PIN.
+   * Flow: Validates new PIN match/length -> calls changePin API (requires current PIN) -> 
+   * clears form -> shows success toast.
+   * @param {React.FormEvent} e - Form submission event.
+   */
   const handleChangePin = async (e) => {
     e.preventDefault();
     if (pinForm.new_pin !== pinForm.confirm_pin) { toast.error('New PINs do not match'); return; }
@@ -74,6 +104,10 @@ export default function Settings() {
     }
   };
 
+  /**
+   * handleLogout - Terminates the user's authenticated session.
+   * Flow: Triggers global logout (clears tokens/state) -> redirects user to the login screen.
+   */
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (

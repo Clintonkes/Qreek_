@@ -1,3 +1,19 @@
+/**
+ * @file authStore.js
+ * @description Global state management for authentication and session lifecycle.
+ * Utilizes Zustand for state persistence and handles JWT token storage, 
+ * session timeout logic, and user profile synchronization with localStorage.
+ * 
+ * Flow:
+ * 1. State Initialization: On load, it checks localStorage for existing tokens 
+ *    and validates their freshness based on the SESSION_TIMEOUT_MS.
+ * 2. Auth Actions: setAuth and updateTokens manage the acquisition and refresh 
+ *    of access/refresh tokens.
+ * 3. Session Security: markSessionActivity and validateSession track user activity 
+ *    to prevent unauthorized access after prolonged inactivity.
+ * 4. Termination: logout clears all sensitive data from memory and persistent storage.
+ */
+
 import { create } from 'zustand';
 
 export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;

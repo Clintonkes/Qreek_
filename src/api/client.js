@@ -1,3 +1,19 @@
+/**
+ * @file client.js
+ * @description Centralized HTTP client configuration for backend communication.
+ * Provides a pre-configured Axios instance with automated authentication logic 
+ * and error handling.
+ * 
+ * Flow:
+ * 1. Request Interception: Automatically injects the active JWT access token into the 
+ *    Authorization header and performs pre-flight session expiration checks.
+ * 2. Response Interception: Monitors for 401 Unauthorized errors.
+ * 3. Token Refresh: On a 401 error, it attempts a single transparent token refresh 
+ *    using the stored refresh token.
+ * 4. Error Escalation: If a refresh fails or the session is definitively invalid, 
+ *    it triggers a global logout and redirects the user to the login screen.
+ */
+
 import axios from 'axios';
 import useAuthStore, { AUTH_STORAGE_KEYS, clearStoredSession, isSessionExpired } from '../store/authStore.js';
 

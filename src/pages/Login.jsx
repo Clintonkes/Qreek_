@@ -1,6 +1,21 @@
+/**
+ * @file Login.jsx
+ * @description Manages the user authentication interface and logic.
+ * This file handles phone number validation, PIN entry with visibility toggles, 
+ * and robust error handling including account lockout protection.
+ * 
+ * Flow:
+ * 1. Input: Collects phone number and security PIN from the user.
+ * 2. Validation: Normalizes the phone number and ensures the PIN is a 4-6 digit numeric string.
+ * 3. Authentication: Calls the login API. On success, it persists tokens and user data 
+ *    to the global authStore and redirects to the dashboard.
+ * 4. Security: Monitors failed attempts and displays remaining attempts or account frozen state.
+ * 5. Recovery: Provides navigation links to PIN retrieval and the landing page.
+ */
+
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LockKey, Warning } from 'phosphor-react';
+import { ArrowLeft, LockKey, Warning, Eye, EyeSlash, House } from 'phosphor-react';
 import { login } from '../api/auth.js';
 import useAuthStore from '../store/authStore.js';
 import Button from '../components/ui/Button.jsx';
@@ -30,6 +45,7 @@ export default function Login() {
   const [loading,      setLoading]      = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(null);
   const [frozen,       setFrozen]       = useState(false);
+  const [showPin,      setShowPin]      = useState(false);
 
   const clearErr = (k) => setErrors(e => ({ ...e, [k]: '' }));
 
@@ -38,6 +54,12 @@ export default function Login() {
     return m ? parseInt(m[1], 10) : null;
   };
 
+  /**
+   * handleSubmit - Processes the login form submission.
+   * Flow: Validates inputs -> normalizes phone -> calls login API -> 
+   * handles success (storage/redirect) or error (attempts count/lockout).
+   * @param {React.FormEvent} e - Form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = {};
@@ -72,8 +94,8 @@ export default function Login() {
       }
       const remaining = parseAttempts(msg);
       if (remaining !== null) setAttemptsLeft(remaining);
-      setErrors({ pin: msg });
-      setPin('');
+      setErrors({ pin: 'Invalid credentials. Please try again.' });
+      // We don't clear the PIN anymore to allow user to correct it, as per request
     } finally {
       setLoading(false);
     }
@@ -122,10 +144,10 @@ export default function Login() {
               error={errors.phone}
             />
 
-            <div>
+            <div style={{ position: 'relative' }}>
               <Input
                 label="PIN"
-                type="password"
+                type={showPin ? "text" : "password"}
                 inputMode="numeric"
                 maxLength={6}
                 value={pin}
@@ -135,6 +157,26 @@ export default function Login() {
                 autoComplete="current-password"
                 autoFocus={!!initialPhone}
               />
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '2.15rem',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-3)',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 2
+                }}
+              >
+                {showPin ? <EyeSlash size={20} /> : <Eye size={20} />}
+              </button>
               {attemptsLeft !== null && attemptsLeft > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', padding: '0.55rem 0.75rem', background: attemptsLeft <= 2 ? 'var(--red-faint)' : 'var(--amber-faint)', border: `1px solid ${attemptsLeft <= 2 ? 'var(--red)' : 'var(--amber)'}`, borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: attemptsLeft <= 2 ? 'var(--red)' : 'var(--amber)' }}>
                   <Warning size={14} weight="fill" />
@@ -147,8 +189,11 @@ export default function Login() {
               {loading ? 'Signing in…' : 'Sign in →'}
             </Button>
 
-            <div style={{ textAlign: 'center' }}>
-              <Link to="/forgot-pin" style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Forgot PIN?</Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'center' }}>
+              <Link to="/forgot-pin" style={{ fontSize: '0.85rem', color: 'var(--text-2)', textDecoration: 'none' }}>Retrieve PIN?</Link>
+              <Link to="/" style={{ fontSize: '0.85rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', textDecoration: 'none' }}>
+                <House size={14} /> Return to home
+              </Link>
             </div>
           </form>
         )}
