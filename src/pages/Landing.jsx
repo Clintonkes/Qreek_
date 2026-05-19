@@ -20,6 +20,22 @@ const GLOBAL_CSS = `
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
   }
+  @keyframes modeAura {
+    0%   { transform: translate3d(-4%, -2%, 0) scale(1); filter: hue-rotate(0deg); }
+    33%  { transform: translate3d(5%, 3%, 0) scale(1.08); filter: hue-rotate(18deg); }
+    66%  { transform: translate3d(2%, -4%, 0) scale(0.96); filter: hue-rotate(-14deg); }
+    100% { transform: translate3d(-4%, -2%, 0) scale(1); filter: hue-rotate(0deg); }
+  }
+  @keyframes modeSweep {
+    0%   { transform: translateX(-110%) rotate(8deg); opacity: 0; }
+    18%  { opacity: 0.55; }
+    55%  { opacity: 0.25; }
+    100% { transform: translateX(110%) rotate(8deg); opacity: 0; }
+  }
+  @keyframes modeTrace {
+    0%, 100% { stroke-dashoffset: 120; opacity: 0.25; }
+    50%      { stroke-dashoffset: 0; opacity: 0.85; }
+  }
   html { scroll-behavior: smooth; }
 
   /* Mobile layout fixes — all buttons visible on every screen */
@@ -31,6 +47,10 @@ const GLOBAL_CSS = `
     .cases-grid         { grid-template-columns: 1fr !important; }
     .trust-grid         { grid-template-columns: 1fr !important; }
     .price-grid         { grid-template-columns: 1fr 1fr !important; }
+    .modes-shell        { grid-template-columns: 1fr !important; }
+    .modes-panel        { min-height: 420px !important; }
+    .mode-action-grid   { grid-template-columns: 1fr !important; }
+    .mode-tabs          { grid-template-columns: 1fr 1fr !important; }
     .cta-btns           { flex-direction: column !important; align-items: center !important; }
     .cta-btns a         { width: 100% !important; max-width: 360px; text-align: center; }
     .fee-pills          { justify-content: center !important; }
@@ -65,6 +85,7 @@ function Nav() {
   }, []);
 
   const sections = [
+    ['modes',        'Modes'],
     ['features',     'Features'],
     ['how-it-works', 'How it works'],
     ['use-cases',    'Use cases'],
@@ -309,6 +330,179 @@ function SL({ children, color = 'var(--teal)' }) {
   return <div style={{ fontSize: '0.73rem', fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color, marginBottom: '0.75rem' }}>{children}</div>;
 }
 
+function ModeAction({ action }) {
+  return (
+    <div style={{
+      background: 'rgba(6,14,26,0.42)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 'var(--radius)',
+      padding: '0.9rem',
+      minHeight: 104,
+    }}>
+      <div style={{ fontSize: '1.3rem', marginBottom: '0.45rem' }}>{action.icon}</div>
+      <div style={{ fontSize: '0.84rem', fontWeight: 800, marginBottom: '0.25rem' }}>{action.title}</div>
+      <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.78rem', lineHeight: 1.55 }}>{action.copy}</p>
+    </div>
+  );
+}
+
+function ModeShowcase({ modes }) {
+  const [active, setActive] = useState(0);
+  const mode = modes[active];
+
+  return (
+    <section id="modes" style={{ padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <div style={{
+        position: 'absolute',
+        inset: '-20% -10%',
+        background: `radial-gradient(circle at 18% 24%, ${mode.color}22, transparent 28%), radial-gradient(circle at 82% 20%, ${mode.alt}1f, transparent 26%), radial-gradient(circle at 50% 86%, rgba(46,213,115,0.13), transparent 30%)`,
+        animation: 'modeAura 12s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{ maxWidth: 1120, margin: '0 auto', position: 'relative' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <SL color={mode.color}>Modes of operation</SL>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.65rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.015em', marginBottom: '0.8rem' }}>
+            One payment layer, tuned to how people collect
+          </h2>
+          <p style={{ color: 'var(--text-2)', maxWidth: 650, margin: '0 auto', lineHeight: 1.8, fontSize: '1rem' }}>
+            Switch between communal, solo, merchant, and enterprise workflows. The interface changes emphasis, but the promise stays the same: clear actions, visible records, and confirmed payments.
+          </p>
+        </div>
+
+        <div className="mode-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.65rem', marginBottom: '1.25rem' }}>
+          {modes.map((m, i) => {
+            const selected = i === active;
+            return (
+              <button
+                key={m.name}
+                onClick={() => setActive(i)}
+                style={{
+                  background: selected ? `${m.color}18` : 'rgba(15,30,53,0.72)',
+                  color: selected ? m.color : 'var(--text-2)',
+                  border: `1px solid ${selected ? m.color + '80' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 'var(--radius)',
+                  padding: '0.8rem 0.9rem',
+                  fontWeight: 800,
+                  fontSize: '0.84rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.45rem',
+                  boxShadow: selected ? `0 12px 38px ${m.color}22` : 'none',
+                  transition: 'all 0.25s ease',
+                }}
+              >
+                <span>{m.icon}</span>
+                <span>{m.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="modes-shell" style={{
+          display: 'grid',
+          gridTemplateColumns: '1.05fr 0.95fr',
+          gap: '1.25rem',
+          alignItems: 'stretch',
+        }}>
+          <div className="modes-panel" style={{
+            minHeight: 500,
+            borderRadius: 'var(--radius-xl)',
+            border: `1px solid ${mode.color}55`,
+            background: 'linear-gradient(145deg, rgba(15,30,53,0.94), rgba(6,14,26,0.96))',
+            boxShadow: `0 30px 90px ${mode.color}18`,
+            position: 'relative',
+            overflow: 'hidden',
+            padding: '1.4rem',
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(120deg, transparent 20%, ${mode.color}18 45%, transparent 68%)`, animation: 'modeSweep 6s ease-in-out infinite', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 26% 28%, ${mode.color}22, transparent 30%), radial-gradient(circle at 78% 72%, ${mode.alt}20, transparent 34%)`, pointerEvents: 'none' }} />
+
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.4rem' }}>
+              <div>
+                <div style={{ color: mode.color, fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>{mode.kicker}</div>
+                <h3 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, margin: 0 }}>{mode.name} mode</h3>
+              </div>
+              <div style={{ width: 54, height: 54, borderRadius: '50%', background: `${mode.color}18`, border: `1px solid ${mode.color}70`, display: 'grid', placeItems: 'center', fontSize: '1.7rem', boxShadow: `0 0 36px ${mode.color}22` }}>
+                {mode.icon}
+              </div>
+            </div>
+
+            <div style={{ position: 'relative', minHeight: 250, display: 'grid', placeItems: 'center', margin: '1rem 0 1.35rem' }}>
+              <svg viewBox="0 0 460 260" style={{ width: '100%', maxWidth: 520, height: 'auto', overflow: 'visible' }} aria-hidden="true">
+                <defs>
+                  <linearGradient id={`modeGradient-${mode.name}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={mode.color} />
+                    <stop offset="55%" stopColor={mode.alt} />
+                    <stop offset="100%" stopColor="#2ed573" />
+                  </linearGradient>
+                  <filter id={`modeGlow-${mode.name}`} x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="8" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                <path d="M82 128 C128 38, 238 42, 290 95 S392 194, 330 222 S154 232, 96 178 S35 160, 82 128" fill="none" stroke={`url(#modeGradient-${mode.name})`} strokeWidth="2.5" strokeDasharray="12 10" style={{ animation: 'modeTrace 5s ease-in-out infinite' }} />
+                {[mode.nodes[0], mode.nodes[1], mode.nodes[2], mode.nodes[3]].map((node, i) => (
+                  <g key={node.label} transform={`translate(${node.x} ${node.y})`}>
+                    <circle r={i === 0 ? 43 : 31} fill="rgba(6,14,26,0.9)" stroke={i === 0 ? mode.color : 'rgba(255,255,255,0.18)'} strokeWidth="2" filter={`url(#modeGlow-${mode.name})`} />
+                    <text y="-2" textAnchor="middle" fontSize={i === 0 ? 25 : 18}>{node.icon}</text>
+                    <text y={i === 0 ? 22 : 18} textAnchor="middle" fontSize="10" fill="#8ba4c0" fontWeight="700">{node.label}</text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+
+            <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+              {mode.stats.map(stat => (
+                <div key={stat.label} style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius)', padding: '0.75rem' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', color: mode.color, fontWeight: 900, fontSize: '0.98rem' }}>{stat.value}</div>
+                  <div style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginTop: '0.15rem' }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(15,30,53,0.72)',
+            padding: '1.35rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: '0 18px 60px rgba(0,0,0,0.24)',
+          }}>
+            <div>
+              <div style={{ color: mode.color, fontWeight: 900, fontSize: '0.76rem', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>What users do here</div>
+              <h3 style={{ fontSize: '1.35rem', marginBottom: '0.65rem', lineHeight: 1.2 }}>{mode.title}</h3>
+              <p style={{ color: 'var(--text-2)', lineHeight: 1.75, fontSize: '0.92rem', margin: 0 }}>{mode.summary}</p>
+            </div>
+
+            <div className="mode-action-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {mode.actions.map(action => <ModeAction key={action.title} action={action} />)}
+            </div>
+
+            <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: '0.55rem' }}>Live operation path</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                {mode.path.map((step, i) => (
+                  <span key={step} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: i === mode.path.length - 1 ? mode.color : 'var(--text-2)', background: i === mode.path.length - 1 ? `${mode.color}14` : 'rgba(255,255,255,0.045)', border: `1px solid ${i === mode.path.length - 1 ? mode.color + '50' : 'rgba(255,255,255,0.08)'}`, borderRadius: 'var(--radius-full)', padding: '0.35rem 0.7rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                    {step}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ════════════════════════════════ MAIN PAGE ════════════════════════════════ */
 export default function Landing() {
   const C   = { textAlign: 'center' };
@@ -337,6 +531,117 @@ export default function Landing() {
     { tag: 'Enterprise',        color: 'var(--purple)', title: 'TechBridge Solutions — 47 employees',            body: 'CFO confirms payroll in 4 minutes. All 47 salary transfers fire in parallel. Each employee gets a bank alert. Printable receipt for accounting. Total fee: 61,200. No monthly subscription.' },
     { tag: 'Student Association',color:'var(--teal)',   title: 'UNILAG Engineering — Final Year Levy',           body: 'Collects 15,000 project levy from 300 students via a Qreek pool. Members pay from their phones. The committee sees exactly who has paid and who is outstanding.' },
     { tag: 'Small Business',    color: 'var(--amber)',  title: 'Chidi web agency — collecting project deposits', body: 'Sends a Qreek payment link to each client instead of sharing account numbers. Client pays via card or bank transfer. Chidi gets instant confirmation and a clean receipt.' },
+  ];
+
+  const MODES = [
+    {
+      name: 'Communal',
+      icon: '🤝',
+      kicker: 'Groups and circles',
+      color: '#00d4aa',
+      alt: '#4a90e2',
+      title: 'Collect together without losing trust in the room.',
+      summary: 'Communal mode is for ajo, esusu, church drives, levies, and committee collections where everyone needs to see the same truth at the same time.',
+      actions: [
+        { icon: '👥', title: 'Invite members', copy: 'Create a pool, add admins, and share one invite link with the whole group.' },
+        { icon: '📣', title: 'Request contributions', copy: 'Send payment requests with amount, purpose, due date, and reminders.' },
+        { icon: '📊', title: 'Track the ledger', copy: 'See who has paid, who is pending, and the running total without screenshots.' },
+        { icon: '🧾', title: 'Resolve disputes', copy: 'Receipts, activity history, and flagged issues stay attached to the pool.' },
+      ],
+      stats: [
+        { value: '0.30%', label: 'per contribution' },
+        { value: 'Live', label: 'member ledger' },
+        { value: 'All', label: 'members visible' },
+      ],
+      path: ['Create pool', 'Invite members', 'Collect', 'Confirm', 'Share ledger'],
+      nodes: [
+        { x: 230, y: 125, icon: '🏦', label: 'Pool' },
+        { x: 92, y: 122, icon: '👤', label: 'Ada' },
+        { x: 330, y: 72, icon: '👤', label: 'Tunde' },
+        { x: 350, y: 200, icon: '👤', label: 'Ngozi' },
+      ],
+    },
+    {
+      name: 'Solo',
+      icon: '⚡',
+      kicker: 'Personal collections',
+      color: '#f5a623',
+      alt: '#00d4aa',
+      title: 'Move fast when one person needs to collect cleanly.',
+      summary: 'Solo mode keeps individual collections sharp: personal dues, deposits, one-off payments, and small business requests with automatic confirmation.',
+      actions: [
+        { icon: '🔗', title: 'Generate a link', copy: 'Create a branded payment link for any amount or leave it flexible.' },
+        { icon: '💬', title: 'Share anywhere', copy: 'Drop the link into WhatsApp, Instagram, email, or an invoice.' },
+        { icon: '✅', title: 'Get confirmation', copy: 'The payment is confirmed by Monnify and recorded instantly in Qreek.' },
+        { icon: '📥', title: 'Keep records', copy: 'Every payer, amount, purpose, and receipt is stored for follow-up.' },
+      ],
+      stats: [
+        { value: '0.40%', label: 'per payment' },
+        { value: '2 min', label: 'link setup' },
+        { value: 'No', label: 'account needed' },
+      ],
+      path: ['Create link', 'Share', 'Customer pays', 'Receipt', 'Record'],
+      nodes: [
+        { x: 230, y: 125, icon: '🔗', label: 'Link' },
+        { x: 92, y: 122, icon: '📱', label: 'Phone' },
+        { x: 330, y: 72, icon: '💳', label: 'Card' },
+        { x: 350, y: 200, icon: '🏦', label: 'Bank' },
+      ],
+    },
+    {
+      name: 'Merchant',
+      icon: '🛍️',
+      kicker: 'Sales and deposits',
+      color: '#2ed573',
+      alt: '#f5a623',
+      title: 'Turn everyday selling into organized payment operations.',
+      summary: 'Merchant mode gives sellers, agencies, and service providers a lightweight command center for deposits, balances, repeat clients, and payment proof.',
+      actions: [
+        { icon: '🏷️', title: 'Name each collection', copy: 'Label payments by client, order, event, project, or invoice purpose.' },
+        { icon: '💸', title: 'Accept channels', copy: 'Customers can pay by card, transfer, or USSD through secure checkout.' },
+        { icon: '🔔', title: 'See alerts', copy: 'Confirmed payments show up with clear status instead of uncertain bank alerts.' },
+        { icon: '📚', title: 'Review history', copy: 'Filter collections by customer, amount, date, and receipt state.' },
+      ],
+      stats: [
+        { value: 'Any', label: 'customer channel' },
+        { value: 'Clean', label: 'receipts' },
+        { value: 'Fast', label: 'follow-up' },
+      ],
+      path: ['Set purpose', 'Share checkout', 'Confirm', 'Receipt', 'Follow up'],
+      nodes: [
+        { x: 230, y: 125, icon: '🛍️', label: 'Shop' },
+        { x: 92, y: 122, icon: '🧑', label: 'Client' },
+        { x: 330, y: 72, icon: '🧾', label: 'Order' },
+        { x: 350, y: 200, icon: '✅', label: 'Paid' },
+      ],
+    },
+    {
+      name: 'Enterprise',
+      icon: '💼',
+      kicker: 'Payroll and teams',
+      color: '#9b59b6',
+      alt: '#4a90e2',
+      title: 'Run high-volume payouts with approval and evidence.',
+      summary: 'Enterprise mode is built for payroll, department reviews, bulk payment runs, and accounting teams that need status per employee and printable proof.',
+      actions: [
+        { icon: '📄', title: 'Import roster', copy: 'Upload employees, salaries, banks, departments, and payment references.' },
+        { icon: '🛡️', title: 'Approve with PIN', copy: 'Sensitive runs require a secure confirmation step before money moves.' },
+        { icon: '🚀', title: 'Disburse in bulk', copy: 'Salary transfers are submitted in parallel with per-person status updates.' },
+        { icon: '🧾', title: 'Export proof', copy: 'Download payroll receipts and run summaries for accounting records.' },
+      ],
+      stats: [
+        { value: '0.30%', label: 'per run' },
+        { value: 'Bulk', label: 'disbursement' },
+        { value: 'Per', label: 'employee status' },
+      ],
+      path: ['Import', 'Review', 'PIN approve', 'Disburse', 'Export'],
+      nodes: [
+        { x: 230, y: 125, icon: '💼', label: 'Run' },
+        { x: 92, y: 122, icon: '👩‍💼', label: 'HR' },
+        { x: 330, y: 72, icon: '🏢', label: 'Team' },
+        { x: 350, y: 200, icon: '📋', label: 'Audit' },
+      ],
+    },
   ];
 
   return (
@@ -399,6 +704,8 @@ export default function Landing() {
           ))}
         </div>
       </section>
+
+      <ModeShowcase modes={MODES} />
 
       {/* ════════ FEATURES / THREE PILLARS ════════ */}
       <section id="features" style={SEC()}>
