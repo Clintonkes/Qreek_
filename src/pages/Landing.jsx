@@ -350,6 +350,14 @@ function ModeShowcase({ modes }) {
   const [active, setActive] = useState(0);
   const mode = modes[active];
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActive(current => (current + 1) % modes.length);
+    }, 10000);
+
+    return () => window.clearInterval(timer);
+  }, [modes.length]);
+
   return (
     <section id="modes" style={{ padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
       <div style={{
@@ -361,13 +369,9 @@ function ModeShowcase({ modes }) {
       }} />
       <div style={{ maxWidth: 1120, margin: '0 auto', position: 'relative' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <SL color={mode.color}>Modes of operation</SL>
           <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.65rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.015em', marginBottom: '0.8rem' }}>
             One payment layer, tuned to how people collect
           </h2>
-          <p style={{ color: 'var(--text-2)', maxWidth: 650, margin: '0 auto', lineHeight: 1.8, fontSize: '1rem' }}>
-            Switch between communal, solo, merchant, and enterprise workflows. The interface changes emphasis, but the promise stays the same: clear actions, visible records, and confirmed payments.
-          </p>
         </div>
 
         <div className="mode-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.65rem', marginBottom: '1.25rem' }}>
