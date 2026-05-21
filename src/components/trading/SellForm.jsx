@@ -5,8 +5,8 @@ import Input from '../ui/Input.jsx';
 import useRatesStore from '../../store/ratesStore.js';
 
 const COINS = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB', 'SOL'];
-const FEE_POOL     = 0.0025;
-const FEE_EXTERNAL = 0.004;
+const FEE_POOL     = 0.0015;
+const FEE_EXTERNAL = 0.0021;
 
 function fmtNGN(v) {
   if (!v || isNaN(v)) return '₦0.00';

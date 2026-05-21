@@ -2,24 +2,25 @@
  * @file PublicPayment.jsx
  * @description Provides a public-facing checkout interface for payment links.
  * Enables both Qreek members and non-members to settle payments directly to a 
- * creator's bank account via secure Monnify rails.
+ * creator's bank account via secure Flutterwave rails.
  * 
  * Flow:
  * 1. Resolution: On mount, it resolves the unique payment code via the backend to display link details.
  * 2. Interaction: Users enter their name, phone, and optional note. Flexible amount links allow user input.
- * 3. Execution: handlePay processes the payment, initiating a Monnify checkout session.
+ * 3. Execution: handlePay processes the payment, initiating a Flutterwave checkout session.
  * 4. Conversion: After success, it displays an interactive prompt encouraging the user to join Qreek.
  */
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight } from 'phosphor-react';
-import { resolveLink } from '../api/paymentLinks.js';
+import { confirmFlutterwaveLinkPayment, resolveLink, payLink } from '../api/paymentLinks.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import PhoneInput from '../components/ui/PhoneInput.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { formatPhoneNumber } from '../lib/utils.js';
+import { getCheckoutUrl, getTransactionReference, PAYMENT_PROVIDER, QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 import { toast } from 'react-hot-toast';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -30,30 +31,57 @@ const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits:
  * - Link Resolution: Fetches and displays details for a specific payment code.
  * - Validation: Ensures the link is active, has not expired, and has not exceeded use limits.
  * - Payment Form: Collects payer identity and supports fixed or flexible amounts.
- * - Monnify Integration: Handles the payment execution (simulated in this build).
+ * - Flutterwave Integration: Hands off to hosted checkout and confirms the redirect.
  * - Post-Payment CTA: Incentivizes payers to register for Qreek after a successful transaction.
  *
  * @returns {JSX.Element}
  */
 export default function PublicPayment() {
   const { code } = useParams();
+  const [searchParams] = useSearchParams();
   const [link, setLink] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '', amount: '', note: '' });
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+
+  const redirectedTransactionId = searchParams.get('transaction_id');
+  const redirectedReference = searchParams.get('tx_ref');
+  const redirectedStatus = searchParams.get('status');
 
   useEffect(() => {
     resolveLink(code)
-      .then(setLink)
+      .then(data => setLink(data.link || data))
       .catch(err => setError(err.response?.data?.detail || 'This payment link is invalid or has expired.'))
       .finally(() => setLoading(false));
   }, [code]);
 
+  useEffect(() => {
+    if (!redirectedTransactionId && !redirectedReference) return;
+
+    setPaying(true);
+    confirmFlutterwaveLinkPayment(code, {
+      transaction_id: redirectedTransactionId,
+      tx_ref: redirectedReference,
+      status: redirectedStatus,
+    })
+      .then(data => {
+        setReceipt(data.payment || data.transaction || data);
+        setSuccess(true);
+        toast.success('Payment confirmed!');
+      })
+      .catch(err => setError(err.response?.data?.detail || 'We could not confirm this payment yet. If money left your account, the receipt will update after provider verification.'))
+      .finally(() => {
+        setPaying(false);
+        setLoading(false);
+      });
+  }, [code, redirectedReference, redirectedStatus, redirectedTransactionId]);
+
   /**
    * handlePay - Orchestrates the payment checkout flow.
-   * Flow: Validates form data -> prepares amount -> triggers Monnify checkout -> 
+   * Flow: Validates form data -> prepares amount -> triggers Flutterwave checkout -> 
    * handles success (shows success UI/CTA) or failure (shows toast).
    * @param {React.FormEvent} e - Form submission event.
    */
@@ -66,18 +94,25 @@ export default function PublicPayment() {
 
     setPaying(true);
     try {
-      // In a real implementation, this would initialize Monnify checkout
-      // and redirect or open the modal. For this demo/fix, we simulate success.
-      // await payLink(code, { ...form, amount, phone: formatPhoneNumber(form.phone) });
-      
-      // Simulate Monnify loading
-      setTimeout(() => {
-        setSuccess(true);
-        toast.success('Payment successful!');
-        setPaying(false);
-      }, 1500);
+      const response = await payLink(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        amount,
+        note: form.note || undefined,
+        provider: 'flutterwave',
+        redirect_url: `${window.location.origin}/p/${code}`,
+      });
+      const checkoutUrl = getCheckoutUrl(response);
+
+      if (!checkoutUrl) {
+        throw new Error('Missing Flutterwave checkout URL from backend.');
+      }
+
+      const reference = getTransactionReference(response);
+      if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
+      window.location.assign(checkoutUrl);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Payment failed.');
+      toast.error(err.response?.data?.detail || err.message || 'Payment failed.');
       setPaying(false);
     }
   };
@@ -102,7 +137,9 @@ export default function PublicPayment() {
           <CheckCircle size={40} weight="fill" />
         </div>
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Payment Successful!</h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>You've sent {FMT(link.is_flexible ? +form.amount : link.amount)} to {link.title}. A receipt has been sent to your phone.</p>
+        <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>
+          You've sent {FMT(receipt?.amount || (link.is_flexible ? +form.amount : link.amount))} to {link.title}. A receipt has been sent to your phone.
+        </p>
         
         <div style={{ background: 'linear-gradient(135deg, rgba(0,212,170,0.1) 0%, rgba(245,166,35,0.05) 100%)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--teal-border)', textAlign: 'left', marginBottom: '2rem' }}>
           <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--teal)' }}>Want more control over your payments?</h3>
@@ -147,6 +184,11 @@ export default function PublicPayment() {
             ) : (
               <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(link.amount)}</div>
             )}
+            {(link.is_flexible ? +form.amount : link.amount) > 0 && (
+              <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
+                Qreek fee {feePercent(QREEK_FEES.paymentLink)}: {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, QREEK_FEES.paymentLink))}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -171,13 +213,13 @@ export default function PublicPayment() {
 
           <div style={{ marginTop: '0.5rem' }}>
             <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-              {paying ? 'Processing…' : `Pay ${link.is_flexible ? FMT(+form.amount || 0) : FMT(link.amount)} →`}
+              {paying ? 'Opening checkout…' : `Pay ${link.is_flexible ? FMT(+form.amount || 0) : FMT(link.amount)} →`}
             </Button>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: 0.6 }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secure payment powered by</span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>Monnify</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>{PAYMENT_PROVIDER.name}</span>
           </div>
         </form>
       </div>

@@ -12,6 +12,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import { getPool, getPoolActivity, poolSend, createRequest, getRequests } from '../api/pools.js';
 import { getBanks } from '../api/payroll.js';
+import { calculateFee, calculateNet, feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
@@ -47,7 +48,7 @@ function ActivityItem({ item, currentPhone }) {
 
 /**
  * Modal to initiate a payment out of the pool to a recipient's bank account.
- * Requires PIN authorization and dynamically calculates the 0.3% fee.
+ * Requires PIN authorization and dynamically calculates the Qreek pool payout fee.
  *
  * @param {Object} props
  * @param {boolean} props.open - Modal visibility.
@@ -78,7 +79,7 @@ function SendModal({ open, onClose, poolId, banks, onSent }) {
     if (!validate()) return;
     setSaving(true);
     try {
-      await poolSend(poolId, { amount: +form.amount, recipient_name: form.recipient_name, bank_account: form.bank_account, bank_code: form.bank_code, note: form.note || undefined, pin: form.pin });
+      await poolSend(poolId, { amount: +form.amount, recipient_name: form.recipient_name, bank_account: form.bank_account, bank_code: form.bank_code, note: form.note || undefined, pin: form.pin, provider: 'flutterwave' });
       toast.success('Payment sent!');
       setForm({ amount: '', recipient_name: '', bank_account: '', bank_code: '', note: '', pin: '' });
       onSent();
@@ -90,8 +91,8 @@ function SendModal({ open, onClose, poolId, banks, onSent }) {
     }
   };
 
-  const fee = +form.amount > 0 ? +(+form.amount * 0.003).toFixed(2) : 0;
-  const net = +form.amount > 0 ? +(+form.amount - fee).toFixed(2) : 0;
+  const fee = calculateFee(form.amount, QREEK_FEES.poolPayout);
+  const net = calculateNet(form.amount, QREEK_FEES.poolPayout);
 
   return (
     <Modal open={open} onClose={onClose} title="Send payment" maxWidth={500}>
@@ -99,7 +100,7 @@ function SendModal({ open, onClose, poolId, banks, onSent }) {
         <Input label="Amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} error={errors.amount} placeholder="5000" />
         {+form.amount > 0 && (
           <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--text-2)' }}>Fee (0.3%): {FMT(fee)}</span>
+            <span style={{ color: 'var(--text-2)' }}>Fee ({feePercent(QREEK_FEES.poolPayout)}): {FMT(fee)}</span>
             <span style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Recipient gets: {FMT(net)}</span>
           </div>
         )}
@@ -224,7 +225,7 @@ export default function PoolDetail() {
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '1.4rem' }}>{pool.name}</h1>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
-              {pool.member_count} member{pool.member_count !== 1 ? 's' : ''} · Fiat pool · 0.3% fee
+              {pool.member_count} member{pool.member_count !== 1 ? 's' : ''} · Fiat pool · {feePercent(QREEK_FEES.poolPayout)} fee
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -344,7 +345,7 @@ function ProtectionTab({ poolId, pool }) {
         <div style={{ fontWeight: 700, color: 'var(--teal)', marginBottom: '0.75rem', fontSize: '0.95rem' }}>🔐 How your money is protected</div>
         <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {[
-            'All payments are processed by Monnify (CBN-licensed). Qreek never holds funds.',
+            `All payments are processed by ${PAYMENT_PROVIDER.name}. Qreek never holds funds.`,
             'Funds go directly from the payer\'s bank to the recipient\'s bank — the admin cannot intercept them.',
             'Every transaction is recorded on Qreek\'s immutable ledger and visible to all pool members.',
             'Admin changes are logged with timestamp and visible to all members.',

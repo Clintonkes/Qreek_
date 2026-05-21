@@ -40,7 +40,7 @@ function PoolCard({ pool, onNavigate }) {
 
       <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         <UsersThree size={13} />
-        {pool.member_count} member{pool.member_count !== 1 ? 's' : ''} · 0.3% fee
+        {pool.member_count} member{pool.member_count !== 1 ? 's' : ''} · 0.15% fee
       </div>
 
       <div
@@ -182,7 +182,7 @@ export default function Pools() {
                 <div>
                   <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Type</label>
                   <select value={type} onChange={e => setType(e.target.value)} style={{ width: '100%' }}>
-                    <option value="fiat">NGN Payment Pool (0.3% fee)</option>
+                    <option value="fiat">NGN Payment Pool (0.15% fee)</option>
                     <option value="crypto">Crypto Trading Pool (0.25% fee)</option>
                   </select>
                 </div>

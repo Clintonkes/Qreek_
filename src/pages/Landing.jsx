@@ -514,22 +514,22 @@ export default function Landing() {
   const SEC = (extra = {}) => ({ maxWidth: 1100, margin: '0 auto', padding: '5rem 1.5rem', ...extra });
 
   const PILLARS = [
-    { icon: '🏦', tag: 'Payment Pools',    color: 'var(--teal)',   g1: '#00D4AA', g2: '#00ffca', fee: '0.30% per contribution', cta: 'Create a pool',    title: 'Ajo, esusu, and group collections — with a live ledger',          desc: 'Create a pool, share the invite code in your WhatsApp group, and request contributions. Every member pays through Monnify checkout. The activity feed shows who paid, how much, and when — in real time, visible to all members.' },
-    { icon: '🔗', tag: 'Payment Links',    color: 'var(--amber)',  g1: '#F5A623', g2: '#FFD700', fee: '0.40% per payment',      cta: 'Create a link',    title: 'One link. Card, transfer, or USSD. Automatic records.',           desc: 'Create a Qreek link in 2 minutes. Share it on WhatsApp or Instagram. Clients open it in the browser, pay through Monnify secure checkout, and you get instant confirmation — no bank alert chasing.' },
-    { icon: '💼', tag: 'Enterprise Payroll', color: 'var(--purple)', g1: '#9B59B6', g2: '#6C3483', fee: '0.30% per payroll run',  cta: 'Set up payroll',   title: 'Pay 500 employees in 4 minutes. 0.3% fee. No subscription.',      desc: 'Import your employee roster via CSV, review salaries by department, confirm with your PIN, and every salary hits every bank account in parallel. Real-time status per employee. Printable receipt for accounting.' },
+    { icon: '🏦', tag: 'Payment Pools',    color: 'var(--teal)',   g1: '#00D4AA', g2: '#00ffca', fee: '0.15% per contribution', cta: 'Create a pool',    title: 'Ajo, esusu, and group collections — with a live ledger',          desc: 'Create a pool, share the invite code in your WhatsApp group, and request contributions. Every member pays through Flutterwave checkout. The activity feed shows who paid, how much, and when — in real time, visible to all members.' },
+    { icon: '🔗', tag: 'Payment Links',    color: 'var(--amber)',  g1: '#F5A623', g2: '#FFD700', fee: '0.21% per payment',      cta: 'Create a link',    title: 'One link. Card, transfer, or USSD. Automatic records.',           desc: 'Create a Qreek link in 2 minutes. Share it on WhatsApp or Instagram. Clients open it in the browser, pay through Flutterwave secure checkout, and you get instant confirmation — no bank alert chasing.' },
+    { icon: '💼', tag: 'Enterprise Payroll', color: 'var(--purple)', g1: '#9B59B6', g2: '#6C3483', fee: '0.21% per payroll run',  cta: 'Set up payroll',   title: 'Pay 500 employees in 4 minutes. 0.21% fee. No subscription.',      desc: 'Import your employee roster via CSV, review salaries by department, confirm with your PIN, and every salary hits every bank account in parallel. Real-time status per employee. Printable receipt for accounting.' },
   ];
 
   const TRUST = [
-    { icon: '🏛️', color: 'var(--teal)',   title: 'CBN-licensed processing',   desc: 'All payments processed by Monnify, a CBN-licensed PSP and Moniepoint company. Qreek operates as their merchant — not a separate payment institution.' },
+    { icon: '🏛️', color: 'var(--teal)',   title: 'CBN-licensed processing',   desc: 'All payments processed by Flutterwave, a CBN-licensed PSP and payment technology company. Qreek operates as their merchant — not a separate payment institution.' },
     { icon: '🚫', color: 'var(--red)',    title: 'Zero fund custody',          desc: 'Qreek never touches your money. Naira flows from payer bank to recipient bank. Qreek records the event — that is its only role.' },
     { icon: '👁️', color: 'var(--blue)',   title: 'Full member transparency',   desc: 'Every pool member sees the complete activity feed — every payment, every request, every receipt. Nothing is hidden from the group.' },
     { icon: '🔐', color: 'var(--amber)',  title: 'PIN-secured transactions',   desc: 'All financial actions require your personal PIN. Five wrong attempts locks the account automatically. Your money is protected even if your phone is stolen.' },
-    { icon: '📋', color: 'var(--green)',  title: 'Immutable receipts',         desc: 'Every confirmed payment generates an automatic receipt for payer and recipient. Monnify webhook confirmation is the source of truth — not a screenshot.' },
+    { icon: '📋', color: 'var(--green)',  title: 'Immutable receipts',         desc: 'Every confirmed payment generates an automatic receipt for payer and recipient. Flutterwave webhook confirmation is the source of truth — not a screenshot.' },
     { icon: '🆘', color: 'var(--purple)', title: 'Dispute reporting built in', desc: 'Any pool member can flag a suspicious payment directly in the app. Support responds within 24 hours. Admins cannot act unilaterally on large sums.' },
   ];
 
   const CASES = [
-    { tag: 'Ajo Group',         color: 'var(--teal)',   title: 'Adaeze market women circle — 20 members',       body: 'Each member contributes 10,000 monthly via Monnify checkout. The activity feed shows who paid and who has not — no more arguments, no more screenshots. Fee: 30 per contribution.' },
+    { tag: 'Ajo Group',         color: 'var(--teal)',   title: 'Adaeze market women circle — 20 members',       body: 'Each member contributes 10,000 monthly via Flutterwave checkout. The activity feed shows who paid and who has not — no more arguments, no more screenshots. Fee: 30 per contribution.' },
     { tag: 'Merchant',          color: 'var(--amber)',  title: 'Tokunbo, a Lagos fashion designer',              body: 'Shares one Qreek link in her Instagram bio. Clients pay flexible amounts for deposits and custom orders. She sees every payment confirmed automatically — no bank alert chasing.' },
     { tag: 'Church',            color: 'var(--green)',  title: 'Pastor James building fund committee',           body: 'Creates a Qreek pool for building fund contributions. Members pay from anywhere. The committee sees the running total live. Every naira is accounted for.' },
     { tag: 'Enterprise',        color: 'var(--purple)', title: 'TechBridge Solutions — 47 employees',            body: 'CFO confirms payroll in 4 minutes. All 47 salary transfers fire in parallel. Each employee gets a bank alert. Printable receipt for accounting. Total fee: 61,200. No monthly subscription.' },
@@ -553,7 +553,7 @@ export default function Landing() {
         { icon: '🧾', title: 'Resolve disputes', copy: 'Receipts, activity history, and flagged issues stay attached to the pool.' },
       ],
       stats: [
-        { value: '0.30%', label: 'per contribution' },
+        { value: '0.15%', label: 'per contribution' },
         { value: 'Live', label: 'member ledger' },
         { value: 'All', label: 'members visible' },
       ],
@@ -576,11 +576,11 @@ export default function Landing() {
       actions: [
         { icon: '🔗', title: 'Generate a link', copy: 'Create a branded payment link for any amount or leave it flexible.' },
         { icon: '💬', title: 'Share anywhere', copy: 'Drop the link into WhatsApp, Instagram, email, or an invoice.' },
-        { icon: '✅', title: 'Get confirmation', copy: 'The payment is confirmed by Monnify and recorded instantly in Qreek.' },
+        { icon: '✅', title: 'Get confirmation', copy: 'The payment is confirmed by Flutterwave and recorded instantly in Qreek.' },
         { icon: '📥', title: 'Keep records', copy: 'Every payer, amount, purpose, and receipt is stored for follow-up.' },
       ],
       stats: [
-        { value: '0.40%', label: 'per payment' },
+        { value: '0.21%', label: 'per payment' },
         { value: '2 min', label: 'link setup' },
         { value: 'No', label: 'account needed' },
       ],
@@ -634,7 +634,7 @@ export default function Landing() {
         { icon: '🧾', title: 'Export proof', copy: 'Download payroll receipts and run summaries for accounting records.' },
       ],
       stats: [
-        { value: '0.30%', label: 'per run' },
+        { value: '0.21%', label: 'per run' },
         { value: 'Bulk', label: 'disbursement' },
         { value: 'Per', label: 'employee status' },
       ],
@@ -675,7 +675,7 @@ export default function Landing() {
         {/* Sub */}
         <p style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', color: 'var(--text-2)', maxWidth: 600, lineHeight: 1.85, marginBottom: '2.5rem', position: 'relative' }}>
           Qreek gives your ajo group, your business, and your team a transparent payment ledger —
-          no more screenshots, no more disputes. Powered by Monnify.{' '}
+          no more screenshots, no more disputes. Powered by Flutterwave.{' '}
           <strong style={{ color: 'var(--text)' }}>Qreek never holds your funds.</strong>
         </p>
 
@@ -691,7 +691,7 @@ export default function Landing() {
 
         {/* Trust strip */}
         <div className="trust-strip" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', padding: '0.8rem 1.25rem', background: 'rgba(0,212,170,0.05)', border: '1px solid rgba(0,212,170,0.14)', borderRadius: 'var(--radius)', marginBottom: '2rem', maxWidth: 780 }}>
-          {[['🔒','Monnify (CBN-licensed) processes all payments'],['🏦','Funds go bank-to-bank directly'],['✅','Qreek never holds your money'],['📋','Every naira tracked']].map(([icon, text]) => (
+          {[['🔒','Flutterwave (CBN-licensed) processes all payments'],['🏦','Funds go bank-to-bank directly'],['✅','Qreek never holds your money'],['📋','Every naira tracked']].map(([icon, text]) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.77rem', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
               <span>{icon}</span><span>{text}</span>
             </div>
@@ -700,7 +700,7 @@ export default function Landing() {
 
         {/* Fee pills */}
         <div className="fee-pills" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center', position: 'relative' }}>
-          {[['Pool contributions','0.30%','var(--teal)'],['Payment links','0.40%','var(--amber)'],['Payroll','0.30%','var(--purple)'],['No monthly fee','Ever','var(--green)']].map(([label, fee, col]) => (
+          {[['Pool contributions','0.15%','var(--teal)'],['Payment links','0.21%','var(--amber)'],['Payroll','0.21%','var(--purple)'],['No monthly fee','Ever','var(--green)']].map(([label, fee, col]) => (
             <div key={label} style={{ background: 'var(--surface)', border: `1px solid ${col}40`, borderRadius: 'var(--radius-full)', padding: '0.35rem 1rem', fontSize: '0.78rem', color: 'var(--text-2)', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: col }}>{fee}</span>
               <span>{label}</span>
@@ -731,8 +731,8 @@ export default function Landing() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.25rem' }}>
             <Step n="01" title="Create a pool or link in 2 minutes" desc="Sign up with your phone number. Create a payment pool for your group, or a payment link for your clients. No forms, no bank visit, no approvals needed." />
-            <Step n="02" title="Share — your people pay in their browser" desc="Group members or clients open the link on any device. They pay using card, bank transfer, or USSD through Monnify secure checkout. No Qreek account needed to pay." />
-            <Step n="03" title="Qreek records it. Everyone sees it." desc="The moment Monnify confirms the payment, Qreek updates your ledger in real time. Payer gets a receipt. Pool shows who paid. Funds settle from Monnify directly to the recipient bank." />
+            <Step n="02" title="Share — your people pay in their browser" desc="Group members or clients open the link on any device. They pay using card, bank transfer, or USSD through Flutterwave secure checkout. No Qreek account needed to pay." />
+            <Step n="03" title="Qreek records it. Everyone sees it." desc="The moment Flutterwave confirms the payment, Qreek updates your ledger in real time. Payer gets a receipt. Pool shows who paid. Funds settle from Flutterwave directly to the recipient bank." />
           </div>
 
           {/* Custody disclaimer card */}
@@ -741,7 +741,7 @@ export default function Landing() {
             <div>
               <div style={{ fontWeight: 800, marginBottom: '0.4rem', color: 'var(--teal)', fontSize: '1rem' }}>Qreek never holds your money</div>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.75, margin: 0 }}>
-                Every naira paid through Qreek is processed by <strong style={{ color: 'var(--text)' }}>Monnify</strong> — a CBN-licensed Payment Solution Provider (a Moniepoint company). Funds flow directly from payer bank to recipient bank. Qreek is never in the middle of your money.
+                Every naira paid through Qreek is processed by <strong style={{ color: 'var(--text)' }}>Flutterwave</strong> — a CBN-licensed Payment Solution Provider (a payment technology company). Funds flow directly from payer bank to recipient bank. Qreek is never in the middle of your money.
               </p>
             </div>
           </div>
@@ -781,13 +781,13 @@ export default function Landing() {
           No monthly fees. No setup costs. You only pay when money moves — and the fee is always shown before you confirm.
         </p>
         <div className="price-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: '1.1rem', maxWidth: 860, margin: '0 auto 1.5rem' }}>
-          <PriceBox label="Pool contributions" pct="0.30%" color="var(--teal)"   note="Per contribution paid by pool member" />
-          <PriceBox label="Payment links"      pct="0.40%" color="var(--amber)"  note="Per payment received through your link" />
-          <PriceBox label="Enterprise payroll" pct="0.30%" color="var(--purple)" note="Per salary disbursed in a payroll run" />
+          <PriceBox label="Pool contributions" pct="0.15%" color="var(--teal)"   note="Per contribution paid by pool member" />
+          <PriceBox label="Payment links"      pct="0.21%" color="var(--amber)"  note="Per payment received through your link" />
+          <PriceBox label="Enterprise payroll" pct="0.21%" color="var(--purple)" note="Per salary disbursed in a payroll run" />
           <PriceBox label="No monthly fee"     pct="Free"  color="var(--green)"  note="No subscription, no setup, no withdrawal fee" />
         </div>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto' }}>
-          All payments processed by Monnify. Monnify processing fees apply separately. Bank transfer payments are typically ₦10–₦30 flat — the most affordable option for your group.
+          All payments processed by Flutterwave. Flutterwave processing fees apply separately. Bank transfer payments are typically ₦10–₦30 flat — the most affordable option for your group.
         </p>
       </section>
 
@@ -819,7 +819,7 @@ export default function Landing() {
           Qreek<span style={{ color: 'var(--teal)' }}>Finance</span>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto 1.25rem', lineHeight: 1.7 }}>
-          All payments processed by Monnify (TeamApt Ltd), a CBN-licensed Payment Solution Provider. Qreek Finance does not hold, custody, or transmit funds.
+          All payments processed by Flutterwave (Flutterwave Technology Solutions Limited), a CBN-licensed Payment Solution Provider. Qreek Finance does not hold, custody, or transmit funds.
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--text-3)' }}>
           <button onClick={() => goTo('features')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.82rem' }}>Features</button>

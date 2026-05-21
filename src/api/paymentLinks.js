@@ -29,6 +29,17 @@ export const resolveLink = (code)   => client.get(`/payment-links/resolve/${code
 export const payLink     = (code, d)=> client.post(`/payment-links/pay/${code}`, d).then(r => r.data);
 
 /**
+ * Confirms a Flutterwave checkout redirect or webhook-backed payment.
+ * The backend must verify tx_ref, transaction_id, amount, currency, and status
+ * against Flutterwave before marking the Qreek ledger entry as paid.
+ * @param {string} code - The payment link code.
+ * @param {Object} d - Flutterwave redirect details.
+ * @returns {Promise<Object>} Verified payment record.
+ */
+export const confirmFlutterwaveLinkPayment = (code, d) =>
+  client.post(`/payment-links/pay/${code}/flutterwave/confirm`, d).then(r => r.data);
+
+/**
  * Link deactivation API.
  * @param {string} id - The ID of the payment link to delete/deactivate.
  * @returns {Promise<Object>} Success message.

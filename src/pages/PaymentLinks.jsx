@@ -11,6 +11,7 @@ import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { getLinks, createLink, deleteLink } from '../api/paymentLinks.js';
 import { getBanks } from '../api/payroll.js';
+import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
@@ -45,6 +46,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
         bank_account: form.bank_account, bank_code: form.bank_code,
         max_uses: form.max_uses ? +form.max_uses : undefined,
         expires_days: form.expires_days ? +form.expires_days : undefined,
+        provider: 'flutterwave',
       });
       toast.success('Payment link created!');
       setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
@@ -93,6 +95,12 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
         </div>
 
         {!flexible && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="50000" />}
+
+        {(flexible || +form.amount > 0) && (
+          <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--text-2)' }}>
+            Qreek keeps {feePercent(QREEK_FEES.paymentLink)} per successful payment. {flexible ? 'The exact fee is calculated when the payer enters an amount.' : `Fee on this amount: ${FMT(calculateFee(form.amount, QREEK_FEES.paymentLink))}.`}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />

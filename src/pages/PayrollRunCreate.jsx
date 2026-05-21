@@ -9,6 +9,7 @@ import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { getEmployees, createPayrollRun, executePayrollRun } from '../api/payroll.js';
+import { feePercent, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
@@ -80,7 +81,7 @@ export default function PayrollRunCreate() {
     setBuilding(true);
     try {
       const periodLabel = `${month} ${year}`;
-      const data = await createPayrollRun({ period_label: periodLabel, note: note || undefined, employee_ids: selected.length === employees.length ? undefined : selected });
+      const data = await createPayrollRun({ period_label: periodLabel, note: note || undefined, employee_ids: selected.length === employees.length ? undefined : selected, provider: 'flutterwave' });
       setRun(data.run);
       setPreview(data.preview);
       setStep(2);
@@ -96,7 +97,7 @@ export default function PayrollRunCreate() {
     if (!run) return;
     setExecuting(true);
     try {
-      await executePayrollRun(run.id, { pin });
+      await executePayrollRun(run.id, { pin, provider: 'flutterwave' });
       setDone(true);
       setStep(3);
     } catch (err) {
@@ -195,7 +196,7 @@ export default function PayrollRunCreate() {
               <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>Step 3 — Review & confirm</h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-                {[['Total gross', FMT(totalGross), 'var(--text)'], ['Fee (0.3%)', FMT(totalFee), 'var(--red)'], ['Employees receive', FMT(totalNet), 'var(--teal)']].map(([l, v, c]) => (
+                {[['Total gross', FMT(totalGross), 'var(--text)'], [`Fee (${feePercent(QREEK_FEES.payroll)})`, FMT(totalFee), 'var(--red)'], ['Employees receive', FMT(totalNet), 'var(--teal)']].map(([l, v, c]) => (
                   <div key={l} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.4rem' }}>{l}</div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 700, color: c }}>{v}</div>

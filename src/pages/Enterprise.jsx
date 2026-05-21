@@ -100,7 +100,7 @@ export default function Enterprise() {
             <span style={{ fontSize: '1.1rem' }}>✅</span> Salaries and vendor payouts from one pool
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-            <span style={{ fontSize: '1.1rem' }}>✅</span> 0.3% payout fee with cleaner visibility
+            <span style={{ fontSize: '1.1rem' }}>✅</span> 0.21% payout fee with cleaner visibility
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-2)' }}>
             <span style={{ fontSize: '1.1rem' }}>✅</span> Bulk import up to 500 employees
@@ -137,7 +137,7 @@ export default function Enterprise() {
         <StatCard icon={Money}    label="Total paid"    value={fmtNgn(analytics?.total_paid_ngn)}  color="var(--teal)" />
         <StatCard icon={Users}    label="Employees"     value={company.employee_count || 0}           color="var(--blue)" sub="active on payroll" />
         <StatCard icon={ChartBar} label="Payroll runs"  value={analytics?.runs_history?.length || 0}  color="var(--amber)" />
-        <StatCard icon={Buildings}label="Status"        value={company.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.3% payroll fee" />
+        <StatCard icon={Buildings}label="Status"        value={company.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.21% payroll fee" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
