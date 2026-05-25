@@ -91,16 +91,21 @@ export default function PublicPayment() {
     if (!form.phone || form.phone.length < 10) return toast.error('Please enter a valid phone number.');
     const amount = link.is_flexible ? +form.amount : link.amount;
     if (!amount || amount < 100) return toast.error('Minimum payment is ₦100.');
+    if (!form.note.trim()) return toast.error('Please enter a payment description.');
 
     setPaying(true);
     try {
+      const idempotencyStorageKey = `qreek:pay:${code}:${amount}:${formatPhoneNumber(form.phone)}`;
+      const idempotencyKey = sessionStorage.getItem(idempotencyStorageKey) || crypto.randomUUID();
+      sessionStorage.setItem(idempotencyStorageKey, idempotencyKey);
       const response = await payLink(code, {
         name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
         amount,
-        note: form.note || undefined,
+        payment_description: form.note.trim(),
         provider: 'flutterwave',
         redirect_url: `${window.location.origin}/p/${code}`,
+        idempotency_key: idempotencyKey,
       });
       const checkoutUrl = getCheckoutUrl(response);
 
@@ -204,7 +209,7 @@ export default function PublicPayment() {
               onChange={v => setForm({...form, phone: v})} 
             />
             <Input 
-              label="Note (optional)" 
+              label="Payment description *" 
               value={form.note} 
               onChange={e => setForm({...form, note: e.target.value})} 
               placeholder="What is this payment for?"

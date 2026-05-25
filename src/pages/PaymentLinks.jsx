@@ -34,6 +34,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
 
   const handleCreate = async () => {
     if (!form.title.trim())        { toast.error('Title required.'); return; }
+    if (!form.description.trim())  { toast.error('Description required.'); return; }
     if (!form.bank_account.trim()) { toast.error('Account number required.'); return; }
     if (!form.bank_code)           { toast.error('Select a bank.'); return; }
     if (!flexible && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or enable flexible.'); return; }
@@ -41,7 +42,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
     setSaving(true);
     try {
       await createLink({
-        title: form.title, description: form.description || undefined,
+        title: form.title, description: form.description.trim(),
         amount: flexible ? undefined : +form.amount,
         bank_account: form.bank_account, bank_code: form.bank_code,
         max_uses: form.max_uses ? +form.max_uses : undefined,
@@ -65,7 +66,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
         <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Q1 Invoice Payment" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)' }}>
-            Description (optional)
+            Description *
           </label>
           <textarea
             value={form.description}
