@@ -60,7 +60,7 @@ export default function PayrollRunDetail() {
       <div class="sub">Run ID: ${run.id} · Processed: ${run.completed_at ? new Date(run.completed_at).toLocaleString('en-NG') : 'In progress'}</div>
       <div class="totals">
         <div class="total-box"><div style="color:#666;font-size:0.75rem">Total gross</div><strong>${FMT(run.total_gross)}</strong></div>
-        <div class="total-box"><div style="color:#666;font-size:0.75rem">Fee (0.21%)</div><strong style="color:#c00">${FMT(run.total_fee)}</strong></div>
+        <div class="total-box"><div style="color:#666;font-size:0.75rem">Fee (0.25%)</div><strong style="color:#c00">${FMT(run.total_fee)}</strong></div>
         <div class="total-box"><div style="color:#666;font-size:0.75rem">Total disbursed</div><strong style="color:green">${FMT(run.total_net)}</strong></div>
       </div>
       <br/>
@@ -123,7 +123,7 @@ export default function PayrollRunDetail() {
             ['Paid', run.paid_count, 'var(--green)'],
             ['Failed', run.failed_count, run.failed_count > 0 ? 'var(--red)' : 'var(--text-3)'],
             ['Total gross', FMT(run.total_gross), 'var(--text)'],
-            ['Fee (0.21%)', FMT(run.total_fee), 'var(--text-2)'],
+            ['Fee (0.25%)', FMT(run.total_fee), 'var(--text-2)'],
             ['Total net', FMT(run.total_net), 'var(--teal)'],
           ].map(([l, v, c]) => (
             <div key={l} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>

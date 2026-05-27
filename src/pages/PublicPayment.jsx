@@ -6,15 +6,16 @@
  * 
  * Flow:
  * 1. Resolution: On mount, it resolves the unique payment code via the backend to display link details.
- * 2. Interaction: Users enter their name, phone, and optional note. Flexible amount links allow user input.
+ * 2. Interaction: Users enter their name, phone, and payment description. Flexible amount links allow user input.
  * 3. Execution: handlePay processes the payment, initiating a Flutterwave checkout session.
- * 4. Conversion: After success, it displays an interactive prompt encouraging the user to join Qreek.
+ * 4. Settlement: After Flutterwave collects funds, it shows recipient transfer progress.
+ * 5. Conversion: After settlement, it displays an interactive prompt encouraging the user to join Qreek.
  */
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, resolveLink, payLink } from '../api/paymentLinks.js';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink } from '../api/paymentLinks.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import PhoneInput from '../components/ui/PhoneInput.jsx';
@@ -24,6 +25,20 @@ import { getCheckoutUrl, getTransactionReference, PAYMENT_PROVIDER, QREEK_FEES, 
 import { toast } from 'react-hot-toast';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+
+function SettlementStep({ done, active, title, detail }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', textAlign: 'left' }}>
+      <div style={{ width: 28, height: 28, borderRadius: '50%', background: done ? 'var(--green-faint)' : active ? 'var(--teal-faint)' : 'var(--surface-2)', color: done ? 'var(--green)' : active ? 'var(--teal)' : 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {done ? <CheckCircle size={20} weight="fill" /> : active ? <Spinner size={16} /> : <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'currentColor' }} />}
+      </div>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{title}</div>
+        <div style={{ color: 'var(--text-3)', fontSize: '0.8rem', lineHeight: 1.5 }}>{detail}</div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * PublicPayment component - The public-facing checkout page for payment links.
@@ -46,6 +61,7 @@ export default function PublicPayment() {
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [receipt, setReceipt] = useState(null);
+  const [checkingSettlement, setCheckingSettlement] = useState(false);
 
   const redirectedTransactionId = searchParams.get('transaction_id');
   const redirectedReference = searchParams.get('tx_ref');
@@ -70,7 +86,12 @@ export default function PublicPayment() {
       .then(data => {
         setReceipt(data.payment || data.transaction || data);
         setSuccess(true);
-        toast.success('Payment confirmed!');
+        const payment = data.payment || data.transaction || data;
+        if (payment?.payout_status === 'completed') {
+          toast.success('Payment and transfer completed!');
+        } else {
+          toast.success('Payment received. Transferring to recipient bank...');
+        }
       })
       .catch(err => setError(err.response?.data?.detail || 'We could not confirm this payment yet. If money left your account, the receipt will update after provider verification.'))
       .finally(() => {
@@ -78,6 +99,35 @@ export default function PublicPayment() {
         setLoading(false);
       });
   }, [code, redirectedReference, redirectedStatus, redirectedTransactionId]);
+
+  useEffect(() => {
+    const txRef = receipt?.reference || redirectedReference;
+    const transferDone = receipt?.status === 'completed' && receipt?.payout_status === 'completed';
+    if (!success || !txRef || transferDone) return;
+
+    setCheckingSettlement(true);
+    const timer = window.setInterval(() => {
+      getLinkPaymentStatus(code, txRef)
+        .then(data => {
+          const payment = data.payment || data.transaction || data;
+          setReceipt(payment);
+          if (payment?.status === 'completed' && payment?.payout_status === 'completed') {
+            toast.success('Recipient transfer completed.');
+            window.clearInterval(timer);
+            setCheckingSettlement(false);
+          }
+        })
+        .catch(() => {
+          window.clearInterval(timer);
+          setCheckingSettlement(false);
+        });
+    }, 5000);
+
+    return () => {
+      window.clearInterval(timer);
+      setCheckingSettlement(false);
+    };
+  }, [code, receipt?.payout_status, receipt?.reference, receipt?.status, redirectedReference, success]);
 
   /**
    * handlePay - Orchestrates the payment checkout flow.
@@ -115,6 +165,12 @@ export default function PublicPayment() {
 
       const reference = getTransactionReference(response);
       if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
+      sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
+        checkout_amount: response.checkout_amount,
+        recipient_amount: response.recipient_amount || response.net,
+        fee: response.fee,
+        provider_fee_estimate: response.provider_fee_estimate,
+      }));
       window.location.assign(checkoutUrl);
     } catch (err) {
       toast.error(err.response?.data?.detail || err.message || 'Payment failed.');
@@ -128,25 +184,56 @@ export default function PublicPayment() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ maxWidth: 400, textAlign: 'center', background: 'var(--surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
         <Warning size={48} color="var(--amber)" style={{ marginBottom: '1rem' }} />
-        <h1 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>Link Unavailable</h1>
+        <h1 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>{redirectedReference || redirectedTransactionId ? 'Payment Confirmation Issue' : 'Link Unavailable'}</h1>
         <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{error}</p>
         <Link to="/" style={{ color: 'var(--teal)', fontWeight: 600, textDecoration: 'none' }}>Go to Qreek Finance</Link>
       </div>
     </div>
   );
 
-  if (success) return (
+  if (success) {
+    const amount = receipt?.checkout_amount || receipt?.amount || (link.is_flexible ? +form.amount : link.amount);
+    const recipientAmount = receipt?.recipient_amount || receipt?.net || (link.is_flexible ? +form.amount : link.amount);
+    const payoutDone = receipt?.status === 'completed' && receipt?.payout_status === 'completed';
+    const payoutPending = receipt?.payout_status === 'pending' || receipt?.status === 'payout_pending' || receipt?.status === 'processing';
+    const settledAmount = receipt?.provider_settled_amount || amount;
+    const qreekFee = receipt?.fee || calculateFee(recipientAmount, QREEK_FEES.paymentLink);
+    const providerFee = receipt?.provider_fee || Math.max(amount - settledAmount, 0);
+    return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ maxWidth: 480, width: '100%', textAlign: 'center', background: 'var(--surface)', padding: '3rem 2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--green-faint)', color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-          <CheckCircle size={40} weight="fill" />
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: payoutDone ? 'var(--green-faint)' : 'var(--teal-faint)', color: payoutDone ? 'var(--green)' : 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+          {payoutDone ? <CheckCircle size={40} weight="fill" /> : <Spinner size={34} />}
         </div>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Payment Successful!</h1>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{payoutDone ? 'Payment Completed!' : 'Payment Received'}</h1>
         <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>
-          You've sent {FMT(receipt?.amount || (link.is_flexible ? +form.amount : link.amount))} to {link.title}. A receipt has been sent to your phone.
+          {payoutDone
+            ? `You've paid ${FMT(amount)}. ${link.title} receives ${FMT(recipientAmount)}.`
+            : `${FMT(amount)} has reached Qreek through Flutterwave. We are transferring ${FMT(recipientAmount)} to the recipient's bank account now.`}
         </p>
+
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          <SettlementStep done title="Payment collected" detail="Flutterwave confirmed the payer's payment into Qreek." />
+          <SettlementStep done={payoutDone} active={payoutPending || checkingSettlement} title="Recipient bank transfer" detail={`Qreek transfers ${FMT(recipientAmount)} to the bank account saved on this link.`} />
+          <SettlementStep done={payoutDone} active={false} title="Completed" detail="This becomes completed only after the recipient transfer succeeds." />
+        </div>
+
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.82rem' }}>
+          {[
+            ['Payer amount', FMT(amount)],
+            ['Recipient receives', FMT(recipientAmount)],
+            [`Qreek fee (${feePercent(QREEK_FEES.paymentLink)})`, FMT(qreekFee)],
+            ['Flutterwave fee', FMT(providerFee)],
+            ['Flutterwave settled', FMT(settledAmount)],
+          ].map(([label, value]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.25rem 0' }}>
+              <span style={{ color: 'var(--text-3)' }}>{label}</span>
+              <strong style={{ fontFamily: 'var(--font-mono)', color: label === 'Recipient receives' ? 'var(--teal)' : 'var(--text-2)' }}>{value}</strong>
+            </div>
+          ))}
+        </div>
         
-        <div style={{ background: 'linear-gradient(135deg, rgba(0,212,170,0.1) 0%, rgba(245,166,35,0.05) 100%)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--teal-border)', textAlign: 'left', marginBottom: '2rem' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(0,212,170,0.1) 0%, rgba(245,166,35,0.05) 100%)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--teal-border)', textAlign: 'left', marginBottom: '2rem', opacity: payoutDone ? 1 : 0.72 }}>
           <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--teal)' }}>Want more control over your payments?</h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '1rem' }}>
             Join Qreek Finance to create your own payment links, manage group pools (ajo), and run payroll with zero monthly fees.
@@ -159,7 +246,8 @@ export default function PublicPayment() {
         <Link to="/" style={{ color: 'var(--text-3)', fontSize: '0.85rem', textDecoration: 'none' }}>Return to Home</Link>
       </div>
     </div>
-  );
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -174,7 +262,7 @@ export default function PublicPayment() {
 
         <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ background: 'var(--bg-2)', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Payment Amount</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Recipient Receives</div>
             {link.is_flexible ? (
               <div style={{ position: 'relative', marginTop: '0.5rem' }}>
                 <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--teal)' }}>₦</span>
@@ -191,7 +279,7 @@ export default function PublicPayment() {
             )}
             {(link.is_flexible ? +form.amount : link.amount) > 0 && (
               <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
-                Qreek fee {feePercent(QREEK_FEES.paymentLink)}: {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, QREEK_FEES.paymentLink))}
+                Qreek fee added at checkout: {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, QREEK_FEES.paymentLink))} ({feePercent(QREEK_FEES.paymentLink)})
               </div>
             )}
           </div>
@@ -210,6 +298,8 @@ export default function PublicPayment() {
             />
             <Input 
               label="Payment description *" 
+              multiline
+              rows={2}
               value={form.note} 
               onChange={e => setForm({...form, note: e.target.value})} 
               placeholder="What is this payment for?"
@@ -218,7 +308,7 @@ export default function PublicPayment() {
 
           <div style={{ marginTop: '0.5rem' }}>
             <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-              {paying ? 'Opening checkout…' : `Pay ${link.is_flexible ? FMT(+form.amount || 0) : FMT(link.amount)} →`}
+              {paying ? 'Opening checkout…' : `Continue to ${PAYMENT_PROVIDER.name} →`}
             </Button>
           </div>
           

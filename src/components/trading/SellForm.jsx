@@ -6,7 +6,7 @@ import useRatesStore from '../../store/ratesStore.js';
 
 const COINS = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB', 'SOL'];
 const FEE_POOL     = 0.0015;
-const FEE_EXTERNAL = 0.0021;
+const FEE_EXTERNAL = 0.0025;
 
 function fmtNGN(v) {
   if (!v || isNaN(v)) return '₦0.00';

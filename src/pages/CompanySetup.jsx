@@ -123,7 +123,7 @@ export default function CompanySetup() {
               ))}
             </div>
             <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '1rem', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-              ✅ Payroll fee: <strong style={{ color: 'var(--teal)' }}>0.21%</strong> per payment · No monthly charge · No hidden fees
+              ✅ Payroll fee: <strong style={{ color: 'var(--teal)' }}>0.25%</strong> per payment · No monthly charge · No hidden fees
             </div>
           </motion.div>
         )}

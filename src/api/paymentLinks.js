@@ -40,6 +40,15 @@ export const confirmFlutterwaveLinkPayment = (code, d) =>
   client.post(`/payment-links/pay/${code}/flutterwave/confirm`, d).then(r => r.data);
 
 /**
+ * Reads the current collection and recipient payout status for a public link payment.
+ * @param {string} code - The payment link code.
+ * @param {string} txRef - The Qreek/Flutterwave transaction reference.
+ * @returns {Promise<Object>} Current payment and payout state.
+ */
+export const getLinkPaymentStatus = (code, txRef) =>
+  client.get(`/payment-links/pay/${code}/status/${txRef}`).then(r => r.data);
+
+/**
  * Link deactivation API.
  * @param {string} id - The ID of the payment link to delete/deactivate.
  * @returns {Promise<Object>} Success message.

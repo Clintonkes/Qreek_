@@ -6,8 +6,8 @@ export const PAYMENT_PROVIDER = {
 export const QREEK_FEES = {
   poolContribution: 0.0015,
   poolPayout: 0.0015,
-  paymentLink: 0.0021,
-  payroll: 0.0021,
+  paymentLink: 0.0025,
+  payroll: 0.0025,
 };
 
 export const feePercent = (rate) => `${(rate * 100).toFixed(2)}%`;
