@@ -87,10 +87,10 @@ export default function PublicPayment() {
         setReceipt(data.payment || data.transaction || data);
         setSuccess(true);
         const payment = data.payment || data.transaction || data;
-        if (payment?.payout_status === 'completed') {
-          toast.success('Payment and transfer completed!');
+        if (['completed', 'split_settlement'].includes(payment?.payout_status)) {
+          toast.success('Payment and recipient settlement completed!');
         } else {
-          toast.success('Payment received. Transferring to recipient bank...');
+          toast.success('Payment received. Confirming recipient settlement...');
         }
       })
       .catch(err => setError(err.response?.data?.detail || 'We could not confirm this payment yet. If money left your account, the receipt will update after provider verification.'))
@@ -102,7 +102,7 @@ export default function PublicPayment() {
 
   useEffect(() => {
     const txRef = receipt?.reference || redirectedReference;
-    const transferDone = receipt?.status === 'completed' && receipt?.payout_status === 'completed';
+    const transferDone = receipt?.status === 'completed' && ['completed', 'split_settlement'].includes(receipt?.payout_status);
     if (!success || !txRef || transferDone) return;
 
     setCheckingSettlement(true);
@@ -111,8 +111,8 @@ export default function PublicPayment() {
         .then(data => {
           const payment = data.payment || data.transaction || data;
           setReceipt(payment);
-          if (payment?.status === 'completed' && payment?.payout_status === 'completed') {
-            toast.success('Recipient transfer completed.');
+          if (payment?.status === 'completed' && ['completed', 'split_settlement'].includes(payment?.payout_status)) {
+            toast.success('Recipient settlement completed.');
             window.clearInterval(timer);
             setCheckingSettlement(false);
           }
@@ -194,7 +194,7 @@ export default function PublicPayment() {
   if (success) {
     const amount = receipt?.checkout_amount || receipt?.amount || (link.is_flexible ? +form.amount : link.amount);
     const recipientAmount = receipt?.recipient_amount || receipt?.net || (link.is_flexible ? +form.amount : link.amount);
-    const payoutDone = receipt?.status === 'completed' && receipt?.payout_status === 'completed';
+    const payoutDone = receipt?.status === 'completed' && ['completed', 'split_settlement'].includes(receipt?.payout_status);
     const payoutPending = receipt?.payout_status === 'pending' || receipt?.status === 'payout_pending' || receipt?.status === 'processing';
     const settledAmount = receipt?.provider_settled_amount || amount;
     const qreekFee = receipt?.fee || calculateFee(recipientAmount, QREEK_FEES.paymentLink);
@@ -209,13 +209,13 @@ export default function PublicPayment() {
         <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>
           {payoutDone
             ? `You've paid ${FMT(amount)}. ${link.title} receives ${FMT(recipientAmount)}.`
-            : `${FMT(amount)} has reached Qreek through Flutterwave. We are transferring ${FMT(recipientAmount)} to the recipient's bank account now.`}
+            : `${FMT(amount)} has been accepted by Flutterwave. The recipient's share is being settled directly to their bank account.`}
         </p>
 
         <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-          <SettlementStep done title="Payment collected" detail="Flutterwave confirmed the payer's payment into Qreek." />
-          <SettlementStep done={payoutDone} active={payoutPending || checkingSettlement} title="Recipient bank transfer" detail={`Qreek transfers ${FMT(recipientAmount)} to the bank account saved on this link.`} />
-          <SettlementStep done={payoutDone} active={false} title="Completed" detail="This becomes completed only after the recipient transfer succeeds." />
+          <SettlementStep done title="Payment collected" detail="Flutterwave confirmed the payer's payment." />
+          <SettlementStep done={payoutDone} active={payoutPending || checkingSettlement} title="Recipient settlement" detail={`Flutterwave settles ${FMT(recipientAmount)} directly to the bank account saved on this link.`} />
+          <SettlementStep done={payoutDone} active={false} title="Completed" detail="This becomes completed when Flutterwave accepts the split settlement for the recipient." />
         </div>
 
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.82rem' }}>
