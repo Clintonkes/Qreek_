@@ -24,7 +24,21 @@ import { formatPhoneNumber } from '../lib/utils.js';
 import { getCheckoutUrl, getTransactionReference, PAYMENT_PROVIDER, QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 import { toast } from 'react-hot-toast';
 
-const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+const FMT = v => {
+  const value = Number(v || 0);
+  const hasKobo = Math.round(value * 100) % 100 !== 0;
+  return `₦${value.toLocaleString('en-NG', {
+    minimumFractionDigits: hasKobo ? 2 : 0,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const cleanAmountInput = (value) => {
+  const normalized = value.replace(/[^\d.]/g, '');
+  const [whole, ...rest] = normalized.split('.');
+  const decimals = rest.join('').slice(0, 2);
+  return rest.length ? `${whole}.${decimals}` : whole;
+};
 
 function SettlementStep({ done, active, title, detail }) {
   return (
@@ -267,9 +281,10 @@ export default function PublicPayment() {
               <div style={{ position: 'relative', marginTop: '0.5rem' }}>
                 <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--teal)' }}>₦</span>
                 <input 
-                  type="number" 
+                  type="text"
+                  inputMode="decimal"
                   value={form.amount} 
-                  onChange={e => setForm({...form, amount: e.target.value})} 
+                  onChange={e => setForm({...form, amount: cleanAmountInput(e.target.value)})} 
                   placeholder="0.00"
                   style={{ paddingLeft: '2.2rem', fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)' }}
                 />
