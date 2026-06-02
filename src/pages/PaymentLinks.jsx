@@ -135,9 +135,10 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
  */
 function LinkCard({ link, onDelete }) {
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm(`Deactivate "${link.title}"?`)) return;
+    setConfirmOpen(false);
     setDeleting(true);
     try {
       await deleteLink(link.id);
@@ -185,11 +186,21 @@ function LinkCard({ link, onDelete }) {
 
       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
         {link.is_active && (
-          <button onClick={handleDelete} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Trash size={14} /> {deleting ? 'Deactivating…' : 'Deactivate'}
           </button>
         )}
       </div>
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Deactivate Link" maxWidth={400}>
+        <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          Are you sure you want to deactivate "{link.title}"? This action cannot be undone.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} style={{ background: 'var(--red)', color: '#fff', borderColor: 'var(--red)' }}>Deactivate</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
