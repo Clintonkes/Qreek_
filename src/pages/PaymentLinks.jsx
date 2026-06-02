@@ -9,7 +9,7 @@ import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getLinks, createLink, deleteLink, updateLink } from '../api/paymentLinks.js';
+import { getLinks, createLink, deleteLink, updateLink, getLinkEvents } from '../api/paymentLinks.js';
 import { getBanks } from '../api/payroll.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
