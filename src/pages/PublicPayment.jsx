@@ -172,8 +172,24 @@ export default function PublicPayment() {
         idempotency_key: idempotencyKey,
       });
       const checkoutUrl = getCheckoutUrl(response);
+      const payment = response.payment || response.transaction || response;
 
-      if (checkoutUrl) {
+      const isAlreadyProcessed = payment?.status === 'completed' ||
+        ['completed', 'split_settlement'].includes(payment?.payout_status);
+      const isPendingSettlement = payment?.payout_status === 'pending' ||
+        payment?.status === 'payout_pending' || payment?.status === 'processing';
+
+      if (isAlreadyProcessed || isPendingSettlement) {
+        // Idempotent hit on a tx that's already charged or in settlement.
+        // Show receipt/success UI + let polling keep it fresh. Do not redirect to (stale) checkout.
+        setReceipt(payment || response);
+        setSuccess(true);
+        if (isAlreadyProcessed) {
+          toast.success('Payment already completed!');
+        } else {
+          toast('Payment is being processed. Monitoring settlement...');
+        }
+      } else if (checkoutUrl) {
         const reference = getTransactionReference(response);
         if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
         sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
@@ -183,22 +199,8 @@ export default function PublicPayment() {
           provider_fee_estimate: response.provider_fee_estimate,
         }));
         window.location.assign(checkoutUrl);
-        return;
-      }
-
-      // No checkout URL returned — this is likely an idempotent "already recorded" or
-      // payout_pending tx (e.g. previous attempt left the payment in pending settlement state).
-      // Instead of throwing, switch to receipt/success UI so the user sees progress or completion.
-      // The polling effect will pick up status updates.
-      const payment = response.payment || response.transaction || response;
-      setReceipt(payment || response);
-      setSuccess(true);
-      if (payment?.status === 'completed' || ['completed', 'split_settlement'].includes(payment?.payout_status)) {
-        toast.success('Payment already completed!');
-      } else if (payment?.payout_status === 'pending' || payment?.status === 'payout_pending') {
-        toast('Payment is being processed. Monitoring settlement...');
       } else {
-        toast('Payment record found. Checking status...');
+        throw new Error('Missing Flutterwave checkout URL from backend.');
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || err.message || 'Payment failed.');
