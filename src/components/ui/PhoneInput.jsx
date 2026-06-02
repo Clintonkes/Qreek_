@@ -16,14 +16,22 @@ function buildList() {
 const COUNTRIES = buildList();
 
 // Parse an E.164 string (+2348012345678) back into { country, localNumber }
+// For countries like NG that conventionally display with leading 0 in national format,
+// prepend '0' to the localNumber for UI display (so user sees 0801... not 801...)
 function parseE164(e164) {
   if (!e164 || !e164.startsWith('+')) return { country: 'NG', localNumber: '' };
   try {
     const parsed = parsePhoneNumber(e164);
     if (parsed) {
+      let local = parsed.nationalNumber || '';
+      // prepend leading 0 for display in countries that use it (NG, GH, etc.)
+      const leadingZero = ['NG', 'GH', 'KE', 'ZA', 'UG', 'TZ', 'MW', 'ZM'];
+      if (leadingZero.includes(parsed.country || '') && local && !local.startsWith('0')) {
+        local = '0' + local;
+      }
       return {
         country:     parsed.country || 'NG',
-        localNumber: parsed.nationalNumber || '',
+        localNumber: local,
       };
     }
   } catch {}
@@ -54,7 +62,9 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
   const placeholder_ = placeholder || (country === 'NG' ? '0801 234 5678' : '');
 
   const emit = (c, n) => {
-    const digits = n.replace(/\D/g, '');
+    let digits = n.replace(/\D/g, '');
+    // strip any leading 0s (users type "08..." for NG, but E.164 is +23480... without the display 0)
+    digits = digits.replace(/^0+/, '');
     if (!digits) { onChange?.(''); return; }
     onChange?.(`+${getCountryCallingCode(c)}${digits}`);
   };
