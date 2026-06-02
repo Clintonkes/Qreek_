@@ -70,3 +70,12 @@ export const updateLink  = (id, d)  => client.put(`/payment-links/${id}`, d).the
  * @returns {Promise<Object>} Events including verify payloads with provider_settled_amount (Qreek fee) and sub splits.
  */
 export const getLinkEvents = (reference) => client.get(`/payment-links/debug/events/${reference}`).then(r => r.data);
+
+/**
+ * List settlements/payments for a specific link (used by Settlements button).
+ * Paginated, 10 per page by default.
+ * @param {string} linkId
+ * @param {number} page
+ */
+export const getLinkSettlements = (linkId, page = 1) =>
+  client.get(`/payment-links/${linkId}/settlements?page=${page}`).then(r => r.data);
