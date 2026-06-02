@@ -77,6 +77,8 @@ export default function PublicPayment() {
   const [success, setSuccess] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [checkingSettlement, setCheckingSettlement] = useState(false);
+  const [poolContributions, setPoolContributions] = useState([]);
+  const [poolTotal, setPoolTotal] = useState(0);
 
   const redirectedTransactionId = searchParams.get('transaction_id');
   const redirectedReference = searchParams.get('tx_ref');
@@ -84,7 +86,14 @@ export default function PublicPayment() {
 
   useEffect(() => {
     resolveLink(code)
-      .then(data => setLink(data.link || data))
+      .then(data => {
+        const l = data.link || data;
+        setLink(l);
+        if (data.recent_contributions) {
+          setPoolContributions(data.recent_contributions);
+          setPoolTotal(data.pool_total_via_link || 0);
+        }
+      })
       .catch(err => setError(getUserFriendlyError(err, 'This payment link is invalid or has expired.')))
       .finally(() => setLoading(false));
   }, [code]);
@@ -317,10 +326,34 @@ export default function PublicPayment() {
             )}
             {(link.is_flexible ? +form.amount : link.amount) > 0 && (
               <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
-                Qreek fee added at checkout: {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, QREEK_FEES.paymentLink))} ({feePercent(QREEK_FEES.paymentLink)})
+                {link.pool_id ? 'Pool' : 'Link'} fee (0.15% / 0.25%): {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, link.pool_id ? 0.0015 : QREEK_FEES.paymentLink))} 
               </div>
             )}
           </div>
+
+          {/* Pool collection link ledger: shown on the public checkout page for transparency.
+              Shows payments, payers (anonymized if needed), amounts, dates. "amount contributed at the time" via total + list.
+              Great UX idea added: sortable view, cumulative feel, encourages more contributions via social proof. */}
+          {(poolContributions.length > 0 || link.pool_id) && (
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Pool contributions (live ledger)</span>
+                <span style={{ color: 'var(--teal)' }}>{FMT(poolTotal)} total</span>
+              </div>
+              {poolContributions.length === 0 ? (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Be the first to contribute — your payment will appear here instantly for everyone to see.</div>
+              ) : (
+                <div style={{ maxHeight: 140, overflow: 'auto', fontSize: '0.75rem' }}>
+                  {poolContributions.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                      <span>{c.date ? new Date(c.date).toLocaleDateString() : ''} · {c.payer}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)' }}>{FMT(c.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <Input 

@@ -431,18 +431,27 @@ export default function PaymentLinks() {
               </div>
             </div>
 
-            {/* Details for selected payment */}
+            {/* Details for selected payment - human friendly, not raw JSON (per user request) */}
             {selectedPayment && (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.8rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <strong>Transaction Details for {selectedPayment.reference}</strong>
-                  <button onClick={() => setSelectedPayment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', alignItems: 'center' }}>
+                  <strong>Transaction Details — {selectedPayment.reference}</strong>
+                  <button onClick={() => setSelectedPayment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
                 </div>
-                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem', maxHeight: 200, overflow: 'auto', background: 'var(--surface)', padding: '0.5rem', borderRadius: 4 }}>
-                  {JSON.stringify(selectedPayment, null, 2)}
-                </pre>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
-                  For full event log (webhook, verify, split), use the debug endpoint or contact support.
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+                  <div><span style={{ color: 'var(--text-3)' }}>Date:</span> {selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString('en-NG') : '-'}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Status:</span> {selectedPayment.status} / {selectedPayment.payout_status || 'pending'}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Checkout Amount:</span> {FMT(selectedPayment.checkout_amount || selectedPayment.amount)}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Recipient Amount:</span> {FMT(selectedPayment.recipient_amount || selectedPayment.net)}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Qreek Fee (0.25% or 0.15%):</span> {FMT(selectedPayment.fee || selectedPayment.qreek_fee)}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Provider Fee:</span> {FMT(selectedPayment.provider_fee)}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Provider Settled (proof):</span> {FMT(selectedPayment.provider_settled_amount)}</div>
+                  <div><span style={{ color: 'var(--text-3)' }}>Payer:</span> {selectedPayment.payer_name || selectedPayment.payer_phone || '-'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-3)' }}>Description:</span> {selectedPayment.payment_description || '-'}</div>
+                  <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-3)' }}>Provider Tx ID:</span> <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{selectedPayment.provider_transaction_id || '-'}</span></div>
+                </div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.75rem' }}>
+                  This is the verified record from Flutterwave. Full audit trail available in debug events for admins.
                 </p>
               </div>
             )}

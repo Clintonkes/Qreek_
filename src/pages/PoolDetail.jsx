@@ -12,6 +12,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import { getPool, getPoolActivity, poolSend, createRequest, getRequests } from '../api/pools.js';
 import { getBanks } from '../api/payroll.js';
+import { createLink, getLinks } from '../api/paymentLinks.js';
 import { calculateFee, calculateNet, feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
