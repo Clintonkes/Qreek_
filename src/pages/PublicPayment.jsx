@@ -159,9 +159,15 @@ export default function PublicPayment() {
 
     setPaying(true);
     try {
-      const idempotencyStorageKey = `qreek:pay:${code}:${amount}:${formatPhoneNumber(form.phone)}`;
-      const idempotencyKey = sessionStorage.getItem(idempotencyStorageKey) || crypto.randomUUID();
-      sessionStorage.setItem(idempotencyStorageKey, idempotencyKey);
+      // Always generate a fresh idempotency key for each pay submission.
+      // This allows the same payer (same phone/amount/desc) to make *multiple independent payments*
+      // to the same link (like depositing to the same bank account number multiple times).
+      // The key is only for deduplicating *retries of the exact same payment attempt* (e.g. network retry
+      // of this POST with the same key). Previous "sticky per-profile key" caused subsequent payments
+      // to hit "idempotent.recorded" for old completed txs (see backend pay_link idempotency logic and
+      // the checkout.idempotent.recorded event in logs), returning no/new checkout_url and triggering
+      // frontend "Missing Flutterwave checkout URL" or showing old receipt instead of new checkout.
+      const idempotencyKey = crypto.randomUUID();
       const response = await payLink(code, {
         name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
