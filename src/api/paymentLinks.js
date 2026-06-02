@@ -54,3 +54,19 @@ export const getLinkPaymentStatus = (code, txRef) =>
  * @returns {Promise<Object>} Success message.
  */
 export const deleteLink  = (id)     => client.delete(`/payment-links/${id}`).then(r => r.data);
+
+/**
+ * Link update API (edit title, description, amount, or bank details).
+ * Editing bank details will recreate the subaccount for correct splits.
+ * @param {string} id - The ID of the payment link.
+ * @param {Object} d - Updated fields.
+ * @returns {Promise<Object>} The updated link data.
+ */
+export const updateLink  = (id, d)  => client.put(`/payment-links/${id}`, d).then(r => r.data);
+
+/**
+ * Debug payment events for a link (to inspect splits, settled amounts, fees).
+ * @param {string} reference - Link code or id.
+ * @returns {Promise<Object>} Events including verify payloads with provider_settled_amount (Qreek fee) and sub splits.
+ */
+export const getLinkEvents = (reference) => client.get(`/payment-links/debug/events/${reference}`).then(r => r.data);

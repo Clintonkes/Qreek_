@@ -82,7 +82,7 @@ function AnimatedOutlet() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg, #0a1628)', color: 'var(--text-2)' }}><div>Loading…</div></div>}>
         <Routes>
           <Route path="/"           element={<Landing />} />
           <Route path="/login"      element={<Login />} />

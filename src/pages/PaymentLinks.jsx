@@ -2,14 +2,14 @@
 // into their own payment workflows without exposing raw bank details every time.
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Link, Plus, Trash } from 'phosphor-react';
+import { Link, Plus, Trash, PencilSimple, ListChecks } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getLinks, createLink, deleteLink } from '../api/paymentLinks.js';
+import { getLinks, createLink, deleteLink, updateLink } from '../api/paymentLinks.js';
 import { getBanks } from '../api/payroll.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
@@ -25,14 +25,35 @@ const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits:
  * @param {Array} props.banks - List of supported banks for deposit routing.
  * @param {Function} props.onCreated - Callback triggered after a link is successfully created.
  */
-function CreateLinkModal({ open, onClose, banks, onCreated }) {
+function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }) {
+  const isEdit = !!editing;
   const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
   const [flexible, setFlexible] = useState(false);
   const [saving, setSaving]     = useState(false);
 
+  // Prefill when editing
+  useEffect(() => {
+    if (open && editing) {
+      const isFlex = editing.is_flexible;
+      setFlexible(isFlex);
+      setForm({
+        title: editing.title || '',
+        description: editing.description || '',
+        amount: isFlex ? '' : (editing.amount || ''),
+        bank_account: '', // do not prefill masked value; user must enter full acct to change bank
+        bank_code: '',
+        max_uses: editing.max_uses || '',
+        expires_days: '',
+      });
+    } else if (open && !editing) {
+      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
+      setFlexible(false);
+    }
+  }, [open, editing]);
+
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!form.title.trim())        { toast.error('Title required.'); return; }
     if (!form.description.trim())  { toast.error('Description required.'); return; }
     if (!form.bank_account.trim()) { toast.error('Account number required.'); return; }
@@ -41,20 +62,30 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
 
     setSaving(true);
     try {
-      await createLink({
+      const payload = {
         title: form.title, description: form.description.trim(),
         amount: flexible ? undefined : +form.amount,
-        bank_account: form.bank_account, bank_code: form.bank_code,
         max_uses: form.max_uses ? +form.max_uses : undefined,
         expires_days: form.expires_days ? +form.expires_days : undefined,
         provider: 'flutterwave',
-      });
-      toast.success('Payment link created!');
-      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
-      onCreated();
+      };
+      // Only send bank fields if provided (non-empty) — changing bank recreates subaccount.
+      if (form.bank_account && form.bank_code) {
+        payload.bank_account = form.bank_account;
+        payload.bank_code = form.bank_code;
+      }
+      if (isEdit && editing?.id) {
+        await onUpdated(editing.id, payload);
+        toast.success('Payment link updated!');
+      } else {
+        await createLink(payload);
+        toast.success('Payment link created!');
+        setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
+        onCreated();
+      }
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create link.');
+      toast.error(err.response?.data?.detail || (isEdit ? 'Failed to update link.' : 'Failed to create link.'));
     } finally {
       setSaving(false);
     }
@@ -116,9 +147,15 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
           <Input label="Expires in days (optional)" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
         </div>
 
+        {isEdit && editing && (editing.bank_name || editing.bank_account) && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', background: 'var(--surface-2)', padding: '0.4rem 0.6rem', borderRadius: 6 }}>
+            Current bank: {editing.bank_name} {editing.bank_account ? `(${editing.bank_account})` : ''} — enter new full details above to change (will recreate subaccount for splits).
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={saving}>{saving ? 'Creating…' : 'Create link'}</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save changes' : 'Create link')}</Button>
         </div>
       </div>
     </Modal>
@@ -133,7 +170,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated }) {
  * @param {Object} props.link - Payment link data object.
  * @param {Function} props.onDelete - Callback when the link is deactivated.
  */
-function LinkCard({ link, onDelete }) {
+function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -146,6 +183,10 @@ function LinkCard({ link, onDelete }) {
       onDelete(link.id);
     } catch { toast.error('Failed to deactivate.'); }
     finally { setDeleting(false); }
+  };
+
+  const handleEditClick = () => {
+    if (onEdit) onEdit(link);
   };
 
   const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
@@ -184,11 +225,25 @@ function LinkCard({ link, onDelete }) {
         <CopyButton text={link.url} />
       </div>
 
+      {link.bank_name && (
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+          Bank: {link.bank_name} · {link.bank_account || '****'}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
         {link.is_active && (
-          <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Trash size={14} /> {deleting ? 'Deactivating…' : 'Deactivate'}
-          </button>
+          <>
+            <button onClick={handleEditClick} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <PencilSimple size={14} /> Edit
+            </button>
+            <button onClick={() => onViewEvents && onViewEvents(link)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <ListChecks size={14} /> Settlements
+            </button>
+            <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Trash size={14} /> {deleting ? 'Deactivating…' : 'Deactivate'}
+            </button>
+          </>
         )}
       </div>
 
@@ -217,6 +272,10 @@ export default function PaymentLinks() {
   const [banks,    setBanks]    = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingLink, setEditingLink] = useState(null);
+  const [eventsLink, setEventsLink] = useState(null);
+  const [events, setEvents] = useState(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -228,6 +287,41 @@ export default function PaymentLinks() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = (id) => setLinks(prev => prev.filter(l => l.id !== id));
+
+  const handleUpdated = async (id, payload) => {
+    await updateLink(id, payload);
+    load();
+  };
+
+  const openEdit = (link) => {
+    setEditingLink(link);
+    setShowCreate(true);
+  };
+
+  const closeModal = () => {
+    setShowCreate(false);
+    setEditingLink(null);
+  };
+
+  const openEvents = async (link) => {
+    setEventsLink(link);
+    setEvents(null);
+    setEventsLoading(true);
+    try {
+      const data = await getLinkEvents(link.code || link.id);
+      setEvents(data);
+    } catch (e) {
+      toast.error('Failed to load events');
+      setEvents({ events: [] });
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  const closeEvents = () => {
+    setEventsLink(null);
+    setEvents(null);
+  };
 
   const activeLinks = links.filter(l => l.is_active);
   const totalCollected = links.reduce((s, l) => s + (l.total_collected || 0), 0);
@@ -255,11 +349,49 @@ export default function PaymentLinks() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {links.map(link => <LinkCard key={link.id} link={link} onDelete={handleDelete} />)}
+          {links.map(link => <LinkCard key={link.id} link={link} onDelete={handleDelete} onEdit={openEdit} onViewEvents={openEvents} />)}
         </div>
       )}
 
-      <CreateLinkModal open={showCreate} onClose={() => setShowCreate(false)} banks={banks} onCreated={load} />
+      <CreateLinkModal 
+        open={showCreate} 
+        onClose={closeModal} 
+        banks={banks} 
+        onCreated={load} 
+        editing={editingLink} 
+        onUpdated={handleUpdated} 
+      />
+
+      {/* Settlements / events modal to inspect Qreek fee (provider_settled_amount) and sub splits without waiting for FW bank payout */}
+      <Modal open={!!eventsLink} onClose={closeEvents} title={`Settlements for ${eventsLink?.title || 'link'}`} maxWidth={640}>
+        {eventsLoading ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}><Spinner size={24} /></div>
+        ) : events && events.events && events.events.length ? (
+          <div style={{ maxHeight: 420, overflow: 'auto', fontSize: '0.82rem' }}>
+            {events.events.slice(0, 20).map((ev, i) => {
+              const p = ev.payload || {};
+              const isVerify = ev.event_type && ev.event_type.includes('verify.successful');
+              const isSplit = ev.event_type && ev.event_type.includes('split.completed');
+              const settled = p.provider_settled_amount;
+              const qfee = p.qreek_fee;
+              const subId = p.subaccount_id;
+              return (
+                <div key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border)', color: isVerify || isSplit ? 'var(--teal)' : undefined }}>
+                  <div><strong>{ev.event_type}</strong> · {ev.status} · {new Date(ev.created_at).toLocaleTimeString()}</div>
+                  {isVerify && settled != null && <div style={{ color: 'var(--green)' }}>Qreek fee landed in main balance: ₦{Number(settled).toFixed(2)}</div>}
+                  {isSplit && subId && <div>Recipient share via sub: {subId} (see FW subaccount tx for bank settlement)</div>}
+                  {qfee != null && <div>Quoted Qreek fee: ₦{Number(qfee).toFixed(2)}</div>}
+                </div>
+              );
+            })}
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.75rem' }}>
+              Look for "flutterwave.verify.successful" — provider_settled_amount is what went to your main FW balance (Qreek fee). Subaccount allocations show in FW sub tx; bank credit happens on FW schedule.
+            </p>
+          </div>
+        ) : (
+          <div style={{ color: 'var(--text-3)' }}>No events yet. Complete a payment to see splits and settled amounts.</div>
+        )}
+      </Modal>
     </AppShell>
   );
 }
