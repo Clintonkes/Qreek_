@@ -9,7 +9,7 @@ import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getLinks, createLink, deleteLink, updateLink, getLinkEvents } from '../api/paymentLinks.js';
+import { getLinks, createLink, deleteLink, updateLink, getLinkSettlements } from '../api/paymentLinks.js';
 import { getBanks } from '../api/payroll.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
@@ -179,7 +179,7 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
     setDeleting(true);
     try {
       await deleteLink(link.id);
-      toast.success('Link deactivated.');
+      toast.success('Link deleted.');
       onDelete(link.id);
     } catch { toast.error('Failed to deactivate.'); }
     finally { setDeleting(false); }
@@ -231,29 +231,31 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+      {/* Action buttons row: tightened padding/gap/font so Edit + Settlements + Delete never shoot off the card edge on narrow grids (3-col on md/lg).
+         flexWrap + smaller sizes + icon+text keeps them inside without overflow (addresses screenshot of buttons "shooting off the tab"). */}
+      <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {link.is_active && (
           <>
-            <button onClick={handleEditClick} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <PencilSimple size={14} /> Edit
+            <button onClick={handleEditClick} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <PencilSimple size={13} /> Edit
             </button>
-            <button onClick={() => onViewEvents && onViewEvents(link)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <ListChecks size={14} /> Settlements
+            <button onClick={() => onViewEvents && onViewEvents(link)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <ListChecks size={13} /> Settlements
             </button>
-            <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Trash size={14} /> {deleting ? 'Deactivating…' : 'Deactivate'}
+            <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Trash size={13} /> {deleting ? 'Deleting…' : 'Delete'}
             </button>
           </>
         )}
       </div>
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Deactivate Link" maxWidth={400}>
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Delete Link" maxWidth={400}>
         <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-          Are you sure you want to deactivate "{link.title}"? This action cannot be undone.
+          Are you sure you want to permanently delete "{link.title}"? This action cannot be undone (historical transactions are kept).
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} style={{ background: 'var(--red)', color: '#fff', borderColor: 'var(--red)' }}>Deactivate</Button>
+          <Button onClick={handleDelete} style={{ background: 'var(--red)', color: '#fff', borderColor: 'var(--red)' }}>Delete</Button>
         </div>
       </Modal>
     </div>
@@ -273,9 +275,11 @@ export default function PaymentLinks() {
   const [loading,  setLoading]  = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
-  const [eventsLink, setEventsLink] = useState(null);
-  const [events, setEvents] = useState(null);
-  const [eventsLoading, setEventsLoading] = useState(false);
+  const [settlementsLink, setSettlementsLink] = useState(null);
+  const [settlements, setSettlements] = useState(null);
+  const [settlementsLoading, setSettlementsLoading] = useState(false);
+  const [settlementsPage, setSettlementsPage] = useState(1);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -286,7 +290,7 @@ export default function PaymentLinks() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDelete = (id) => setLinks(prev => prev.filter(l => l.id !== id));
+  const handleDelete = (id) => setLinks(prev => prev.filter(l => l.id !== id)); // local state update after hard delete on backend (deactivated gone forever from lists)
 
   const handleUpdated = async (id, payload) => {
     await updateLink(id, payload);
@@ -303,28 +307,44 @@ export default function PaymentLinks() {
     setEditingLink(null);
   };
 
-  const openEvents = async (link) => {
-    setEventsLink(link);
-    setEvents(null);
-    setEventsLoading(true);
+  const openSettlements = async (link, page = 1) => {
+    setSettlementsLink(link);
+    setSettlements(null);
+    setSettlementsLoading(true);
+    setSettlementsPage(page);
+    setSelectedPayment(null);
     try {
-      const data = await getLinkEvents(link.code || link.id);
-      setEvents(data);
+      const data = await getLinkSettlements(link.id, page);
+      setSettlements(data);
     } catch (e) {
-      toast.error('Failed to load events');
-      setEvents({ events: [] });
+      toast.error('Failed to load settlements');
+      setSettlements({ payments: [], total: 0, page, per_page: 10, total_pages: 0 });
     } finally {
-      setEventsLoading(false);
+      setSettlementsLoading(false);
     }
   };
 
-  const closeEvents = () => {
-    setEventsLink(null);
-    setEvents(null);
+  const closeSettlements = () => {
+    setSettlementsLink(null);
+    setSettlements(null);
+    setSelectedPayment(null);
   };
 
-  const activeLinks = links.filter(l => l.is_active);
-  const totalCollected = links.reduce((s, l) => s + (l.total_collected || 0), 0);
+  const changeSettlementsPage = (newPage) => {
+    if (settlementsLink) {
+      openSettlements(settlementsLink, newPage);
+    }
+  };
+
+  const viewPaymentDetails = (payment) => {
+    setSelectedPayment(payment);
+  };
+
+  // Strictly filter to only active (non-deactivated) links. Deactivated are hard-deleted on backend (see deactivate_link)
+  // but we filter client-side too for safety + any cached/inflight data. This ensures deleted/deactivated
+  // links no longer appear in dashboard or list (per user request + screenshot of lingering deactivated links).
+  const displayLinks = links.filter(l => l.is_active !== false);
+  const totalCollected = displayLinks.reduce((s, l) => s + (l.total_collected || 0), 0);
 
   return (
     <AppShell title="Payment links">
@@ -332,7 +352,7 @@ export default function PaymentLinks() {
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Payment links</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
-            {activeLinks.length} active · Total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
+            {displayLinks.length} active · Total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>
@@ -340,7 +360,7 @@ export default function PaymentLinks() {
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><Spinner size={32} /></div>
-      ) : links.length === 0 ? (
+      ) : displayLinks.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <Link size={40} color="var(--border-light)" style={{ marginBottom: '1rem' }} />
           <div style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>No payment links yet.</div>
@@ -349,7 +369,7 @@ export default function PaymentLinks() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {links.map(link => <LinkCard key={link.id} link={link} onDelete={handleDelete} onEdit={openEdit} onViewEvents={openEvents} />)}
+          {displayLinks.map(link => <LinkCard key={link.id} link={link} onDelete={handleDelete} onEdit={openEdit} onViewEvents={openSettlements} />)}
         </div>
       )}
 
@@ -362,34 +382,70 @@ export default function PaymentLinks() {
         onUpdated={handleUpdated} 
       />
 
-      {/* Settlements / events modal to inspect Qreek fee (provider_settled_amount) and sub splits without waiting for FW bank payout */}
-      <Modal open={!!eventsLink} onClose={closeEvents} title={`Settlements for ${eventsLink?.title || 'link'}`} maxWidth={640}>
-        {eventsLoading ? (
+      {/* Settlements modal: table of all payments received via this link, 10 per page, with View action for details */}
+      <Modal open={!!settlementsLink} onClose={closeSettlements} title={`Settlements for ${settlementsLink?.title || 'link'}`} maxWidth={800}>
+        {settlementsLoading ? (
           <div style={{ padding: '2rem', textAlign: 'center' }}><Spinner size={24} /></div>
-        ) : events && events.events && events.events.length ? (
-          <div style={{ maxHeight: 420, overflow: 'auto', fontSize: '0.82rem' }}>
-            {events.events.slice(0, 20).map((ev, i) => {
-              const p = ev.payload || {};
-              const isVerify = ev.event_type && ev.event_type.includes('verify.successful');
-              const isSplit = ev.event_type && ev.event_type.includes('split.completed');
-              const settled = p.provider_settled_amount;
-              const qfee = p.qreek_fee;
-              const subId = p.subaccount_id;
-              return (
-                <div key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border)', color: isVerify || isSplit ? 'var(--teal)' : undefined }}>
-                  <div><strong>{ev.event_type}</strong> · {ev.status} · {new Date(ev.created_at).toLocaleTimeString()}</div>
-                  {isVerify && settled != null && <div style={{ color: 'var(--green)' }}>Qreek fee landed in main balance: ₦{Number(settled).toFixed(2)}</div>}
-                  {isSplit && subId && <div>Recipient share via sub: {subId} (see FW subaccount tx for bank settlement)</div>}
-                  {qfee != null && <div>Quoted Qreek fee: ₦{Number(qfee).toFixed(2)}</div>}
+        ) : settlements && settlements.payments && settlements.payments.length ? (
+          <div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Reference</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Qreek Fee</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payout</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {settlements.payments.map((p, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
+                    <td style={{ padding: '0.5rem' }}>{p.status}</td>
+                    <td style={{ padding: '0.5rem' }}>{p.payout_status || '-'}</td>
+                    <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                      <button onClick={() => viewPaymentDetails(p)} style={{ background: 'var(--teal-faint)', color: 'var(--teal)', border: 'none', padding: '0.2rem 0.5rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem' }}>View</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem' }}>
+              <div>
+                Page {settlements.page} of {settlements.total_pages} · {settlements.total} total
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button variant="secondary" disabled={settlements.page <= 1} onClick={() => changeSettlementsPage(settlements.page - 1)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Prev</Button>
+                <Button variant="secondary" disabled={settlements.page >= settlements.total_pages} onClick={() => changeSettlementsPage(settlements.page + 1)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Next</Button>
+              </div>
+            </div>
+
+            {/* Details for selected payment */}
+            {selectedPayment && (
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <strong>Transaction Details for {selectedPayment.reference}</strong>
+                  <button onClick={() => setSelectedPayment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                 </div>
-              );
-            })}
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.75rem' }}>
-              Look for "flutterwave.verify.successful" — provider_settled_amount is what went to your main FW balance (Qreek fee). Subaccount allocations show in FW sub tx; bank credit happens on FW schedule.
-            </p>
+                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem', maxHeight: 200, overflow: 'auto', background: 'var(--surface)', padding: '0.5rem', borderRadius: 4 }}>
+                  {JSON.stringify(selectedPayment, null, 2)}
+                </pre>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
+                  For full event log (webhook, verify, split), use the debug endpoint or contact support.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
-          <div style={{ color: 'var(--text-3)' }}>No events yet. Complete a payment to see splits and settled amounts.</div>
+          <div style={{ color: 'var(--text-3)' }}>No payments yet for this link.</div>
         )}
       </Modal>
     </AppShell>
