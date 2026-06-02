@@ -16,6 +16,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight } from 'phosphor-react';
 import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink } from '../api/paymentLinks.js';
+import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import PhoneInput from '../components/ui/PhoneInput.jsx';
@@ -84,7 +85,7 @@ export default function PublicPayment() {
   useEffect(() => {
     resolveLink(code)
       .then(data => setLink(data.link || data))
-      .catch(err => setError(err.response?.data?.detail || 'This payment link is invalid or has expired.'))
+      .catch(err => setError(getUserFriendlyError(err, 'This payment link is invalid or has expired.')))
       .finally(() => setLoading(false));
   }, [code]);
 
@@ -107,7 +108,7 @@ export default function PublicPayment() {
           toast.success('Payment received. Confirming recipient settlement...');
         }
       })
-      .catch(err => setError(err.response?.data?.detail || 'We could not confirm this payment yet. If money left your account, the receipt will update after provider verification.'))
+      .catch(err => setError(getUserFriendlyError(err, 'We could not confirm this payment yet. If money left your account, the receipt will update after provider verification.')))
       .finally(() => {
         setPaying(false);
         setLoading(false);
@@ -209,7 +210,7 @@ export default function PublicPayment() {
         throw new Error('Missing Flutterwave checkout URL from backend.');
       }
     } catch (err) {
-      toast.error(err.response?.data?.detail || err.message || 'Payment failed.');
+      toast.error(getUserFriendlyError(err, 'Payment failed.'));
       setPaying(false);
     }
   };

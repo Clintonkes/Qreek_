@@ -10,6 +10,7 @@ import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { getLinks, createLink, deleteLink, updateLink, getLinkSettlements } from '../api/paymentLinks.js';
+import { getUserFriendlyError } from '../lib/utils.js';
 import { getBanks } from '../api/payroll.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
@@ -85,7 +86,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
       }
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.detail || (isEdit ? 'Failed to update link.' : 'Failed to create link.'));
+      toast.error(getUserFriendlyError(err, isEdit ? 'Failed to update link.' : 'Failed to create link.'));
     } finally {
       setSaving(false);
     }
@@ -181,7 +182,7 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
       await deleteLink(link.id);
       toast.success('Link deleted.');
       onDelete(link.id);
-    } catch { toast.error('Failed to deactivate.'); }
+    } catch (err) { toast.error(getUserFriendlyError(err, 'Failed to delete link.')); }
     finally { setDeleting(false); }
   };
 
@@ -317,7 +318,7 @@ export default function PaymentLinks() {
       const data = await getLinkSettlements(link.id, page);
       setSettlements(data);
     } catch (e) {
-      toast.error('Failed to load settlements');
+      toast.error(getUserFriendlyError(e, 'Failed to load settlements'));
       setSettlements({ payments: [], total: 0, page, per_page: 10, total_pages: 0 });
     } finally {
       setSettlementsLoading(false);
@@ -392,6 +393,7 @@ export default function PaymentLinks() {
               <thead>
                 <tr style={{ background: 'var(--surface-2)' }}>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Reference</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payer</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Qreek Fee</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
@@ -404,6 +406,7 @@ export default function PaymentLinks() {
                 {settlements.payments.map((p, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
+                    <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
                     <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
                     <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
                     <td style={{ padding: '0.5rem' }}>{p.status}</td>

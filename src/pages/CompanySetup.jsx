@@ -9,6 +9,7 @@ import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import { createCompany } from '../api/payroll.js';
+import { getUserFriendlyError } from '../lib/utils.js';
 
 const INDUSTRIES = [
   'Technology', 'Finance & Banking', 'Healthcare', 'Education', 'Manufacturing',
@@ -71,7 +72,7 @@ export default function CompanySetup() {
       toast.success('Company created! Start adding employees.');
       navigate('/enterprise/employees');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create company.');
+      toast.error(getUserFriendlyError(err, 'Failed to create company.'));
     } finally {
       setLoading(false);
     }

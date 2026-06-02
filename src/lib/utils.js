@@ -45,3 +45,20 @@ export function formatPhoneNumber(phone) {
     return null;
   }
 }
+
+/**
+ * Returns a safe, user-facing error string.
+ * Never leaks raw technical details (subaccount ids, "Merchant not found", Railway logs,
+ * Flutterwave internals, long traces, etc.) to toasts, error screens or public UI.
+ * Used everywhere we do toast.error(err.response?.data?.detail ...) or setError.
+ */
+export function getUserFriendlyError(err, fallback = 'Something went wrong. Please try again or contact support.') {
+  const raw = err?.response?.data?.detail || err?.message || (typeof err === 'string' ? err : '');
+  const s = String(raw || '').trim();
+  if (!s) return fallback;
+  // Anything that smells like internals, provider error, or is excessively long -> generic
+  const isTechnical = /subaccount|RS_[A-Z0-9]{10,}|flutterwave|railway|payment_event|traceback|stack|internal server|merchant not|could not prepare|see .* log|0x[0-9a-f]+|exception|failed to update subaccount/i.test(s)
+    || s.length > 160
+    || /"status":\s*"error"/i.test(s);
+  return isTechnical ? fallback : s;
+}
