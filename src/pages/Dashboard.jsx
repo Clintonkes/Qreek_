@@ -167,7 +167,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 pools.slice(0, 3).map(pool => (
-                  <div key={pool.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)' }}>
+                  <div key={pool.id} onClick={() => navigate(`/pools/${pool.id}`)} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{pool.name}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>{pool.member_count || 0} members</div>
@@ -191,7 +191,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 links.slice(0, 3).map(link => (
-                  <div key={link.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)' }}>
+                  <div key={link.id} onClick={() => navigate('/payment-links')} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{link.title}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
