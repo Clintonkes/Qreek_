@@ -173,19 +173,33 @@ export default function PublicPayment() {
       });
       const checkoutUrl = getCheckoutUrl(response);
 
-      if (!checkoutUrl) {
-        throw new Error('Missing Flutterwave checkout URL from backend.');
+      if (checkoutUrl) {
+        const reference = getTransactionReference(response);
+        if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
+        sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
+          checkout_amount: response.checkout_amount,
+          recipient_amount: response.recipient_amount || response.net,
+          fee: response.fee,
+          provider_fee_estimate: response.provider_fee_estimate,
+        }));
+        window.location.assign(checkoutUrl);
+        return;
       }
 
-      const reference = getTransactionReference(response);
-      if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
-      sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
-        checkout_amount: response.checkout_amount,
-        recipient_amount: response.recipient_amount || response.net,
-        fee: response.fee,
-        provider_fee_estimate: response.provider_fee_estimate,
-      }));
-      window.location.assign(checkoutUrl);
+      // No checkout URL returned — this is likely an idempotent "already recorded" or
+      // payout_pending tx (e.g. previous attempt left the payment in pending settlement state).
+      // Instead of throwing, switch to receipt/success UI so the user sees progress or completion.
+      // The polling effect will pick up status updates.
+      const payment = response.payment || response.transaction || response;
+      setReceipt(payment || response);
+      setSuccess(true);
+      if (payment?.status === 'completed' || ['completed', 'split_settlement'].includes(payment?.payout_status)) {
+        toast.success('Payment already completed!');
+      } else if (payment?.payout_status === 'pending' || payment?.status === 'payout_pending') {
+        toast('Payment is being processed. Monitoring settlement...');
+      } else {
+        toast('Payment record found. Checking status...');
+      }
     } catch (err) {
       toast.error(err.response?.data?.detail || err.message || 'Payment failed.');
       setPaying(false);
