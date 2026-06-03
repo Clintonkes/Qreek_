@@ -159,6 +159,11 @@ export default function PublicPayment() {
    * handles success (shows success UI/CTA) or failure (shows toast).
    * @param {React.FormEvent} e - Form submission event.
    */
+  // Computed for pool links: even when expired, resolve succeeds (see _get_live_link for_payment=false)
+  // so we can always show the data/ledger. Only block the actual pay action.
+  const isPoolLink = link ? !!link.pool_id : false;
+  const isExpired = link ? !!(link.expires_at && new Date(link.expires_at) < new Date()) : false;
+
   const handlePay = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error('Please enter your name.');
@@ -166,6 +171,10 @@ export default function PublicPayment() {
     const amount = link.is_flexible ? +form.amount : link.amount;
     if (!amount || amount < 100) return toast.error('Minimum payment is ₦100.');
     if (!form.note.trim()) return toast.error('Please enter a payment description.');
+
+    if (isPoolLink && isExpired) {
+      return toast.error('This pool link has expired and no longer accepts payments. All records remain visible.');
+    }
 
     setPaying(true);
     try {
@@ -355,38 +364,49 @@ export default function PublicPayment() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <Input 
-              label="Your Full Name" 
-              value={form.name} 
-              onChange={e => setForm({...form, name: e.target.value})} 
-              placeholder="e.g. John Doe"
-            />
-            <PhoneInput 
-              label="Phone Number" 
-              value={form.phone} 
-              onChange={v => setForm({...form, phone: v})} 
-            />
-            <Input 
-              label="Payment description *" 
-              multiline
-              rows={2}
-              value={form.note} 
-              onChange={e => setForm({...form, note: e.target.value})} 
-              placeholder="What is this payment for?"
-            />
-          </div>
+          {isPoolLink && isExpired && (
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
+              This pool link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
+              However, every record, contribution history, payer details, amounts, dates, totals, and other data concerning it remains permanently visible here (and in the pool dashboard).
+            </div>
+          )}
 
-          <div style={{ marginTop: '0.5rem' }}>
-            <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-              {paying ? 'Opening checkout…' : `Continue to ${PAYMENT_PROVIDER.name} →`}
-            </Button>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: 0.6 }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secure payment powered by</span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>{PAYMENT_PROVIDER.name}</span>
-          </div>
+          {!(isPoolLink && isExpired) && (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <Input 
+                  label="Your Full Name" 
+                  value={form.name} 
+                  onChange={e => setForm({...form, name: e.target.value})} 
+                  placeholder="e.g. John Doe"
+                />
+                <PhoneInput 
+                  label="Phone Number" 
+                  value={form.phone} 
+                  onChange={v => setForm({...form, phone: v})} 
+                />
+                <Input 
+                  label="Payment description *" 
+                  multiline
+                  rows={2}
+                  value={form.note} 
+                  onChange={e => setForm({...form, note: e.target.value})} 
+                  placeholder="What is this payment for?"
+                />
+              </div>
+
+              <div style={{ marginTop: '0.5rem' }}>
+                <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
+                  {paying ? 'Opening checkout…' : `Continue to ${PAYMENT_PROVIDER.name} →`}
+                </Button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: 0.6 }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secure payment powered by</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>{PAYMENT_PROVIDER.name}</span>
+              </div>
+            </>
+          )}
         </form>
       </div>
     </div>
