@@ -28,7 +28,7 @@ const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits:
  */
 function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }) {
   const isEdit = !!editing;
-  const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
+  const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
   const [flexible, setFlexible] = useState(false);
   const [saving, setSaving]     = useState(false);
 
@@ -43,11 +43,10 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
         amount: isFlex ? '' : (editing.amount || ''),
         bank_account: '', // do not prefill masked value; user must enter full acct to change bank
         bank_code: '',
-        max_uses: editing.max_uses || '',
         expires_days: '',
       });
     } else if (open && !editing) {
-      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
+      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
       setFlexible(false);
     }
   }, [open, editing]);
@@ -65,8 +64,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
     try {
       const payload = {
         title: form.title, description: form.description.trim(),
-        amount: flexible ? undefined : +form.amount,
-        max_uses: form.max_uses ? +form.max_uses : undefined,
+        amount: flexible ? null : +form.amount,
         expires_days: form.expires_days ? +form.expires_days : undefined,
         provider: 'flutterwave',
       };
@@ -81,7 +79,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
       } else {
         await createLink(payload);
         toast.success('Payment link created!');
-        setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', max_uses: '', expires_days: '' });
+        setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
         onCreated();
       }
       onClose();
@@ -144,7 +142,6 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
               {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
             </select>
           </div>
-          <Input label="Max uses (optional)" type="number" value={form.max_uses} onChange={e => set('max_uses', e.target.value)} placeholder="100" />
           <Input label="Expires in days (optional)" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
         </div>
 
@@ -191,9 +188,8 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
   };
 
   const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
-  const isFull    = link.max_uses && link.use_count >= link.max_uses;
-  const status    = !link.is_active ? 'inactive' : isExpired ? 'expired' : isFull ? 'full' : 'active';
-  const statusColor = { active: 'var(--green)', expired: 'var(--text-3)', full: 'var(--amber)', inactive: 'var(--text-3)' }[status];
+  const status    = !link.is_active ? 'inactive' : isExpired ? 'expired' : 'active';
+  const statusColor = { active: 'var(--green)', expired: 'var(--text-3)', inactive: 'var(--text-3)' }[status];
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', opacity: status !== 'active' ? 0.7 : 1 }}>
@@ -211,8 +207,8 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', color: 'var(--teal)' }}>{link.is_flexible ? 'Flexible' : FMT(link.amount)}</div>
         </div>
         <div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Uses</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem' }}>{link.use_count}{link.max_uses ? ` / ${link.max_uses}` : ''}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Payments</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem' }}>{link.use_count || 0}</div>
         </div>
         <div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Collected</div>

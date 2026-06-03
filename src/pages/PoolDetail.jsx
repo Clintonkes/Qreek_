@@ -3,17 +3,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { ArrowLeft, PaperPlaneTilt, Bell, Users, Clock, CheckCircle, XCircle, Plus } from 'phosphor-react';
+import { ArrowLeft, Bell, Users, Clock, CheckCircle, XCircle, Plus } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
-import { getPool, getPoolActivity, poolSend, createRequest, getRequests } from '../api/pools.js';
+import { getPool, getPoolActivity, createRequest, getRequests, reportDispute } from '../api/pools.js';
 import { getBanks } from '../api/payroll.js';
-import { createLink, getLinks } from '../api/paymentLinks.js';
-import { calculateFee, calculateNet, feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
+import { createLink } from '../api/paymentLinks.js';
+import { feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
@@ -48,87 +48,6 @@ function ActivityItem({ item, currentPhone }) {
 }
 
 /**
- * Modal to initiate a payment out of the pool to a recipient's bank account.
- * Requires PIN authorization and dynamically calculates the Qreek pool payout fee.
- *
- * @param {Object} props
- * @param {boolean} props.open - Modal visibility.
- * @param {Function} props.onClose - Callback to close the modal.
- * @param {string} props.poolId - ID of the pool sending funds.
- * @param {Array} props.banks - List of supported Nigerian banks.
- * @param {Function} props.onSent - Callback triggered after successful payment.
- */
-function SendModal({ open, onClose, poolId, banks, onSent }) {
-  const [form, setForm] = useState({ amount: '', recipient_name: '', bank_account: '', bank_code: '', note: '', pin: '' });
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
-
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const validate = () => {
-    const e = {};
-    if (!form.amount || +form.amount < 100)      e.amount = 'Minimum ₦100';
-    if (!form.recipient_name.trim())              e.recipient_name = 'Required';
-    if (!/^\d{10}$/.test(form.bank_account))     e.bank_account = 'Must be 10 digits';
-    if (!form.bank_code)                          e.bank_code = 'Select a bank';
-    if (!form.pin || form.pin.length < 4)         e.pin = '4–6 digit PIN';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
-
-  const handleSend = async () => {
-    if (!validate()) return;
-    setSaving(true);
-    try {
-      await poolSend(poolId, { amount: +form.amount, recipient_name: form.recipient_name, bank_account: form.bank_account, bank_code: form.bank_code, note: form.note || undefined, pin: form.pin, provider: 'flutterwave' });
-      toast.success('Payment sent!');
-      setForm({ amount: '', recipient_name: '', bank_account: '', bank_code: '', note: '', pin: '' });
-      onSent();
-      onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Payment failed.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const fee = calculateFee(form.amount, QREEK_FEES.poolPayout);
-  const net = calculateNet(form.amount, QREEK_FEES.poolPayout);
-
-  return (
-    <Modal open={open} onClose={onClose} title="Send payment" maxWidth={500}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <Input label="Amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} error={errors.amount} placeholder="5000" />
-        {+form.amount > 0 && (
-          <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--text-2)' }}>Fee ({feePercent(QREEK_FEES.poolPayout)}): {FMT(fee)}</span>
-            <span style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>Recipient gets: {FMT(net)}</span>
-          </div>
-        )}
-        <Input label="Recipient name *" value={form.recipient_name} onChange={e => set('recipient_name', e.target.value)} error={errors.recipient_name} placeholder="Emeka Johnson" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} error={errors.bank_account} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
-          <div>
-            <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: errors.bank_code ? 'var(--red)' : 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-            <select value={form.bank_code} onChange={e => set('bank_code', e.target.value)} style={{ width: '100%', borderColor: errors.bank_code ? 'var(--red)' : undefined }}>
-              <option value="">Select</option>
-              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-            </select>
-            {errors.bank_code && <span style={{ fontSize: '0.78rem', color: 'var(--red)' }}>{errors.bank_code}</span>}
-          </div>
-        </div>
-        <Input label="Note (optional)" value={form.note} onChange={e => set('note', e.target.value)} placeholder="For January supplies" />
-        <Input label="Your PIN *" type="password" value={form.pin} onChange={e => set('pin', e.target.value.replace(/\D/g, '').slice(0, 6))} error={errors.pin} placeholder="••••••" maxLength={6} style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.3em' }} />
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSend} disabled={saving}>{saving ? 'Sending…' : 'Send payment'}</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/**
  * Modal for pool administrators to request payments from pool members.
  * Creates a centralized collection request visible to all members.
  *
@@ -145,6 +64,7 @@ function RequestModal({ open, onClose, poolId, onCreated }) {
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.amount || +form.amount <= 0) { toast.error('Title and amount required.'); return; }
+    if (!form.due_date) { toast.error('Due date required.'); return; }
     setSaving(true);
     try {
       await createRequest(poolId, { title: form.title, amount: +form.amount, note: form.note || undefined, due_date: form.due_date || undefined });
@@ -165,10 +85,78 @@ function RequestModal({ open, onClose, poolId, onCreated }) {
         <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="January dues" />
         <Input label="Amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />
         <Input label="Note (optional)" value={form.note} onChange={e => set('note', e.target.value)} placeholder="Pay before Friday" />
-        <Input label="Due date (optional)" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+        <Input label="Due date *" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={handleCreate} disabled={saving}>{saving ? 'Sending…' : 'Send request'}</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
+  const [form, setForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
+  const [flexible, setFlexible] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleCreate = async () => {
+    if (!form.title.trim()) { toast.error('Title required.'); return; }
+    if (!form.description.trim()) { toast.error('Description required.'); return; }
+    if (!flexible && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or choose flexible.'); return; }
+    if (!/^\d{10}$/.test(form.bank_account)) { toast.error('Enter a valid 10 digit account number.'); return; }
+    if (!form.bank_code) { toast.error('Select a bank.'); return; }
+    if (!form.expires_days || +form.expires_days <= 0) { toast.error('Due date is required.'); return; }
+
+    setSaving(true);
+    try {
+      await createLink({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        amount: flexible ? null : +form.amount,
+        bank_account: form.bank_account,
+        bank_code: form.bank_code,
+        expires_days: +form.expires_days,
+        pool_id: poolId,
+        provider: 'flutterwave',
+      });
+      toast.success('Pool payment link created.');
+      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
+      setFlexible(false);
+      onCreated();
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to create pool payment link.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Create pool payment link" maxWidth={520}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="January dues" />
+        <Input label="Description *" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Contribution for January pool payment" />
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-2)' }}>
+          <input type="checkbox" checked={flexible} onChange={e => setFlexible(e.target.checked)} />
+          Flexible amount
+        </label>
+        {!flexible && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
+          <div>
+            <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
+            <select value={form.bank_code} onChange={e => set('bank_code', e.target.value)} style={{ width: '100%' }}>
+              <option value="">Select</option>
+              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <Input label="Expires in days *" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={saving}>{saving ? 'Creating...' : 'Create link'}</Button>
         </div>
       </div>
     </Modal>
@@ -194,8 +182,8 @@ export default function PoolDetail() {
   const [requests,  setRequests]  = useState([]);
   const [banks,     setBanks]     = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [showSend,  setShowSend]  = useState(false);
   const [showReq,   setShowReq]   = useState(false);
+  const [showLink,  setShowLink]  = useState(false);
   const [tab,       setTab]       = useState('activity');
 
   const load = useCallback(async () => {
@@ -231,7 +219,7 @@ export default function PoolDetail() {
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             {pool.is_admin && <Button variant="secondary" onClick={() => setShowReq(true)}><Bell size={16} /> Request payment</Button>}
-            <Button onClick={() => setShowSend(true)}><PaperPlaneTilt size={16} /> Send payment</Button>
+            {pool.is_admin && <Button onClick={() => setShowLink(true)}><Plus size={16} /> Payment link</Button>}
           </div>
         </div>
 
@@ -261,7 +249,7 @@ export default function PoolDetail() {
           <div>
             {activity.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                No activity yet. Send the first payment!
+                No activity yet.
               </div>
             ) : activity.map(item => <ActivityItem key={item.id} item={item} currentPhone="" />)}
           </div>
@@ -301,9 +289,6 @@ export default function PoolDetail() {
                 </div>
                 {req.note && <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '0.4rem' }}>{req.note}</div>}
                 {req.due_date && <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>Due: {new Date(req.due_date).toLocaleDateString('en-NG')}</div>}
-                <div style={{ marginTop: '0.75rem' }}>
-                  <Button onClick={() => setShowSend(true)} style={{ fontSize: '0.82rem', padding: '0.45rem 1rem' }}>Pay now</Button>
-                </div>
               </div>
             ))}
           </div>
@@ -314,8 +299,8 @@ export default function PoolDetail() {
         )}
       </div>
 
-      <SendModal open={showSend} onClose={() => setShowSend(false)} poolId={poolId} banks={banks} onSent={load} />
       <RequestModal open={showReq} onClose={() => setShowReq(false)} poolId={poolId} onCreated={load} />
+      <PoolLinkModal open={showLink} onClose={() => setShowLink(false)} poolId={poolId} banks={banks} onCreated={load} />
     </AppShell>
   );
 }
@@ -330,7 +315,7 @@ function ProtectionTab({ poolId, pool }) {
     if (!desc.trim() || desc.trim().length < 10) { toast.error('Please describe the issue in at least 10 characters.'); return; }
     setSending(true);
     try {
-      const res = await import('../api/pools.js').then(m => m.reportDispute ? m.reportDispute(poolId, { description: desc, transaction_id: txnId || undefined }) : Promise.reject(new Error('not implemented')));
+      await reportDispute(poolId, { description: desc, transaction_id: txnId || undefined });
       setDone(true);
       toast.success('Dispute reported. Support will review within 24 hours.');
     } catch (err) {

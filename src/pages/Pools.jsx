@@ -84,6 +84,7 @@ export default function Pools() {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) { toast.error('Pool name required'); return; }
+    if (type === 'crypto') { toast.error('Crypto pool trading is coming soon.'); return; }
     setCreating(true);
     try {
       const pool = await createPool({ name: name.trim(), pool_type: type });
@@ -102,7 +103,7 @@ export default function Pools() {
   const handleJoin = async (e) => {
     e.preventDefault();
     setCodeErr('');
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = code.trim().replace(/\/+$/, '').split('/').pop().toUpperCase();
     if (!trimmed) { setCodeErr('Enter an invite code'); return; }
     if (trimmed.length !== 6) { setCodeErr('Invite codes are 6 characters'); return; }
 
@@ -183,7 +184,7 @@ export default function Pools() {
                   <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Type</label>
                   <select value={type} onChange={e => setType(e.target.value)} style={{ width: '100%' }}>
                     <option value="fiat">NGN Payment Pool (0.15% fee)</option>
-                    <option value="crypto">Crypto Trading Pool (0.25% fee)</option>
+                    <option value="crypto" disabled>Crypto Pool Trading (Coming soon)</option>
                   </select>
                 </div>
                 <Button type="submit" disabled={creating} style={{ width: '100%', justifyContent: 'center' }}>
@@ -201,9 +202,8 @@ export default function Pools() {
                   </label>
                   <input
                     value={code}
-                    onChange={e => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setCodeErr(''); }}
-                    placeholder="ABC123"
-                    maxLength={6}
+                    onChange={e => { setCode(e.target.value); setCodeErr(''); }}
+                    placeholder="ABC123 or invite link"
                     style={{
                       fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', fontSize: '1.1rem',
                       textAlign: 'center', textTransform: 'uppercase',
