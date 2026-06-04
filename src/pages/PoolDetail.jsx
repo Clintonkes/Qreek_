@@ -3,16 +3,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bell, Users, Clock, CheckCircle, XCircle, Plus } from 'phosphor-react';
+import { ArrowLeft, Users, Clock, CheckCircle, XCircle, Plus, Link as LinkIcon } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
-import { getPool, getPoolActivity, createRequest, getRequests, reportDispute } from '../api/pools.js';
+import { getPool, getPoolActivity, reportDispute } from '../api/pools.js';
 import { getBanks } from '../api/payroll.js';
-import { createLink } from '../api/paymentLinks.js';
+import { createLink, getLinks } from '../api/paymentLinks.js';
 import { feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -47,83 +47,40 @@ function ActivityItem({ item, currentPhone }) {
   );
 }
 
-/**
- * Modal for pool administrators to request payments from pool members.
- * Creates a centralized collection request visible to all members.
- *
- * @param {Object} props
- * @param {boolean} props.open - Modal visibility.
- * @param {Function} props.onClose - Callback to close the modal.
- * @param {string} props.poolId - ID of the pool making the request.
- * @param {Function} props.onCreated - Callback triggered when the request is created.
- */
-function RequestModal({ open, onClose, poolId, onCreated }) {
-  const [form, setForm]   = useState({ title: '', amount: '', note: '', due_date: '' });
-  const [saving, setSaving] = useState(false);
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleCreate = async () => {
-    if (!form.title.trim() || !form.amount || +form.amount <= 0) { toast.error('Title and amount required.'); return; }
-    if (!form.due_date) { toast.error('Due date required.'); return; }
-    setSaving(true);
-    try {
-      await createRequest(poolId, { title: form.title, amount: +form.amount, note: form.note || undefined, due_date: form.due_date || undefined });
-      toast.success('Payment request sent to pool members!');
-      setForm({ title: '', amount: '', note: '', due_date: '' });
-      onCreated();
-      onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create request.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title="Request payment from members" maxWidth={460}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="January dues" />
-        <Input label="Amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />
-        <Input label="Note (optional)" value={form.note} onChange={e => set('note', e.target.value)} placeholder="Pay before Friday" />
-        <Input label="Due date *" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={saving}>{saving ? 'Sending…' : 'Send request'}</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
-  const [form, setForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
-  const [flexible, setFlexible] = useState(false);
+  const [form, setForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
+  const [amountMode, setAmountMode] = useState('fixed');
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleCreate = async () => {
     if (!form.title.trim()) { toast.error('Title required.'); return; }
     if (!form.description.trim()) { toast.error('Description required.'); return; }
-    if (!flexible && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or choose flexible.'); return; }
+    if (amountMode === 'fixed' && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or choose flexible.'); return; }
     if (!/^\d{10}$/.test(form.bank_account)) { toast.error('Enter a valid 10 digit account number.'); return; }
     if (!form.bank_code) { toast.error('Select a bank.'); return; }
-    if (!form.expires_days || +form.expires_days <= 0) { toast.error('Due date is required.'); return; }
+    if (!form.due_date) { toast.error('Due date is required.'); return; }
+
+    const dueDate = new Date(`${form.due_date}T23:59:59`);
+    const today = new Date();
+    const expiresDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (!Number.isFinite(expiresDays) || expiresDays <= 0) { toast.error('Due date must be in the future.'); return; }
 
     setSaving(true);
     try {
       await createLink({
         title: form.title.trim(),
         description: form.description.trim(),
-        amount: flexible ? null : +form.amount,
+        amount: amountMode === 'flexible' ? null : +form.amount,
         bank_account: form.bank_account,
         bank_code: form.bank_code,
-        expires_days: +form.expires_days,
+        expires_days: expiresDays,
         pool_id: poolId,
         provider: 'flutterwave',
       });
       toast.success('Pool payment link created.');
-      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
-      setFlexible(false);
+      setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
+      setAmountMode('fixed');
       onCreated();
       onClose();
     } catch (err) {
@@ -134,15 +91,38 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Create pool payment link" maxWidth={520}>
+    <Modal open={open} onClose={onClose} title="Generate payment link" maxWidth={520}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <Input label="Title *" value={form.title} onChange={e => set('title', e.target.value)} placeholder="January dues" />
         <Input label="Description *" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Contribution for January pool payment" />
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-          <input type="checkbox" checked={flexible} onChange={e => setFlexible(e.target.checked)} />
-          Flexible amount
-        </label>
-        {!flexible && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />}
+        <div>
+          <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Amount type *</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            {[
+              ['fixed', 'Fixed amount'],
+              ['flexible', 'Flexible amount'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAmountMode(value)}
+                style={{
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  border: `1px solid ${amountMode === value ? 'var(--teal)' : 'var(--border)'}`,
+                  background: amountMode === value ? 'var(--teal-faint)' : 'var(--surface-2)',
+                  color: amountMode === value ? 'var(--teal)' : 'var(--text-2)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 600,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {amountMode === 'fixed' && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
           <div>
@@ -153,14 +133,33 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
             </select>
           </div>
         </div>
-        <Input label="Expires in days *" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
+        <Input label="Due date *" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={saving}>{saving ? 'Creating...' : 'Create link'}</Button>
+          <Button onClick={handleCreate} disabled={saving}>{saving ? 'Generating...' : 'Generate link'}</Button>
         </div>
       </div>
     </Modal>
   );
+}
+
+function PoolLinkAction({ link, isAdmin, onGenerate }) {
+  if (link) {
+    return (
+      <div style={{ minWidth: 260, maxWidth: 420, display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.65rem' }}>
+        <LinkIcon size={16} color="var(--teal)" />
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+          {link.url}
+        </span>
+        <CopyButton text={link.url} />
+        <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+          Open
+        </a>
+      </div>
+    );
+  }
+  if (!isAdmin) return null;
+  return <Button onClick={onGenerate}><Plus size={16} /> Generate payment link</Button>;
 }
 
 /**
@@ -179,22 +178,21 @@ export default function PoolDetail() {
   const navigate   = useNavigate();
   const [pool,      setPool]      = useState(null);
   const [activity,  setActivity]  = useState([]);
-  const [requests,  setRequests]  = useState([]);
+  const [poolLinks, setPoolLinks] = useState([]);
   const [banks,     setBanks]     = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [showReq,   setShowReq]   = useState(false);
   const [showLink,  setShowLink]  = useState(false);
   const [tab,       setTab]       = useState('activity');
 
   const load = useCallback(async () => {
     try {
-      const [pd, ad, rd, bd] = await Promise.all([
-        getPool(poolId), getPoolActivity(poolId, 1), getRequests(poolId), getBanks(),
+      const [pd, ad, bd, ld] = await Promise.all([
+        getPool(poolId), getPoolActivity(poolId, 1), getBanks(), getLinks(),
       ]);
       setPool(pd);
       setActivity(ad.activity || []);
-      setRequests(rd.requests || []);
       setBanks(bd.banks || []);
+      setPoolLinks((ld.links || []).filter(l => l.pool_id === poolId && l.is_active !== false));
     } catch { toast.error('Failed to load pool.'); }
     finally { setLoading(false); }
   }, [poolId]);
@@ -203,6 +201,7 @@ export default function PoolDetail() {
 
   if (loading) return <AppShell title="Pool"><div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size={36} /></div></AppShell>;
   if (!pool)   return <AppShell title="Pool"><div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>Pool not found.</div></AppShell>;
+  const activePoolLink = poolLinks[0] || null;
 
   return (
     <AppShell title={pool.name}>
@@ -218,8 +217,7 @@ export default function PoolDetail() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {pool.is_admin && <Button variant="secondary" onClick={() => setShowReq(true)}><Bell size={16} /> Request payment</Button>}
-            {pool.is_admin && <Button onClick={() => setShowLink(true)}><Plus size={16} /> Payment link</Button>}
+            <PoolLinkAction link={activePoolLink} isAdmin={pool.is_admin} onGenerate={() => setShowLink(true)} />
           </div>
         </div>
 
@@ -228,7 +226,7 @@ export default function PoolDetail() {
             ['Invite code', <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--teal)', fontSize: '1.1rem', letterSpacing: '0.1em' }}>{pool.invite_code}</span>],
             ['Total volume', <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', color: 'var(--green)' }}>{FMT(pool.total_volume)}</span>],
             ['Members', <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem' }}>{pool.member_count}</span>],
-            ['Active requests', <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', color: 'var(--amber)' }}>{requests.length}</span>],
+            ['Payment link', <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: activePoolLink ? 'var(--teal)' : 'var(--text-3)' }}>{activePoolLink ? 'Generated' : 'Not created'}</span>],
           ].map(([l, v]) => (
             <div key={l} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.4rem' }}>{l}</div>
@@ -238,9 +236,9 @@ export default function PoolDetail() {
         </div>
 
         <div style={{ display: 'flex', gap: '0', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.25rem', marginBottom: '1.25rem' }}>
-          {[['activity', 'Activity'], ['members', 'Members'], ['requests', 'Requests'], ['protect', '🛡 Protection']].map(([id, label]) => (
+          {[['activity', 'Activity'], ['members', 'Members'], ['protect', 'Protection']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '0.5rem', border: 'none', background: tab === id ? 'var(--surface-2)' : 'transparent', color: tab === id ? 'var(--teal)' : 'var(--text-2)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 500, borderBottom: tab === id ? '2px solid var(--teal)' : '2px solid transparent', transition: 'var(--trans-fast)' }}>
-              {label} {id === 'requests' && requests.length > 0 && <span style={{ background: 'var(--amber)', color: 'var(--text-inv)', borderRadius: 'var(--radius-full)', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700, marginLeft: '0.25rem' }}>{requests.length}</span>}
+              {label}
             </button>
           ))}
         </div>
@@ -274,32 +272,11 @@ export default function PoolDetail() {
           </div>
         )}
 
-        {tab === 'requests' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {requests.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                No active payment requests.
-                {pool.is_admin && <div style={{ marginTop: '0.75rem' }}><Button variant="secondary" onClick={() => setShowReq(true)}><Plus size={16} /> Create request</Button></div>}
-              </div>
-            ) : requests.map(req => (
-              <div key={req.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontWeight: 700 }}>{req.title}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--amber)', fontSize: '1rem' }}>{FMT(req.amount)}</span>
-                </div>
-                {req.note && <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '0.4rem' }}>{req.note}</div>}
-                {req.due_date && <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>Due: {new Date(req.due_date).toLocaleDateString('en-NG')}</div>}
-              </div>
-            ))}
-          </div>
-        )}
-
         {tab === 'protect' && (
           <ProtectionTab poolId={poolId} pool={pool} />
         )}
       </div>
 
-      <RequestModal open={showReq} onClose={() => setShowReq(false)} poolId={poolId} onCreated={load} />
       <PoolLinkModal open={showLink} onClose={() => setShowLink(false)} poolId={poolId} banks={banks} onCreated={load} />
     </AppShell>
   );

@@ -16,6 +16,22 @@ import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 
+function DetailItem({ label, value, wide = false }) {
+  return (
+    <div style={{
+      gridColumn: wide ? '1 / -1' : undefined,
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-sm)',
+      padding: '0.7rem 0.8rem',
+      minWidth: 0,
+    }}>
+      <div style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: '0.84rem', color: 'var(--text-1)', wordBreak: 'break-word' }}>{value || '-'}</div>
+    </div>
+  );
+}
+
 /**
  * Modal component for creating a new payment link.
  * Allows configuration of fixed or flexible amounts, maximum uses, and expiration.
@@ -334,7 +350,7 @@ export default function PaymentLinks() {
   };
 
   const viewPaymentDetails = (payment) => {
-    setSelectedPayment(payment);
+    setSelectedPayment(prev => prev?.reference === payment.reference ? null : payment);
   };
 
   // Strictly filter to only active (non-deactivated) links. Deactivated are hard-deleted on backend (see deactivate_link)
@@ -400,18 +416,51 @@ export default function PaymentLinks() {
               </thead>
               <tbody>
                 {settlements.payments.map((p, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
-                    <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
-                    <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
-                    <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
-                    <td style={{ padding: '0.5rem' }}>{p.status}</td>
-                    <td style={{ padding: '0.5rem' }}>{p.payout_status || '-'}</td>
-                    <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
-                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                      <button onClick={() => viewPaymentDetails(p)} style={{ background: 'var(--teal-faint)', color: 'var(--teal)', border: 'none', padding: '0.2rem 0.5rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem' }}>View</button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={p.reference || i}>
+                    <tr style={{ borderBottom: selectedPayment?.reference === p.reference ? 'none' : '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
+                      <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
+                      <td style={{ padding: '0.5rem' }}>{p.status}</td>
+                      <td style={{ padding: '0.5rem' }}>{p.payout_status || '-'}</td>
+                      <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        <button onClick={() => viewPaymentDetails(p)} style={{ background: 'var(--teal-faint)', color: 'var(--teal)', border: 'none', padding: '0.2rem 0.5rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem' }}>
+                          {selectedPayment?.reference === p.reference ? 'Hide' : 'View'}
+                        </button>
+                      </td>
+                    </tr>
+                    {selectedPayment?.reference === p.reference && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '0 0.5rem 0.9rem', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem' }}>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Transaction details</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{p.reference}</div>
+                              </div>
+                              <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)', background: 'var(--teal-faint)', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                                {p.payout_status || p.status}
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                              <DetailItem label="Date" value={p.created_at ? new Date(p.created_at).toLocaleString('en-NG') : '-'} />
+                              <DetailItem label="Payer" value={p.payer_name || p.payer_phone || '-'} />
+                              <DetailItem label="Checkout amount" value={FMT(p.checkout_amount || p.amount)} />
+                              <DetailItem label="Recipient amount" value={FMT(p.recipient_amount || p.net)} />
+                              <DetailItem label="Qreek fee" value={FMT(p.fee || p.qreek_fee)} />
+                              <DetailItem label="Provider fee" value={FMT(p.provider_fee)} />
+                              <DetailItem label="Provider settled" value={FMT(p.provider_settled_amount)} />
+                              <DetailItem label="Status" value={`${p.status || '-'} / ${p.payout_status || 'pending'}`} />
+                              <DetailItem label="Description" value={p.payment_description || '-'} wide />
+                              <DetailItem label="Provider transaction ID" value={p.provider_transaction_id || '-'} wide />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -426,31 +475,6 @@ export default function PaymentLinks() {
                 <Button variant="secondary" disabled={settlements.page >= settlements.total_pages} onClick={() => changeSettlementsPage(settlements.page + 1)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Next</Button>
               </div>
             </div>
-
-            {/* Details for selected payment - human friendly, not raw JSON (per user request) */}
-            {selectedPayment && (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.82rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', alignItems: 'center' }}>
-                  <strong>Transaction Details — {selectedPayment.reference}</strong>
-                  <button onClick={() => setSelectedPayment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
-                  <div><span style={{ color: 'var(--text-3)' }}>Date:</span> {selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString('en-NG') : '-'}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Status:</span> {selectedPayment.status} / {selectedPayment.payout_status || 'pending'}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Checkout Amount:</span> {FMT(selectedPayment.checkout_amount || selectedPayment.amount)}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Recipient Amount:</span> {FMT(selectedPayment.recipient_amount || selectedPayment.net)}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Qreek Fee (0.25% or 0.15%):</span> {FMT(selectedPayment.fee || selectedPayment.qreek_fee)}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Provider Fee:</span> {FMT(selectedPayment.provider_fee)}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Provider Settled (proof):</span> {FMT(selectedPayment.provider_settled_amount)}</div>
-                  <div><span style={{ color: 'var(--text-3)' }}>Payer:</span> {selectedPayment.payer_name || selectedPayment.payer_phone || '-'}</div>
-                  <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-3)' }}>Description:</span> {selectedPayment.payment_description || '-'}</div>
-                  <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-3)' }}>Provider Tx ID:</span> <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{selectedPayment.provider_transaction_id || '-'}</span></div>
-                </div>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.75rem' }}>
-                  This is the verified record from Flutterwave. Full audit trail available in debug events for admins.
-                </p>
-              </div>
-            )}
           </div>
         ) : (
           <div style={{ color: 'var(--text-3)' }}>No payments yet for this link.</div>
