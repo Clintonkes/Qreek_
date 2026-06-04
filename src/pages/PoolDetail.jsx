@@ -12,7 +12,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import { getPool, getPoolActivity, reportDispute } from '../api/pools.js';
 import { getBanks } from '../api/payroll.js';
-import { createLink, getLinks } from '../api/paymentLinks.js';
+import { createLink, getLinks, verifyBankAccount } from '../api/paymentLinks.js';
 import { feePercent, PAYMENT_PROVIDER, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -68,6 +68,10 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
 
     setSaving(true);
     try {
+      const verified = await verifyBankAccount({
+        bank_account: form.bank_account,
+        bank_code: form.bank_code,
+      });
       await createLink({
         title: form.title.trim(),
         description: form.description.trim(),
@@ -78,7 +82,7 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
         pool_id: poolId,
         provider: 'flutterwave',
       });
-      toast.success('Pool payment link created.');
+      toast.success(verified?.account_name ? `Verified ${verified.account_name}. Pool payment link created.` : 'Pool payment link created.');
       setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
       setAmountMode('fixed');
       onCreated();

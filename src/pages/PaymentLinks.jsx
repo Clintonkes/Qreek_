@@ -1,6 +1,7 @@
 // PaymentLinks.jsx manages shareable collection links so users can accept payments
 // into their own payment workflows without exposing raw bank details every time.
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Link, Plus, Trash, PencilSimple, ListChecks } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
@@ -9,7 +10,7 @@ import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getLinks, createLink, deleteLink, updateLink, getLinkSettlements } from '../api/paymentLinks.js';
+import { getLinks, createLink, deleteLink, updateLink, verifyBankAccount } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import { getBanks } from '../api/payroll.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
@@ -72,12 +73,25 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
   const handleSave = async () => {
     if (!form.title.trim())        { toast.error('Title required.'); return; }
     if (!form.description.trim())  { toast.error('Description required.'); return; }
-    if (!form.bank_account.trim()) { toast.error('Account number required.'); return; }
-    if (!form.bank_code)           { toast.error('Select a bank.'); return; }
     if (!flexible && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or enable flexible.'); return; }
+
+    const hasBankChange = Boolean(form.bank_account.trim() || form.bank_code);
+    if (!isEdit || hasBankChange) {
+      if (!/^\d{10}$/.test(form.bank_account)) { toast.error('Enter a valid 10 digit account number.'); return; }
+      if (!form.bank_code) { toast.error('Select a bank.'); return; }
+    }
 
     setSaving(true);
     try {
+      let verifiedAccountName = '';
+      if (!isEdit || hasBankChange) {
+        const verified = await verifyBankAccount({
+          bank_account: form.bank_account,
+          bank_code: form.bank_code,
+        });
+        verifiedAccountName = verified?.account_name || '';
+      }
+
       const payload = {
         title: form.title, description: form.description.trim(),
         amount: flexible ? null : +form.amount,
@@ -85,16 +99,16 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
         provider: 'flutterwave',
       };
       // Only send bank fields if provided (non-empty) — changing bank recreates subaccount.
-      if (form.bank_account && form.bank_code) {
+      if (hasBankChange) {
         payload.bank_account = form.bank_account;
         payload.bank_code = form.bank_code;
       }
       if (isEdit && editing?.id) {
         await onUpdated(editing.id, payload);
-        toast.success('Payment link updated!');
+        toast.success(verifiedAccountName ? `Payment link updated. Verified: ${verifiedAccountName}` : 'Payment link updated!');
       } else {
         await createLink(payload);
-        toast.success('Payment link created!');
+        toast.success(verifiedAccountName ? `Payment link created. Verified: ${verifiedAccountName}` : 'Payment link created!');
         setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
         onCreated();
       }
@@ -184,7 +198,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
  * @param {Object} props.link - Payment link data object.
  * @param {Function} props.onDelete - Callback when the link is deactivated.
  */
-function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
+function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -252,7 +266,7 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
             <button onClick={handleEditClick} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <PencilSimple size={13} /> Edit
             </button>
-            <button onClick={() => onViewEvents && onViewEvents(link)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <button onClick={() => onViewSettlements && onViewSettlements(link)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <ListChecks size={13} /> Settlements
             </button>
             <button onClick={() => setConfirmOpen(true)} disabled={deleting} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--red)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -283,16 +297,12 @@ function LinkCard({ link, onDelete, onEdit, onViewEvents }) {
  * @returns {JSX.Element}
  */
 export default function PaymentLinks() {
+  const navigate = useNavigate();
   const [links,    setLinks]    = useState([]);
   const [banks,    setBanks]    = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
-  const [settlementsLink, setSettlementsLink] = useState(null);
-  const [settlements, setSettlements] = useState(null);
-  const [settlementsLoading, setSettlementsLoading] = useState(false);
-  const [settlementsPage, setSettlementsPage] = useState(1);
-  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -320,44 +330,12 @@ export default function PaymentLinks() {
     setEditingLink(null);
   };
 
-  const openSettlements = async (link, page = 1) => {
-    setSettlementsLink(link);
-    setSettlements(null);
-    setSettlementsLoading(true);
-    setSettlementsPage(page);
-    setSelectedPayment(null);
-    try {
-      const data = await getLinkSettlements(link.id, page);
-      setSettlements(data);
-    } catch (e) {
-      toast.error(getUserFriendlyError(e, 'Failed to load settlements'));
-      setSettlements({ payments: [], total: 0, page, per_page: 10, total_pages: 0 });
-    } finally {
-      setSettlementsLoading(false);
-    }
-  };
-
-  const closeSettlements = () => {
-    setSettlementsLink(null);
-    setSettlements(null);
-    setSelectedPayment(null);
-  };
-
-  const changeSettlementsPage = (newPage) => {
-    if (settlementsLink) {
-      openSettlements(settlementsLink, newPage);
-    }
-  };
-
-  const viewPaymentDetails = (payment) => {
-    setSelectedPayment(prev => prev?.reference === payment.reference ? null : payment);
-  };
-
   // Strictly filter to only active (non-deactivated) links. Deactivated are hard-deleted on backend (see deactivate_link)
   // but we filter client-side too for safety + any cached/inflight data. This ensures deleted/deactivated
   // links no longer appear in dashboard or list (per user request + screenshot of lingering deactivated links).
   const displayLinks = links.filter(l => l.is_active !== false);
   const totalCollected = displayLinks.reduce((s, l) => s + (l.total_collected || 0), 0);
+  const hasPersonalLink = displayLinks.some(l => !l.pool_id);
 
   return (
     <AppShell title="Payment links">
@@ -368,7 +346,7 @@ export default function PaymentLinks() {
             {displayLinks.length} active · Total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>
+        {!hasPersonalLink && <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>}
       </div>
 
       {loading ? (
@@ -382,7 +360,15 @@ export default function PaymentLinks() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayLinks.map(link => <LinkCard key={link.id} link={link} onDelete={handleDelete} onEdit={openEdit} onViewEvents={openSettlements} />)}
+          {displayLinks.map(link => (
+            <LinkCard
+              key={link.id}
+              link={link}
+              onDelete={handleDelete}
+              onEdit={openEdit}
+              onViewSettlements={(selectedLink) => navigate(`/payment-links/${selectedLink.id}/settlements`)}
+            />
+          ))}
         </div>
       )}
 
@@ -394,92 +380,6 @@ export default function PaymentLinks() {
         editing={editingLink} 
         onUpdated={handleUpdated} 
       />
-
-      {/* Settlements modal: table of all payments received via this link, 10 per page, with View action for details */}
-      <Modal open={!!settlementsLink} onClose={closeSettlements} title={`Settlements for ${settlementsLink?.title || 'link'}`} maxWidth={800}>
-        {settlementsLoading ? (
-          <div style={{ padding: '2rem', textAlign: 'center' }}><Spinner size={24} /></div>
-        ) : settlements && settlements.payments && settlements.payments.length ? (
-          <div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface-2)' }}>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Reference</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payer</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Qreek Fee</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payout</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {settlements.payments.map((p, i) => (
-                  <React.Fragment key={p.reference || i}>
-                    <tr style={{ borderBottom: selectedPayment?.reference === p.reference ? 'none' : '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
-                      <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
-                      <td style={{ padding: '0.5rem' }}>{p.status}</td>
-                      <td style={{ padding: '0.5rem' }}>{p.payout_status || '-'}</td>
-                      <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                        <button onClick={() => viewPaymentDetails(p)} style={{ background: 'var(--teal-faint)', color: 'var(--teal)', border: 'none', padding: '0.2rem 0.5rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem' }}>
-                          {selectedPayment?.reference === p.reference ? 'Hide' : 'View'}
-                        </button>
-                      </td>
-                    </tr>
-                    {selectedPayment?.reference === p.reference && (
-                      <tr>
-                        <td colSpan={8} style={{ padding: '0 0.5rem 0.9rem', borderBottom: '1px solid var(--border)' }}>
-                          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem' }}>
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Transaction details</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{p.reference}</div>
-                              </div>
-                              <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)', background: 'var(--teal-faint)', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                                {p.payout_status || p.status}
-                              </span>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
-                              <DetailItem label="Date" value={p.created_at ? new Date(p.created_at).toLocaleString('en-NG') : '-'} />
-                              <DetailItem label="Payer" value={p.payer_name || p.payer_phone || '-'} />
-                              <DetailItem label="Checkout amount" value={FMT(p.checkout_amount || p.amount)} />
-                              <DetailItem label="Recipient amount" value={FMT(p.recipient_amount || p.net)} />
-                              <DetailItem label="Qreek fee" value={FMT(p.fee || p.qreek_fee)} />
-                              <DetailItem label="Provider fee" value={FMT(p.provider_fee)} />
-                              <DetailItem label="Provider settled" value={FMT(p.provider_settled_amount)} />
-                              <DetailItem label="Status" value={`${p.status || '-'} / ${p.payout_status || 'pending'}`} />
-                              <DetailItem label="Description" value={p.payment_description || '-'} wide />
-                              <DetailItem label="Provider transaction ID" value={p.provider_transaction_id || '-'} wide />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem' }}>
-              <div>
-                Page {settlements.page} of {settlements.total_pages} · {settlements.total} total
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Button variant="secondary" disabled={settlements.page <= 1} onClick={() => changeSettlementsPage(settlements.page - 1)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Prev</Button>
-                <Button variant="secondary" disabled={settlements.page >= settlements.total_pages} onClick={() => changeSettlementsPage(settlements.page + 1)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Next</Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ color: 'var(--text-3)' }}>No payments yet for this link.</div>
-        )}
-      </Modal>
     </AppShell>
   );
 }

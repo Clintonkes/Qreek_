@@ -14,6 +14,13 @@ export const createLink  = (d)      => client.post('/payment-links', d).then(r =
 export const getLinks    = ()       => client.get('/payment-links').then(r => r.data);
 
 /**
+ * Verifies a Nigerian bank account before creating or updating a link.
+ * @param {Object} d - Bank details (bank_code, bank_account).
+ * @returns {Promise<Object>} The resolved account name/details.
+ */
+export const verifyBankAccount = (d) => client.post('/payment-links/verify-bank', d).then(r => r.data);
+
+/**
  * Public link resolution API.
  * @param {string} code - The unique code of the payment link.
  * @returns {Promise<Object>} The resolved link details.

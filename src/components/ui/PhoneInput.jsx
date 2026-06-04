@@ -78,7 +78,7 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
   };
 
   const handleNumber = (e) => {
-    let raw = e.target.value;
+    const raw = e.target.value;
     let digits = raw.replace(/\D/g, '');
     let newCountry = country;
     // Support pasting full numbers: detect +234..., 234..., 080... etc and switch country + extract local
@@ -104,28 +104,11 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
     if (newCountry !== country) {
       setCountry(newCountry);
     }
-    // Seamless: always allow typing starting with 0 or omitting it.
-    // For NG we show conventional leading 0 in the input immediately (first digit registers, no re-press needed).
-    // We emit clean E.164 (no leading 0) to parent. Use rAF + setSelection to end to keep caret stable on prefix insert.
-    const isNG = (newCountry || 'NG') === 'NG';
-    if (isNG) {
-      // Strip any leading 0s from the local part we will store/emit; display will re-add the 0 for NG convention.
-      const local = digits.replace(/^0+/, '');
-      const display = local ? '0' + local : '';
-      setNumber(display);
-      // Restore caret at end after React updates the controlled value (fixes first-digit lag / need to press twice).
-      requestAnimationFrame(() => {
-        const inp = inputRef.current;
-        if (inp) {
-          const len = display.length;
-          try { inp.setSelectionRange(len, len); } catch {}
-        }
-      });
-      emit(newCountry, local);
-    } else {
-      setNumber(digits);
-      emit(newCountry, digits);
-    }
+    // Keep the visible input exactly as the user typed it, but emit a clean E.164 value.
+    // This avoids the "0 disappears / becomes 08" cursor jump while still normalizing the backend value.
+    setNumber(digits);
+    const normalized = (newCountry || 'NG') === 'NG' ? digits.replace(/^0+/, '') : digits;
+    emit(newCountry, normalized);
   };
 
   // Close dropdown on outside click
@@ -155,7 +138,7 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
 
       {/* Helper text */}
       <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: '-0.1rem 0 0.1rem' }}>
-        Select your country, then type your number <em>without</em> the country code
+        Select your country, then type your number.
       </p>
 
       <div style={{ display: 'flex', position: 'relative' }} ref={dropRef}>

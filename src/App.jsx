@@ -33,6 +33,7 @@ import PayrollRuns from './pages/PayrollRuns.jsx';
 import PayrollRunCreate from './pages/PayrollRunCreate.jsx';
 import PayrollRunDetail from './pages/PayrollRunDetail.jsx';
 import PaymentLinks from './pages/PaymentLinks.jsx';
+import LinkSettlements from './pages/LinkSettlements.jsx';
 import PublicPayment from './pages/PublicPayment.jsx';
 
 /**
@@ -102,6 +103,7 @@ export default function App() {
               <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
               <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
               <Route path="/payment-links"             element={<PaymentLinks />} />
+              <Route path="/payment-links/:linkId/settlements" element={<LinkSettlements />} />
             </Route>
           </Route>
         </Route>
