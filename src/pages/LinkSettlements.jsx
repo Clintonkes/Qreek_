@@ -5,7 +5,6 @@ import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Modal from '../components/ui/Modal.jsx';
-import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import { getLinks, getLinkSettlements } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
@@ -68,6 +67,13 @@ export default function LinkSettlements() {
   };
 
   const closeDetails = () => setSelectedPayment(null);
+  const statusLabel = (payment) => {
+    if (!payment) return '-';
+    if (payment.status === 'completed') return 'Completed';
+    if (payment.status === 'processing' || payment.status === 'payout_pending') return 'Processing';
+    if (payment.status === 'failed') return 'Failed';
+    return payment.status || '-';
+  };
 
   return (
     <AppShell title={link?.title ? `Settlements - ${link.title}` : 'Settlements'}>
@@ -94,10 +100,13 @@ export default function LinkSettlements() {
         </div>
 
         {loading || settlementsLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size={32} /></div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem', color: 'var(--text-3)', fontSize: '0.9rem' }}>
+            Loading settlements...
+          </div>
         ) : settlements && settlements.payments && settlements.payments.length ? (
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
               <thead>
                 <tr style={{ background: 'var(--surface-2)' }}>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Reference</th>
@@ -105,7 +114,6 @@ export default function LinkSettlements() {
                   <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Qreek Fee</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payout</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
                   <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>Action</th>
                 </tr>
@@ -118,8 +126,7 @@ export default function LinkSettlements() {
                       <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
                       <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
                       <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
-                      <td style={{ padding: '0.5rem' }}>{p.status}</td>
-                      <td style={{ padding: '0.5rem' }}>{p.payout_status || '-'}</td>
+                      <td style={{ padding: '0.5rem' }}>{statusLabel(p)}</td>
                       <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
                       <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                         <button onClick={() => setSelectedPayment(prev => prev?.reference === p.reference ? null : p)} style={{ background: 'var(--teal-faint)', color: 'var(--teal)', border: 'none', padding: '0.2rem 0.5rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.75rem' }}>
@@ -131,6 +138,7 @@ export default function LinkSettlements() {
                 ))}
               </tbody>
             </table>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '1rem', borderTop: '1px solid var(--border)', fontSize: '0.8rem' }}>
               <div>
@@ -158,7 +166,7 @@ export default function LinkSettlements() {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{selectedPayment.reference}</div>
               </div>
               <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)', background: 'var(--teal-faint)', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
-                {selectedPayment.payout_status || selectedPayment.status}
+                {statusLabel(selectedPayment)}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
@@ -168,8 +176,7 @@ export default function LinkSettlements() {
               <DetailItem label="Recipient amount" value={FMT(selectedPayment.recipient_amount || selectedPayment.net)} />
               <DetailItem label="Qreek fee" value={FMT(selectedPayment.fee || selectedPayment.qreek_fee)} />
               <DetailItem label="Provider fee" value={FMT(selectedPayment.provider_fee)} />
-              <DetailItem label="Provider settled" value={FMT(selectedPayment.provider_settled_amount)} />
-              <DetailItem label="Status" value={`${selectedPayment.status || '-'} / ${selectedPayment.payout_status || 'pending'}`} />
+              <DetailItem label="Status" value={statusLabel(selectedPayment)} />
               <DetailItem label="Description" value={selectedPayment.payment_description || '-'} wide />
               <DetailItem label="Provider transaction ID" value={selectedPayment.provider_transaction_id || '-'} wide />
             </div>

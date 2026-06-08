@@ -51,7 +51,25 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
   const [form, setForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
   const [amountMode, setAmountMode] = useState('fixed');
   const [saving, setSaving] = useState(false);
+  const [bankStatus, setBankStatus] = useState({ state: 'idle', name: '' });
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const verifyBank = async () => {
+    if (!/^\d{10}$/.test(form.bank_account) || !form.bank_code) {
+      setBankStatus({ state: 'idle', name: '' });
+      return;
+    }
+    setBankStatus({ state: 'checking', name: '' });
+    try {
+      const verified = await verifyBankAccount({
+        bank_account: form.bank_account,
+        bank_code: form.bank_code,
+      });
+      setBankStatus({ state: 'verified', name: verified?.account_name || '' });
+    } catch {
+      setBankStatus({ state: 'failed', name: '' });
+    }
+  };
 
   const handleCreate = async () => {
     if (!form.title.trim()) { toast.error('Title required.'); return; }
@@ -128,13 +146,19 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
         </div>
         {amountMode === 'fixed' && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
+          <Input label="Account number *" value={form.bank_account} onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
           <div>
             <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-            <select value={form.bank_code} onChange={e => set('bank_code', e.target.value)} style={{ width: '100%' }}>
+            <select value={form.bank_code} onChange={e => { set('bank_code', e.target.value); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} style={{ width: '100%' }}>
               <option value="">Select</option>
               {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
             </select>
+          </div>
+          <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
+            {bankStatus.state === 'checking' && 'Verifying bank account...'}
+            {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
+            {bankStatus.state === 'failed' && 'Bank account could not be verified.'}
+            {bankStatus.state === 'idle' && 'Bank account will be verified before saving.'}
           </div>
         </div>
         <Input label="Due date *" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />

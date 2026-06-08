@@ -9,7 +9,6 @@ import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
-import Spinner from '../components/ui/Spinner.jsx';
 import { getLinks, createLink, deleteLink, updateLink, verifyBankAccount } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import { getBanks } from '../api/payroll.js';
@@ -48,6 +47,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
   const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
   const [flexible, setFlexible] = useState(false);
   const [saving, setSaving]     = useState(false);
+  const [bankStatus, setBankStatus] = useState({ state: 'idle', name: '' });
 
   // Prefill when editing
   useEffect(() => {
@@ -65,10 +65,25 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
     } else if (open && !editing) {
       setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
       setFlexible(false);
+      setBankStatus({ state: 'idle', name: '' });
     }
   }, [open, editing]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const verifyBank = async () => {
+    if (!/^\d{10}$/.test(form.bank_account) || !form.bank_code) {
+      setBankStatus({ state: 'idle', name: '' });
+      return;
+    }
+    setBankStatus({ state: 'checking', name: '' });
+    try {
+      const verified = await verifyBankAccount({ bank_account: form.bank_account, bank_code: form.bank_code });
+      setBankStatus({ state: 'verified', name: verified?.account_name || '' });
+    } catch {
+      setBankStatus({ state: 'failed', name: '' });
+    }
+  };
 
   const handleSave = async () => {
     if (!form.title.trim())        { toast.error('Title required.'); return; }
@@ -164,16 +179,22 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
-          <div>
-            <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-            <select value={form.bank_code} onChange={e => set('bank_code', e.target.value)} style={{ width: '100%' }}>
-              <option value="">Select</option>
-              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-            </select>
-          </div>
-          <Input label="Expires in days (optional)" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
+        <Input label="Account number *" value={form.bank_account} onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
+        <div>
+          <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
+          <select value={form.bank_code} onChange={e => { set('bank_code', e.target.value); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} style={{ width: '100%' }}>
+            <option value="">Select</option>
+            {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+          </select>
         </div>
+        <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
+          {bankStatus.state === 'checking' && 'Verifying bank account...'}
+          {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
+          {bankStatus.state === 'failed' && 'Bank account could not be verified.'}
+          {bankStatus.state === 'idle' && 'Bank account will be verified before saving.'}
+        </div>
+        <Input label="Expires in days (optional)" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
+      </div>
 
         {isEdit && editing && (editing.bank_name || editing.bank_account) && (
           <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', background: 'var(--surface-2)', padding: '0.4rem 0.6rem', borderRadius: 6 }}>
@@ -301,14 +322,19 @@ export default function PaymentLinks() {
   const [links,    setLinks]    = useState([]);
   const [banks,    setBanks]    = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [linksLoaded, setLinksLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
 
   const load = () => {
     setLoading(true);
+    setLinksLoaded(false);
     Promise.all([getLinks(), getBanks()])
       .then(([ld, bd]) => { setLinks(ld.links || []); setBanks(bd.banks || []); })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setLinksLoaded(true);
+      });
   };
 
   useEffect(() => { load(); }, []);
@@ -346,11 +372,13 @@ export default function PaymentLinks() {
             {displayLinks.length} active · Total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
           </p>
         </div>
-        {!hasPersonalLink && <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>}
+        {linksLoaded && !hasPersonalLink && <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>}
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><Spinner size={32} /></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem', color: 'var(--text-3)', fontSize: '0.9rem' }}>
+          Loading links...
+        </div>
       ) : displayLinks.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <Link size={40} color="var(--border-light)" style={{ marginBottom: '1rem' }} />

@@ -189,7 +189,9 @@ export default function PublicPayment() {
       const idempotencyKey = crypto.randomUUID();
       const response = await payLink(code, {
         name: form.name.trim(),
+        payer_name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
+        payer_phone: formatPhoneNumber(form.phone),
         amount,
         payment_description: form.note.trim(),
         provider: 'flutterwave',
