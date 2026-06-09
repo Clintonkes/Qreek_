@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Clock, CheckCircle, XCircle, Plus, Link as LinkIcon }
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
+import BankSelect from '../components/ui/BankSelect.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
@@ -52,18 +53,37 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
   const [amountMode, setAmountMode] = useState('fixed');
   const [saving, setSaving] = useState(false);
   const [bankStatus, setBankStatus] = useState({ state: 'idle', name: '' });
+  const [dueDateError, setDueDateError] = useState('');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const verifyBank = async () => {
-    if (!/^\d{10}$/.test(form.bank_account) || !form.bank_code) {
+  const validateDueDate = (value) => {
+    if (!value) {
+      setDueDateError('');
+      return false;
+    }
+    const selected = new Date(`${value}T00:00:00`);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    if (selected < startOfToday) {
+      setDueDateError('Selected date has already passed.');
+      return false;
+    }
+    setDueDateError('');
+    return true;
+  };
+
+  const verifyBank = async (override = {}) => {
+    const bankAccount = override.bank_account ?? form.bank_account;
+    const bankCode = override.bank_code ?? form.bank_code;
+    if (!/^\d{10}$/.test(bankAccount) || !bankCode) {
       setBankStatus({ state: 'idle', name: '' });
       return;
     }
     setBankStatus({ state: 'checking', name: '' });
     try {
       const verified = await verifyBankAccount({
-        bank_account: form.bank_account,
-        bank_code: form.bank_code,
+        bank_account: bankAccount,
+        bank_code: bankCode,
       });
       setBankStatus({ state: 'verified', name: verified?.account_name || '' });
     } catch {
@@ -78,6 +98,10 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
     if (!/^\d{10}$/.test(form.bank_account)) { toast.error('Enter a valid 10 digit account number.'); return; }
     if (!form.bank_code) { toast.error('Select a bank.'); return; }
     if (!form.due_date) { toast.error('Due date is required.'); return; }
+    if (!validateDueDate(form.due_date)) {
+      toast.error('Selected date has already passed.');
+      return;
+    }
 
     const dueDate = new Date(`${form.due_date}T23:59:59`);
     const today = new Date();
@@ -103,6 +127,7 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
       toast.success(verified?.account_name ? `Verified ${verified.account_name}. Pool payment link created.` : 'Pool payment link created.');
       setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
       setAmountMode('fixed');
+      setDueDateError('');
       onCreated();
       onClose();
     } catch (err) {
@@ -145,15 +170,21 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
           </div>
         </div>
         {amountMode === 'fixed' && <Input label="Fixed amount (₦) *" type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="5000" />}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Account number *" value={form.bank_account} onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
-          <div>
-            <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-            <select value={form.bank_code} onChange={e => { set('bank_code', e.target.value); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} style={{ width: '100%' }}>
-              <option value="">Select</option>
-              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-            </select>
-          </div>
+          <BankSelect
+            label="Bank *"
+            banks={banks}
+            value={form.bank_code}
+            onChange={value => {
+              set('bank_code', value);
+              setBankStatus({ state: 'idle', name: '' });
+              if (/^\d{10}$/.test(form.bank_account) && value) {
+                verifyBank({ bank_account: form.bank_account, bank_code: value });
+              }
+            }}
+            hint="Bank account will be verified before saving."
+          />
           <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
             {bankStatus.state === 'checking' && 'Verifying bank account...'}
             {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
@@ -161,7 +192,17 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
             {bankStatus.state === 'idle' && 'Bank account will be verified before saving.'}
           </div>
         </div>
-        <Input label="Due date *" type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+        <Input
+          label="Due date *"
+          type="date"
+          value={form.due_date}
+          onChange={e => {
+            set('due_date', e.target.value);
+            validateDueDate(e.target.value);
+          }}
+          error={dueDateError}
+          hint="Past dates are rejected as soon as they are selected."
+        />
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={handleCreate} disabled={saving}>{saving ? 'Generating...' : 'Generate link'}</Button>
@@ -174,13 +215,15 @@ function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
 function PoolLinkAction({ link, isAdmin, onGenerate }) {
   if (link) {
     return (
-      <div style={{ minWidth: 260, maxWidth: 420, display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.55rem 0.65rem' }}>
-        <LinkIcon size={16} color="var(--teal)" />
-        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-          {link.url}
-        </span>
-        <CopyButton text={link.url} />
-        <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+      <div style={{ width: '100%', maxWidth: 420, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem', background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.7rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+          <LinkIcon size={16} color="var(--teal)" style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+            {link.url}
+          </span>
+          <CopyButton text={link.url} />
+        </div>
+        <a href={link.url} target="_blank" rel="noreferrer" style={{ alignSelf: 'flex-start', fontSize: '0.75rem', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
           Open
         </a>
       </div>

@@ -7,6 +7,7 @@ import { Link, Plus, Trash, PencilSimple, ListChecks } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
+import BankSelect from '../components/ui/BankSelect.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import { getLinks, createLink, deleteLink, updateLink, verifyBankAccount } from '../api/paymentLinks.js';
@@ -71,14 +72,16 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const verifyBank = async () => {
-    if (!/^\d{10}$/.test(form.bank_account) || !form.bank_code) {
+  const verifyBank = async (override = {}) => {
+    const bankAccount = override.bank_account ?? form.bank_account;
+    const bankCode = override.bank_code ?? form.bank_code;
+    if (!/^\d{10}$/.test(bankAccount) || !bankCode) {
       setBankStatus({ state: 'idle', name: '' });
       return;
     }
     setBankStatus({ state: 'checking', name: '' });
     try {
-      const verified = await verifyBankAccount({ bank_account: form.bank_account, bank_code: form.bank_code });
+      const verified = await verifyBankAccount({ bank_account: bankAccount, bank_code: bankCode });
       setBankStatus({ state: 'verified', name: verified?.account_name || '' });
     } catch {
       setBankStatus({ state: 'failed', name: '' });
@@ -180,13 +183,19 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input label="Account number *" value={form.bank_account} onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
-        <div>
-          <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-          <select value={form.bank_code} onChange={e => { set('bank_code', e.target.value); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} style={{ width: '100%' }}>
-            <option value="">Select</option>
-            {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-          </select>
-        </div>
+        <BankSelect
+          label="Bank *"
+          banks={banks}
+          value={form.bank_code}
+          onChange={value => {
+            set('bank_code', value);
+            setBankStatus({ state: 'idle', name: '' });
+            if (/^\d{10}$/.test(form.bank_account) && value) {
+              verifyBank({ bank_account: form.bank_account, bank_code: value });
+            }
+          }}
+          hint="Bank account will be verified before saving."
+        />
         <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
           {bankStatus.state === 'checking' && 'Verifying bank account...'}
           {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}

@@ -79,6 +79,7 @@ export default function PublicPayment() {
   const [checkingSettlement, setCheckingSettlement] = useState(false);
   const [poolContributions, setPoolContributions] = useState([]);
   const [poolTotal, setPoolTotal] = useState(0);
+  const [paymentError, setPaymentError] = useState('');
 
   const redirectedTransactionId = searchParams.get('transaction_id');
   const redirectedReference = searchParams.get('tx_ref');
@@ -166,6 +167,7 @@ export default function PublicPayment() {
 
   const handlePay = async (e) => {
     e.preventDefault();
+    setPaymentError('');
     if (!form.name.trim()) return toast.error('Please enter your name.');
     if (!form.phone || form.phone.length < 10) return toast.error('Please enter a valid phone number.');
     const amount = link.is_flexible ? +form.amount : link.amount;
@@ -230,7 +232,16 @@ export default function PublicPayment() {
         throw new Error('Missing Flutterwave checkout URL from backend.');
       }
     } catch (err) {
-      toast.error(getUserFriendlyError(err, 'Payment failed.'));
+      const status = err?.response?.status;
+      const failureMessage =
+        status === 502 && isPoolLink
+          ? 'This pool link cannot accept payments right now because the recipient bank setup failed earlier. The pool owner needs to edit the bank details to refresh the subaccount.'
+          : status === 502
+            ? 'The payment service could not prepare this checkout right now. Please try again shortly.'
+            : getUserFriendlyError(err, 'Payment failed.');
+
+      setPaymentError(failureMessage);
+      toast.error(failureMessage);
       setPaying(false);
     }
   };
@@ -318,6 +329,12 @@ export default function PublicPayment() {
         </div>
 
         <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {paymentError && (
+            <div style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', color: 'var(--text-2)', fontSize: '0.85rem', lineHeight: 1.55 }}>
+              {paymentError}
+            </div>
+          )}
+
           <div style={{ background: 'var(--bg-2)', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', textAlign: 'center' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Recipient Receives</div>
             {link.is_flexible ? (
