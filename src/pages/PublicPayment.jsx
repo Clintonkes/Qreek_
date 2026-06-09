@@ -14,8 +14,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink } from '../api/paymentLinks.js';
+import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets } from 'phosphor-react';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -79,6 +79,12 @@ export default function PublicPayment() {
   const [checkingSettlement, setCheckingSettlement] = useState(false);
   const [poolContributions, setPoolContributions] = useState([]);
   const [poolTotal, setPoolTotal] = useState(0);
+  const [poolContributionsTotal, setPoolContributionsTotal] = useState(0);
+  const [poolLedgerTotalPages, setPoolLedgerTotalPages] = useState(1);
+  const [poolLedgerPage, setPoolLedgerPage] = useState(1);
+  const [poolLedgerLoading, setPoolLedgerLoading] = useState(false);
+  const [poolLedgerError, setPoolLedgerError] = useState('');
+  const [activeTab, setActiveTab] = useState('pay');
   const [paymentError, setPaymentError] = useState('');
 
   const redirectedTransactionId = searchParams.get('transaction_id');
@@ -98,6 +104,33 @@ export default function PublicPayment() {
       .catch(err => setError(getUserFriendlyError(err, 'This payment link is invalid or has expired.')))
       .finally(() => setLoading(false));
   }, [code]);
+
+  useEffect(() => {
+    if (!link?.pool_id || activeTab !== 'ledger') return;
+
+    let cancelled = false;
+    setPoolLedgerLoading(true);
+    setPoolLedgerError('');
+    getPublicLinkContributions(code, poolLedgerPage, 25)
+      .then(data => {
+        if (cancelled) return;
+        setPoolContributions(data.payments || []);
+        setPoolContributionsTotal(data.total || 0);
+        setPoolLedgerTotalPages(data.total_pages || 1);
+        setPoolTotal(data.total_collected || link.total_collected || 0);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setPoolLedgerError(getUserFriendlyError(err, 'Could not load the pool ledger right now.'));
+      })
+      .finally(() => {
+        if (!cancelled) setPoolLedgerLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, code, link?.pool_id, link?.total_collected, poolLedgerPage]);
 
   useEffect(() => {
     if (!redirectedTransactionId && !redirectedReference) return;
@@ -317,6 +350,67 @@ export default function PublicPayment() {
     );
   }
 
+  const renderPoolLedger = () => (
+    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.65rem', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+          <ListBullets size={16} style={{ marginRight: '0.4rem', verticalAlign: '-2px' }} />
+          Pool contributions
+        </div>
+        <div style={{ color: 'var(--teal)', fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}>
+          {FMT(poolTotal)} total · {poolContributionsTotal} payment{poolContributionsTotal === 1 ? '' : 's'}
+        </div>
+      </div>
+
+      {poolLedgerLoading ? (
+        <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Loading payment history...</div>
+      ) : poolLedgerError ? (
+        <div style={{ color: 'var(--red)', fontSize: '0.8rem' }}>{poolLedgerError}</div>
+      ) : poolContributions.length === 0 ? (
+        <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>No payments yet. The first contribution will appear here.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {poolContributions.map((c) => (
+            <div key={c.reference} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', alignItems: 'center', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.payer || 'Anonymous'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)' }}>
+                  {c.date ? new Date(c.date).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable'} · Ref {c.reference || '—'}
+                </div>
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>
+                {FMT(c.amount)}
+              </div>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
+            <button
+              type="button"
+              onClick={() => setPoolLedgerPage(p => Math.max(1, p - 1))}
+              disabled={poolLedgerPage === 1}
+              style={{ padding: '0.45rem 0.7rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Previous
+            </button>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
+              Page {poolLedgerPage}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPoolLedgerPage(p => p + 1)}
+              disabled={poolLedgerPage >= poolLedgerTotalPages}
+              style={{ padding: '0.45rem 0.7rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage >= poolLedgerTotalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ maxWidth: 480, width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem', boxShadow: 'var(--shadow)' }}>
@@ -328,7 +422,43 @@ export default function PublicPayment() {
           {link.description && <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{link.description}</p>}
         </div>
 
-        <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {link.pool_id && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pay')}
+              style={{
+                padding: '0.65rem 0.8rem',
+                borderRadius: 'var(--radius)',
+                border: `1px solid ${activeTab === 'pay' ? 'var(--teal)' : 'var(--border)'}`,
+                background: activeTab === 'pay' ? 'var(--teal-faint)' : 'var(--surface-2)',
+                color: activeTab === 'pay' ? 'var(--teal)' : 'var(--text-2)',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+              }}
+            >
+              Make payment
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ledger')}
+              style={{
+                padding: '0.65rem 0.8rem',
+                borderRadius: 'var(--radius)',
+                border: `1px solid ${activeTab === 'ledger' ? 'var(--teal)' : 'var(--border)'}`,
+                background: activeTab === 'ledger' ? 'var(--teal-faint)' : 'var(--surface-2)',
+                color: activeTab === 'ledger' ? 'var(--teal)' : 'var(--text-2)',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+              }}
+            >
+              View payments
+            </button>
+          </div>
+        )}
+
+        {(!link.pool_id || activeTab === 'pay') && (
+          <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {paymentError && (
             <div style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', color: 'var(--text-2)', fontSize: '0.85rem', lineHeight: 1.55 }}>
               {paymentError}
@@ -359,30 +489,6 @@ export default function PublicPayment() {
             )}
           </div>
 
-          {/* Pool collection link ledger: shown on the public checkout page for transparency.
-              Shows payments, payers (anonymized if needed), amounts, dates. "amount contributed at the time" via total + list.
-              Great UX idea added: sortable view, cumulative feel, encourages more contributions via social proof. */}
-          {(poolContributions.length > 0 || link.pool_id) && (
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Pool contributions (live ledger)</span>
-                <span style={{ color: 'var(--teal)' }}>{FMT(poolTotal)} total</span>
-              </div>
-              {poolContributions.length === 0 ? (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Be the first to contribute — your payment will appear here instantly for everyone to see.</div>
-              ) : (
-                <div style={{ maxHeight: 140, overflow: 'auto', fontSize: '0.75rem' }}>
-                  {poolContributions.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderTop: i ? '1px solid var(--border)' : 'none' }}>
-                      <span>{c.date ? new Date(c.date).toLocaleDateString() : ''} · {c.payer}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)' }}>{FMT(c.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {isPoolLink && isExpired && (
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
               This pool link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
@@ -390,7 +496,9 @@ export default function PublicPayment() {
             </div>
           )}
 
-          {!(isPoolLink && isExpired) && (
+          {link.pool_id && activeTab === 'ledger' && renderPoolLedger()}
+
+          {!(isPoolLink && isExpired) && activeTab === 'pay' && (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Input 
@@ -426,7 +534,8 @@ export default function PublicPayment() {
               </div>
             </>
           )}
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

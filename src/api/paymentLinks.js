@@ -28,6 +28,13 @@ export const verifyBankAccount = (d) => client.post('/payment-links/verify-bank'
 export const resolveLink = (code)   => client.get(`/payment-links/resolve/${code}`).then(r => r.data);
 
 /**
+ * Public pool ledger API for anonymous viewers.
+ * Returns paginated payment history for pool collection links without requiring login.
+ */
+export const getPublicLinkContributions = (code, page = 1, perPage = 25) =>
+  client.get(`/payment-links/public/${code}/contributions?page=${page}&per_page=${perPage}`).then(r => r.data);
+
+/**
  * Payment processing API for links.
  * @param {string} code - The unique code of the payment link.
  * @param {Object} d - Payment details (amount, payer info, PIN).
