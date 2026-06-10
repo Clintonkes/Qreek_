@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowRight, Link as LinkIcon, Plus, UsersThree, Wallet, PaperPlaneTilt, HandCoins } from 'phosphor-react';
+import { ArrowRight, Link as LinkIcon, Plus, UsersThree, Wallet, PaperPlaneTilt, Coins } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -367,7 +367,7 @@ export default function Family() {
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <Button variant="secondary" onClick={() => setShowLink(true)}><LinkIcon size={16} /> Create link</Button>
-                    <Button variant="secondary" onClick={() => setShowRequest(true)}><HandCoins size={16} /> Request money</Button>
+                    <Button variant="secondary" onClick={() => setShowRequest(true)}><Coins size={16} /> Request money</Button>
                     <Button onClick={() => setShowTransfer(true)}><PaperPlaneTilt size={16} /> Record transfer</Button>
                   </div>
                 </div>
