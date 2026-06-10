@@ -457,48 +457,48 @@ export default function PublicPayment() {
           </div>
         )}
 
+        {link.pool_id && activeTab === 'ledger' && renderPoolLedger()}
+
         {(!link.pool_id || activeTab === 'pay') && (
           <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {paymentError && (
-            <div style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', color: 'var(--text-2)', fontSize: '0.85rem', lineHeight: 1.55 }}>
-              {paymentError}
-            </div>
-          )}
-
-          <div style={{ background: 'var(--bg-2)', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Recipient Receives</div>
-            {link.is_flexible ? (
-              <div style={{ position: 'relative', marginTop: '0.5rem' }}>
-                <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--teal)' }}>₦</span>
-                <input 
-                  type="text"
-                  inputMode="decimal"
-                  value={form.amount} 
-                  onChange={e => setForm({...form, amount: cleanAmountInput(e.target.value)})} 
-                  placeholder="0.00"
-                  style={{ paddingLeft: '2.2rem', fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)' }}
-                />
-              </div>
-            ) : (
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(link.amount)}</div>
-            )}
-            {(link.is_flexible ? +form.amount : link.amount) > 0 && (
-              <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
-                {link.pool_id ? 'Pool' : 'Link'} fee (0.15% / 0.25%): {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, link.pool_id ? 0.0015 : QREEK_FEES.paymentLink))} 
+            {paymentError && (
+              <div style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', color: 'var(--text-2)', fontSize: '0.85rem', lineHeight: 1.55 }}>
+                {paymentError}
               </div>
             )}
-          </div>
 
-          {isPoolLink && isExpired && (
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
-              This pool link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
-              However, every record, contribution history, payer details, amounts, dates, totals, and other data concerning it remains permanently visible here (and in the pool dashboard).
+            <div style={{ background: 'var(--bg-2)', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Recipient Receives</div>
+              {link.is_flexible ? (
+                <div style={{ position: 'relative', marginTop: '0.5rem' }}>
+                  <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--teal)' }}>₦</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.amount}
+                    onChange={e => setForm({...form, amount: cleanAmountInput(e.target.value)})}
+                    placeholder="0.00"
+                    style={{ paddingLeft: '2.2rem', fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(link.amount)}</div>
+              )}
+              {(link.is_flexible ? +form.amount : link.amount) > 0 && (
+                <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
+                  {link.pool_id ? 'Pool' : 'Link'} fee (0.15% / 0.25%): {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, link.pool_id ? 0.0015 : QREEK_FEES.paymentLink))}
+                </div>
+              )}
             </div>
-          )}
 
-          {link.pool_id && activeTab === 'ledger' && renderPoolLedger()}
+            {isPoolLink && isExpired && (
+              <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
+                This pool link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
+                However, every record, contribution history, payer details, amounts, dates, totals, and other data concerning it remains permanently visible here (and in the pool dashboard).
+              </div>
+            )}
 
-          {!(isPoolLink && isExpired) && activeTab === 'pay' && (
+            {!(isPoolLink && isExpired) && activeTab === 'pay' && (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Input 
