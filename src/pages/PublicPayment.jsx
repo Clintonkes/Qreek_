@@ -106,7 +106,7 @@ export default function PublicPayment() {
   }, [code]);
 
   useEffect(() => {
-    if (!link?.pool_id || activeTab !== 'ledger') return;
+    if (!(link?.pool_id || link?.family_id) || activeTab !== 'ledger') return;
 
     let cancelled = false;
     setPoolLedgerLoading(true);
@@ -193,9 +193,10 @@ export default function PublicPayment() {
    * handles success (shows success UI/CTA) or failure (shows toast).
    * @param {React.FormEvent} e - Form submission event.
    */
-  // Computed for pool links: even when expired, resolve succeeds (see _get_live_link for_payment=false)
-  // so we can always show the data/ledger. Only block the actual pay action.
-  const isPoolLink = link ? !!link.pool_id : false;
+  // Computed for group links (pools and family): even when expired, resolve succeeds
+  // (see _get_live_link for_payment=false) so we can always show the data/ledger.
+  // Only block the actual pay action.
+  const isGroupLink = link ? !!(link.pool_id || link.family_id) : false;
   const isExpired = link ? !!(link.expires_at && new Date(link.expires_at) < new Date()) : false;
 
   const handlePay = async (e) => {
@@ -207,7 +208,7 @@ export default function PublicPayment() {
     if (!amount || amount < 100) return toast.error('Minimum payment is ₦100.');
     if (!form.note.trim()) return toast.error('Please enter a payment description.');
 
-    if (isPoolLink && isExpired) {
+    if (isGroupLink && isExpired) {
       return toast.error('This pool link has expired and no longer accepts payments. All records remain visible.');
     }
 
@@ -267,7 +268,7 @@ export default function PublicPayment() {
     } catch (err) {
       const status = err?.response?.status;
       const failureMessage =
-        status === 502 && isPoolLink
+        status === 502 && isGroupLink
           ? 'This pool link cannot accept payments right now because the recipient bank setup failed earlier. The pool owner needs to edit the bank details to refresh the subaccount.'
           : status === 502
             ? 'The payment service could not prepare this checkout right now. Please try again shortly.'
@@ -355,7 +356,7 @@ export default function PublicPayment() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.65rem', flexWrap: 'wrap' }}>
         <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
           <ListBullets size={16} style={{ marginRight: '0.4rem', verticalAlign: '-2px' }} />
-          Pool contributions
+          {link.family_id ? 'Family contributions' : 'Pool contributions'}
         </div>
         <div style={{ color: 'var(--teal)', fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}>
           {FMT(poolTotal)} total · {poolContributionsTotal} payment{poolContributionsTotal === 1 ? '' : 's'}
@@ -371,16 +372,25 @@ export default function PublicPayment() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {poolContributions.map((c) => (
-            <div key={c.reference} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', alignItems: 'center', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <div key={c.reference} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'start', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.payer || 'Anonymous'}
+                <div style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.payer_name || 'Qreek payer'}
                 </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)' }}>
-                  {c.date ? new Date(c.date).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable'} · Ref {c.reference || '—'}
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>
+                  {c.payer_phone || 'Phone unavailable'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.35rem', lineHeight: 1.55 }}>
+                  {c.payment_description || 'No description provided'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.35rem' }}>
+                  {c.created_at ? new Date(c.created_at).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable'} · Ref {c.reference || '—'}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
+                  Status: {c.status || '-'} {c.payout_status ? `· Payout: ${c.payout_status}` : ''}
                 </div>
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)', fontSize: '0.95rem' }}>
                 {FMT(c.amount)}
               </div>
             </div>
@@ -422,7 +432,7 @@ export default function PublicPayment() {
           {link.description && <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{link.description}</p>}
         </div>
 
-        {link.pool_id && (
+        {(link.pool_id || link.family_id) && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
             <button
               type="button"
@@ -457,9 +467,9 @@ export default function PublicPayment() {
           </div>
         )}
 
-        {link.pool_id && activeTab === 'ledger' && renderPoolLedger()}
+        {(link.pool_id || link.family_id) && activeTab === 'ledger' && renderPoolLedger()}
 
-        {(!link.pool_id || activeTab === 'pay') && (
+        {(!(link.pool_id || link.family_id) || activeTab === 'pay') && (
           <form onSubmit={handlePay} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {paymentError && (
               <div style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem', color: 'var(--text-2)', fontSize: '0.85rem', lineHeight: 1.55 }}>
@@ -486,19 +496,19 @@ export default function PublicPayment() {
               )}
               {(link.is_flexible ? +form.amount : link.amount) > 0 && (
                 <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)' }}>
-                  {link.pool_id ? 'Pool' : 'Link'} fee (0.15% / 0.25%): {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, link.pool_id ? 0.0015 : QREEK_FEES.paymentLink))}
+                  {link.pool_id ? 'Pool' : link.family_id ? 'Family' : 'Link'} fee (0.15% / 0.25%): {FMT(calculateFee(link.is_flexible ? +form.amount : link.amount, link.pool_id || link.family_id ? 0.0015 : QREEK_FEES.paymentLink))}
                 </div>
               )}
             </div>
 
-            {isPoolLink && isExpired && (
+            {isGroupLink && isExpired && (
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
-                This pool link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
-                However, every record, contribution history, payer details, amounts, dates, totals, and other data concerning it remains permanently visible here (and in the pool dashboard).
+                This {link.family_id ? 'family' : 'pool'} link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
+                However, every record, contribution history, payer details, amounts, dates, totals, and other data concerning it remains permanently visible here and in the dashboard.
               </div>
             )}
 
-            {!(isPoolLink && isExpired) && activeTab === 'pay' && (
+            {!(isGroupLink && isExpired) && activeTab === 'pay' && (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Input 

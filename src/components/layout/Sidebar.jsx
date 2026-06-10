@@ -5,6 +5,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   ChartPieSlice,
   Users,
+  UsersThree,
   GearSix,
   SignOut,
   Buildings,
@@ -17,6 +18,7 @@ import Button from '../ui/Button.jsx';
 const NAV_MAIN = [
   { to: '/dashboard', icon: ChartPieSlice, label: 'Dashboard' },
   { to: '/pools', icon: Users, label: 'Pools' },
+  { to: '/family', icon: UsersThree, label: 'Family' },
   { to: '/payment-links', icon: LinkIcon, label: 'Payment Links' },
 ];
 

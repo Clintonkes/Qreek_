@@ -25,6 +25,7 @@ import ForgotPin from './pages/ForgotPin.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Pools from './pages/Pools.jsx';
 import PoolDetail from './pages/PoolDetail.jsx';
+import Family from './pages/Family.jsx';
 import Settings from './pages/Settings.jsx';
 import Enterprise from './pages/Enterprise.jsx';
 import CompanySetup from './pages/CompanySetup.jsx';
@@ -95,6 +96,8 @@ export default function App() {
               <Route path="/dashboard"                 element={<Dashboard />} />
               <Route path="/pools"                     element={<Pools />} />
               <Route path="/pools/:poolId"             element={<PoolDetail />} />
+              <Route path="/family"                    element={<Family />} />
+              <Route path="/family/:familyId"          element={<Family />} />
               <Route path="/settings"                  element={<Settings />} />
               <Route path="/enterprise"                element={<Enterprise />} />
               <Route path="/enterprise/setup"          element={<CompanySetup />} />

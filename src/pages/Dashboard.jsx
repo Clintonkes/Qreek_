@@ -2,11 +2,12 @@
 // and enterprise payout activity so they can choose the next action quickly.
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Buildings, Link as LinkIcon, Users } from 'phosphor-react';
+import { ArrowRight, Buildings, Link as LinkIcon, Users, UsersThree } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
 import { getPools } from '../api/pools.js';
+import { getFamilies } from '../api/family.js';
 import { getLinks } from '../api/paymentLinks.js';
 import { getCompany, getAnalytics } from '../api/payroll.js';
 import useAuthStore from '../store/authStore.js';
@@ -58,19 +59,22 @@ export default function Dashboard() {
   // Keep each backend slice separate so the dashboard can fail softly if one endpoint is unavailable.
   const [loading, setLoading] = useState(true);
   const [pools, setPools] = useState([]);
+  const [families, setFamilies] = useState([]);
   const [links, setLinks] = useState([]);
   const [company, setCompany] = useState(null);
   const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
     // Load the main payment data in parallel, then enrich enterprise metrics only if a company exists.
-    Promise.allSettled([getPools(), getLinks(), getCompany()])
-      .then(async ([poolsResult, linksResult, companyResult]) => {
+    Promise.allSettled([getPools(), getFamilies(), getLinks(), getCompany()])
+      .then(async ([poolsResult, familiesResult, linksResult, companyResult]) => {
         const nextPools = poolsResult.status === 'fulfilled' ? poolsResult.value.pools || [] : [];
+        const nextFamilies = familiesResult.status === 'fulfilled' ? familiesResult.value.families || [] : [];
         const nextLinks = linksResult.status === 'fulfilled' ? linksResult.value.links || [] : [];
         const nextCompany = companyResult.status === 'fulfilled' ? companyResult.value.company || null : null;
 
         setPools(nextPools);
+        setFamilies(nextFamilies);
         setLinks(nextLinks);
         setCompany(nextCompany);
 
@@ -88,6 +92,7 @@ export default function Dashboard() {
   const activeLinks = links.filter(link => link.is_active);
   const totalCollected = links.reduce((sum, link) => sum + (link.total_collected || 0), 0);
   const totalMembers = pools.reduce((sum, pool) => sum + (pool.member_count || 0), 0);
+  const totalFamilyMembers = families.reduce((sum, family) => sum + (family.member_count || 0), 0);
   const activePools = pools.filter(pool => pool.pool_type === 'fiat').length || pools.length;
 
   return (
@@ -98,7 +103,7 @@ export default function Dashboard() {
             {greeting()}, {firstName}
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>
-            Your payment overview across pools, collections, and enterprise payouts.
+            Your payment overview across pools, families, collections, and enterprise payouts.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -107,6 +112,9 @@ export default function Dashboard() {
           </Button>
           <Button onClick={() => navigate('/pools')}>
             <Users size={16} /> Open pools
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/family')}>
+            <UsersThree size={16} /> Family
           </Button>
         </div>
       </div>
@@ -142,6 +150,10 @@ export default function Dashboard() {
                   <span style={{ color: 'var(--text-2)' }}>People across pools</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{totalMembers}</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                  <span style={{ color: 'var(--text-2)' }}>People in family groups</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{totalFamilyMembers}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -150,6 +162,7 @@ export default function Dashboard() {
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
             <StatCard label="Payment pools" value={activePools} sub="Active money groups" accent="var(--teal)" />
             <StatCard label="Contributors" value={totalMembers} sub="Members across joined pools" accent="var(--green)" />
+            <StatCard label="Family groups" value={families.length} sub="Shared family ledgers" accent="var(--amber)" />
             <StatCard label="Collections" value={activeLinks.length} sub="Links currently active" accent="var(--amber)" />
             <StatCard label="Enterprise" value={company ? (company.is_verified ? 'Verified' : 'Active') : 'Not set'} sub={company ? `${analytics?.runs_history?.length || 0} payroll runs recorded` : 'Set up business payouts when ready'} accent="var(--blue)" />
           </section>
@@ -191,7 +204,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 links.slice(0, 3).map(link => (
-                  <div key={link.id} onClick={() => navigate('/payment-links')} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
+                  <div key={link.id} onClick={() => navigate(`/payment-links/${link.id}/settlements`)} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{link.title}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
@@ -205,12 +218,39 @@ export default function Dashboard() {
                 ))
               )}
             </section>
+
+            <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', fontFamily: 'var(--font-display)' }}>Family groups</h2>
+                <Link to="/family" style={{ fontSize: '0.82rem', color: 'var(--teal)' }}>Manage</Link>
+              </div>
+              {families.length === 0 ? (
+                <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: '2rem 0' }}>
+                  No family groups yet. Create one for shared requests and transfers.
+                </div>
+              ) : (
+                families.slice(0, 3).map(family => (
+                  <div key={family.id} onClick={() => navigate(`/family/${family.id}`)} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.85rem 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{family.name}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
+                        {family.member_count || 0} members · {fmtNgn(family.balance_ngn || 0)}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)', background: 'rgba(245,166,35,0.12)', color: 'var(--amber)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                      {family.role || 'member'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </section>
           </div>
 
           {/* Action cards turn the dashboard into a launch point for the main payment workflows. */}
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             {[
               { title: 'Open payment pools', desc: 'Create or join a pool for family, teams, or contribution circles.', to: '/pools', icon: Users, accent: 'var(--teal)' },
+              { title: 'Open family ledger', desc: 'Manage shared family contributions, requests, and recorded transfers.', to: '/family', icon: UsersThree, accent: 'var(--amber)' },
               { title: 'Create payment links', desc: 'Collect money through shareable links and keep inflows organized.', to: '/payment-links', icon: LinkIcon, accent: 'var(--amber)' },
               { title: 'Manage enterprise payouts', desc: 'Run payroll and structured business disbursements from one place.', to: '/enterprise', icon: Buildings, accent: 'var(--blue)' },
             ].map(item => (
