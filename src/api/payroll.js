@@ -98,10 +98,53 @@ export const executePayrollRun = (id, d) => client.post(`/payroll/runs/${id}/exe
 export const cancelPayrollRun  = (id)    => client.delete(`/payroll/runs/${id}`).then(r => r.data);
 
 /**
+ * Retry a single failed payroll entry.
+ * @param {string} runId - The payroll run ID.
+ * @param {string} entryId - The payroll entry ID to retry.
+ * @returns {Promise<Object>} Result with updated entry.
+ */
+export const retryPayrollEntry = (runId, entryId) => client.post(`/payroll/runs/${runId}/entries/${entryId}/retry`).then(r => r.data);
+
+/**
+ * Retry all failed entries in a payroll run.
+ * @param {string} runId - The payroll run ID.
+ * @returns {Promise<Object>} Summary of retry results.
+ */
+export const retryAllFailed     = (runId) => client.post(`/payroll/runs/${runId}/retry-failed`).then(r => r.data);
+
+/**
  * Payroll analytics API.
  * @returns {Promise<Object>} Spending summaries, employee counts, and trends.
  */
 export const getAnalytics      = ()      => client.get('/payroll/analytics').then(r => r.data);
+
+/**
+ * Company wallet deposit API - creates a Flutterwave checkout URL.
+ * @param {Object} d - { amount: number }
+ * @returns {Promise<Object>} { checkout_url, reference, message }
+ */
+export const depositToWallet   = (d)     => client.post('/payroll/wallet/deposit', d).then(r => r.data);
+
+/**
+ * Get company wallet balance.
+ * @returns {Promise<Object>} { wallet_balance_ngn }
+ */
+export const getWalletBalance  = ()      => client.get('/payroll/wallet/balance').then(r => r.data);
+
+/**
+ * Export payroll run as CSV.
+ * @param {string} id - The payroll run ID.
+ * @returns {Promise<Blob>} CSV file blob.
+ */
+export const exportRunCsv      = (id)    => client.get(`/payroll/runs/${id}/export`, { responseType: 'blob' }).then(r => r.data);
+
+/**
+ * Get payslip for a single entry.
+ * @param {string} runId - The payroll run ID.
+ * @param {string} entryId - The payroll entry ID.
+ * @returns {Promise<Object>} Payslip data.
+ */
+export const getPayslip        = (runId, entryId) => client.get(`/payroll/runs/${runId}/entries/${entryId}/payslip`).then(r => r.data);
 
 /**
  * Supported banks list for payroll disbursements.

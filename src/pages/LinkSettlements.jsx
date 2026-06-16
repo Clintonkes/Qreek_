@@ -69,7 +69,7 @@ export default function LinkSettlements() {
   const closeDetails = () => setSelectedPayment(null);
   const statusLabel = (payment) => {
     if (!payment) return '-';
-    if (payment.status === 'completed') return 'Completed';
+    if (payment.status === 'completed' || payment.status === 'split_settlement') return 'Completed';
     if (payment.status === 'processing' || payment.status === 'payout_pending') return 'Processing';
     if (payment.status === 'failed') return 'Failed';
     return payment.status || '-';

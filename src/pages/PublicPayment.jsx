@@ -111,7 +111,7 @@ export default function PublicPayment() {
     let cancelled = false;
     setPoolLedgerLoading(true);
     setPoolLedgerError('');
-    getPublicLinkContributions(code, poolLedgerPage, 25)
+    getPublicLinkContributions(code, poolLedgerPage, 10)
       .then(data => {
         if (cancelled) return;
         setPoolContributions(data.payments || []);
@@ -364,57 +364,61 @@ export default function PublicPayment() {
       </div>
 
       {poolLedgerLoading ? (
-        <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Loading payment history...</div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem', color: 'var(--text-3)', fontSize: '0.9rem' }}>
+          Loading payments...
+        </div>
       ) : poolLedgerError ? (
-        <div style={{ color: 'var(--red)', fontSize: '0.8rem' }}>{poolLedgerError}</div>
+        <div style={{ color: 'var(--red)', fontSize: '0.8rem', padding: '1rem' }}>{poolLedgerError}</div>
       ) : poolContributions.length === 0 ? (
-        <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>No payments yet. The first contribution will appear here.</div>
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.9rem' }}>
+          No payments yet. The first contribution will appear here.
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {poolContributions.map((c) => (
-            <div key={c.reference} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'start', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.payer_name || 'Qreek payer'}
-                </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>
-                  {c.payer_phone || 'Phone unavailable'}
-                </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.35rem', lineHeight: 1.55 }}>
-                  {c.payment_description || 'No description provided'}
-                </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.35rem' }}>
-                  {c.created_at ? new Date(c.created_at).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable'} · Ref {c.reference || '—'}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
-                  Status: {c.status || '-'} {c.payout_status ? `· Payout: ${c.payout_status}` : ''}
-                </div>
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)', fontSize: '0.95rem' }}>
-                {FMT(c.amount)}
-              </div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', minWidth: 600, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <thead>
+              <tr style={{ background: 'var(--surface-2)' }}>
+                <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payer</th>
+                <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {poolContributions.map((c, i) => (
+                <tr key={c.reference || i} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '0.5rem', fontSize: '0.78rem' }}>{c.payer_name || c.payer_phone || '-'}</td>
+                  <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>{FMT(c.amount)}</td>
+                  <td style={{ padding: '0.5rem', fontSize: '0.78rem' }}>{c.status === 'split_settlement' || c.status === 'completed' ? 'Completed' : c.status || '-'}</td>
+                  <td style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>{c.created_at ? new Date(c.created_at).toLocaleDateString('en-NG') : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem 1rem', borderTop: '1px solid var(--border)', fontSize: '0.78rem' }}>
+            <div style={{ color: 'var(--text-3)' }}>
+              Page {poolLedgerPage} of {poolLedgerTotalPages} · {poolContributionsTotal} total
             </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
-            <button
-              type="button"
-              onClick={() => setPoolLedgerPage(p => Math.max(1, p - 1))}
-              disabled={poolLedgerPage === 1}
-              style={{ padding: '0.45rem 0.7rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage === 1 ? 'not-allowed' : 'pointer' }}
-            >
-              Previous
-            </button>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
-              Page {poolLedgerPage}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => setPoolLedgerPage(p => Math.max(1, p - 1))}
+                disabled={poolLedgerPage === 1}
+                style={{ padding: '0.4rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.78rem' }}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPoolLedgerPage(p => p + 1)}
+                disabled={poolLedgerPage >= poolLedgerTotalPages}
+                style={{ padding: '0.4rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage >= poolLedgerTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.78rem' }}
+              >
+                Next
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setPoolLedgerPage(p => p + 1)}
-              disabled={poolLedgerPage >= poolLedgerTotalPages}
-              style={{ padding: '0.45rem 0.7rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: poolLedgerPage >= poolLedgerTotalPages ? 'not-allowed' : 'pointer' }}
-            >
-              Next
-            </button>
           </div>
         </div>
       )}

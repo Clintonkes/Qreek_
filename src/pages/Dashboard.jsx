@@ -110,7 +110,7 @@ export default function Dashboard() {
           <Button variant="secondary" onClick={() => navigate('/payment-links')}>
             <LinkIcon size={16} /> Payment links
           </Button>
-          <Button onClick={() => navigate('/pools')}>
+          <Button variant="secondary" onClick={() => navigate('/pools')}>
             <Users size={16} /> Open pools
           </Button>
           <Button variant="secondary" onClick={() => navigate('/family')}>

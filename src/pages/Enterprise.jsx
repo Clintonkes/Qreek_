@@ -2,11 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning } from 'phosphor-react';
+import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning, Wallet, X } from 'phosphor-react';
+import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
-import { getCompany, getAnalytics } from '../api/payroll.js';
+import Input from '../components/ui/Input.jsx';
+import Modal from '../components/ui/Modal.jsx';
+import { getCompany, getAnalytics, depositToWallet, getWalletBalance } from '../api/payroll.js';
 
 /**
  * A reusable UI card to display a key metric or statistic.
@@ -66,20 +69,53 @@ function RunBar({ run }) {
  * @returns {JSX.Element}
  */
 export default function Enterprise() {
-  const [company,   setCompany]   = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading,   setLoading]   = useState(true);
+  const [company,     setCompany]     = useState(null);
+  const [analytics,   setAnalytics]   = useState(null);
+  const [walletBal,   setWalletBal]   = useState(0);
+  const [loading,     setLoading]     = useState(true);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [depositAmt,  setDepositAmt]  = useState('');
+  const [depositing,  setDepositing]  = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     getCompany()
       .then(d => {
         setCompany(d.company);
-        if (d.company) return getAnalytics();
+        if (d.company) {
+          getWalletBalance().then(w => setWalletBal(w.wallet_balance_ngn || 0)).catch(() => {});
+          return getAnalytics();
+        }
       })
       .then(d => { if (d) setAnalytics(d); })
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDeposit = async () => {
+    const amt = parseFloat(depositAmt);
+    if (!amt || amt <= 0) { toast.error('Enter a valid amount.'); return; }
+    if (amt > 10_000_000) { toast.error('Max ₦10,000,000 per deposit.'); return; }
+    setDepositing(true);
+    try {
+      const res = await depositToWallet({ amount: amt });
+      if (res.checkout_url) {
+        window.open(res.checkout_url, '_blank');
+        toast.success('Deposit checkout opened.');
+      }
+      setShowDeposit(false);
+      setDepositAmt('');
+      setTimeout(async () => {
+        try {
+          const w = await getWalletBalance();
+          setWalletBal(w.wallet_balance_ngn || 0);
+        } catch {}
+      }, 5000);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Deposit failed.');
+    } finally {
+      setDepositing(false);
+    }
+  };
 
   if (loading) return (
     <AppShell title="Enterprise">
@@ -122,23 +158,48 @@ export default function Enterprise() {
 
   return (
     <AppShell title="Enterprise">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{company.name}</h1>
-          <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{company.industry || 'Enterprise account'} {company.rc_number ? `· RC ${company.rc_number}` : ''}</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{company.name}</h1>
+            <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{company.industry || 'Enterprise account'} {company.rc_number ? `· RC ${company.rc_number}` : ''}</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <Button variant="secondary" onClick={() => setShowDeposit(true)}><Wallet size={16} /> Fund wallet</Button>
+            <Button variant="secondary" onClick={() => navigate('/enterprise/employees')}><Users size={16} /> Employees</Button>
+            <Button onClick={() => navigate('/enterprise/payroll/run')}><Lightning size={16} /> Run payroll</Button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button variant="secondary" onClick={() => navigate('/enterprise/employees')}><Users size={16} /> Employees</Button>
-          <Button onClick={() => navigate('/enterprise/payroll/run')}><Lightning size={16} /> Run payroll</Button>
-        </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <StatCard icon={Money}    label="Total paid"    value={fmtNgn(analytics?.total_paid_ngn)}  color="var(--teal)" />
-        <StatCard icon={Users}    label="Employees"     value={company.employee_count || 0}           color="var(--blue)" sub="active on payroll" />
-        <StatCard icon={ChartBar} label="Payroll runs"  value={analytics?.runs_history?.length || 0}  color="var(--amber)" />
-        <StatCard icon={Buildings}label="Status"        value={company.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.25% payroll fee" />
-      </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <StatCard icon={Wallet}   label="Wallet balance" value={fmtNgn(walletBal)}                color="var(--teal)" sub="company wallet" />
+          <StatCard icon={Money}    label="Total paid"     value={fmtNgn(analytics?.total_paid_ngn)} color="var(--teal)" />
+          <StatCard icon={Users}    label="Employees"      value={company.employee_count || 0}       color="var(--blue)" sub="active on payroll" />
+          <StatCard icon={ChartBar} label="Payroll runs"   value={analytics?.runs_history?.length || 0} color="var(--amber)" />
+          <StatCard icon={Buildings}label="Status"         value={company.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.15% payroll fee" />
+        </div>
+
+        <Modal open={showDeposit} onClose={() => setShowDeposit(false)} title="Fund company wallet" maxWidth={420}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>
+              Deposit NGN into your company wallet to cover payroll runs. Funds are processed via Flutterwave secure checkout.
+            </p>
+            <Input
+              label="Amount (₦)"
+              type="number"
+              value={depositAmt}
+              onChange={e => setDepositAmt(e.target.value)}
+              placeholder="e.g. 500000"
+              min={1}
+              max={10_000_000}
+            />
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={() => setShowDeposit(false)}>Cancel</Button>
+              <Button onClick={handleDeposit} disabled={depositing || !depositAmt}>
+                {depositing ? 'Opening checkout…' : `Deposit ${depositAmt ? `₦${parseFloat(depositAmt).toLocaleString()}` : ''}`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>

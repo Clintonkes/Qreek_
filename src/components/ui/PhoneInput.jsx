@@ -79,7 +79,8 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
 
   const handleNumber = (e) => {
     const raw = e.target.value;
-    let digits = raw.replace(/\D/g, '');
+    const display = raw.replace(/\D/g, '');
+    let digits = display;
     let newCountry = country;
     // Support pasting full numbers: detect +234..., 234..., 080... etc and switch country + extract local
     if (digits.length >= 3) {
@@ -87,11 +88,9 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
         newCountry = 'NG';
         digits = digits.slice(3);
       } else if (digits.startsWith('0')) {
-        // local with 0, assume NG or keep; for seamless prefer current or NG
         if (country !== 'NG') newCountry = 'NG';
         digits = digits.slice(1);
       } else if (digits.length > 10) {
-        // try full international without +
         try {
           const p = parsePhoneNumber('+' + digits);
           if (p && p.country) {
@@ -104,11 +103,10 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
     if (newCountry !== country) {
       setCountry(newCountry);
     }
-    // Keep the visible input exactly as the user typed it, but emit a clean E.164 value.
-    // This avoids the "0 disappears / becomes 08" cursor jump while still normalizing the backend value.
-    setNumber(digits);
-    const normalized = (newCountry || 'NG') === 'NG' ? digits.replace(/^0+/, '') : digits;
-    emit(newCountry, normalized);
+    // Show the user exactly what they typed (including leading 0 for NG).
+    // Only strip the leading 0 for the E.164 emit value.
+    setNumber(display);
+    emit(newCountry, digits);
   };
 
   // Close dropdown on outside click

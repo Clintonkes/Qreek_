@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, Clock, CheckCircle, XCircle, Plus, Link as LinkIcon } from 'phosphor-react';
+import { ArrowLeft, Users, UsersThree, Clock, CheckCircle, XCircle, Plus, Link as LinkIcon } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -20,14 +20,32 @@ const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits:
 
 /**
  * Renders an individual activity log item for a pool.
- * Highlights whether the current user is the sender and displays transfer status,
- * amounts, and recipient details.
+ * Supports both payment transfers and member-join events.
  *
  * @param {Object} props
  * @param {Object} props.item - The transaction or activity record.
  * @param {string} props.currentPhone - The active user's phone number to determine perspective.
  */
 function ActivityItem({ item, currentPhone }) {
+  if (item.type === 'join') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+        style={{ display: 'flex', gap: '0.75rem', padding: '0.85rem 0', borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
+        <div style={{ marginTop: '2px', color: 'var(--teal)' }}>
+          <UsersThree size={16} weight="fill" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.88rem' }}>
+            <strong>{item.name || item.phone}</strong> joined the pool
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>
+            {new Date(item.date || item.created_at).toLocaleString('en-NG', { dateStyle: 'short', timeStyle: 'short' })}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   const isSender = item.sender_phone === currentPhone;
   const icon     = item.status === 'completed' ? <CheckCircle size={16} color="var(--green)" weight="fill" /> : item.status === 'failed' ? <XCircle size={16} color="var(--red)" weight="fill" /> : <Clock size={16} color="var(--amber)" />;
   return (
@@ -261,7 +279,17 @@ export default function PoolDetail() {
         getPool(poolId), getPoolActivity(poolId, 1), getBanks(), getLinks(),
       ]);
       setPool(pd);
-      setActivity(ad.activity || []);
+      const payments = (ad.activity || []).map(t => ({ ...t, type: 'payment' }));
+      const joins = (pd.members || []).map(m => ({
+        type: 'join', id: `join_${m.phone}`, name: m.name, phone: m.phone,
+        created_at: m.joined_at,
+      }));
+      const merged = [...payments, ...joins].sort((a, b) => {
+        const da = new Date(a.created_at || 0).getTime();
+        const db = new Date(b.created_at || 0).getTime();
+        return db - da;
+      });
+      setActivity(merged);
       setBanks(bd.banks || []);
       setPoolLinks((ld.links || []).filter(l => l.pool_id === poolId && l.is_active !== false));
     } catch { toast.error('Failed to load pool.'); }
