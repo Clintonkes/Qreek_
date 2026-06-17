@@ -51,7 +51,7 @@ function RunCard({ run }) {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>{run.entry_count}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.15rem' }}>Fee (0.15%)</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.15rem' }}>Fee (0.2%)</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', color: 'var(--text-2)' }}>{FMT(run.total_fee)}</div>
           </div>
         </div>

@@ -516,7 +516,7 @@ export default function Landing() {
   const PILLARS = [
     { icon: '🏦', tag: 'Payment Pools',    color: 'var(--teal)',   g1: '#00D4AA', g2: '#00ffca', fee: '0.15% per contribution', cta: 'Create a pool',    title: 'Ajo, esusu, and group collections — with a live ledger',          desc: 'Create a pool, share the invite code in your WhatsApp group, and request contributions. Every member pays through Flutterwave checkout. The activity feed shows who paid, how much, and when — in real time, visible to all members.' },
     { icon: '🔗', tag: 'Payment Links',    color: 'var(--amber)',  g1: '#F5A623', g2: '#FFD700', fee: '0.25% per payment',      cta: 'Create a link',    title: 'One link. Card, transfer, or USSD. Automatic records.',           desc: 'Create a Qreek link in 2 minutes. Share it on WhatsApp or Instagram. Clients open it in the browser, pay through Flutterwave secure checkout, and you get instant confirmation — no bank alert chasing.' },
-    { icon: '💼', tag: 'Enterprise Payroll', color: 'var(--purple)', g1: '#9B59B6', g2: '#6C3483', fee: '0.15% per payroll run',  cta: 'Set up payroll',   title: 'Pay 500 employees in 4 minutes. 0.15% fee. No subscription.',      desc: 'Import your employee roster via CSV, review salaries by department, confirm with your PIN, and every salary hits every bank account in parallel. Real-time status per employee. Printable receipt for accounting.' },
+    { icon: '💼', tag: 'Enterprise Payroll', color: 'var(--purple)', g1: '#9B59B6', g2: '#6C3483', fee: '0.2% per payroll run',  cta: 'Set up payroll',   title: 'Pay 500 employees in 4 minutes. 0.2% fee. No subscription.',      desc: 'Import your employee roster via CSV, review salaries by department, confirm with your PIN, and every salary hits every bank account in parallel. Real-time status per employee. Printable receipt for accounting.' },
   ];
 
   const TRUST = [
@@ -634,7 +634,7 @@ export default function Landing() {
         { icon: '🧾', title: 'Export proof', copy: 'Download payroll receipts and run summaries for accounting records.' },
       ],
       stats: [
-        { value: '0.25%', label: 'per run' },
+        { value: '0.2%', label: 'per run' },
         { value: 'Bulk', label: 'disbursement' },
         { value: 'Per', label: 'employee status' },
       ],
@@ -700,7 +700,7 @@ export default function Landing() {
 
         {/* Fee pills */}
         <div className="fee-pills" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center', position: 'relative' }}>
-          {[['Pool contributions','0.15%','var(--teal)'],['Payment links','0.25%','var(--amber)'],['Payroll','0.15%','var(--purple)'],['No monthly fee','Ever','var(--green)']].map(([label, fee, col]) => (
+          {[['Pool contributions','0.15%','var(--teal)'],['Payment links','0.25%','var(--amber)'],['Payroll','0.2%','var(--purple)'],['No monthly fee','Ever','var(--green)']].map(([label, fee, col]) => (
             <div key={label} style={{ background: 'var(--surface)', border: `1px solid ${col}40`, borderRadius: 'var(--radius-full)', padding: '0.35rem 1rem', fontSize: '0.78rem', color: 'var(--text-2)', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: col }}>{fee}</span>
               <span>{label}</span>
@@ -783,7 +783,7 @@ export default function Landing() {
         <div className="price-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: '1.1rem', maxWidth: 860, margin: '0 auto 1.5rem' }}>
           <PriceBox label="Pool contributions" pct="0.15%" color="var(--teal)"   note="Per contribution paid by pool member" />
           <PriceBox label="Payment links"      pct="0.25%" color="var(--amber)"  note="Per payment received through your link" />
-          <PriceBox label="Enterprise payroll" pct="0.25%" color="var(--purple)" note="Per salary disbursed in a payroll run" />
+          <PriceBox label="Enterprise payroll" pct="0.2%" color="var(--purple)" note="Per salary disbursed in a payroll run" />
           <PriceBox label="No monthly fee"     pct="Free"  color="var(--green)"  note="No subscription, no setup, no withdrawal fee" />
         </div>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto' }}>
