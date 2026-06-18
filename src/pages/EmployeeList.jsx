@@ -9,7 +9,7 @@ import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getEmployees, addEmployee, removeEmployee, updateEmployee, getBanks, bulkAddEmployees } from '../api/payroll.js';
+import { getEmployees, addEmployee, removeEmployee, updateEmployee, getBanks, bulkAddEmployees, verifyAccount } from '../api/payroll.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 
@@ -28,14 +28,49 @@ function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', bank_account: '', bank_code: '', department: '', job_title: '', salary: '' });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+  const [verifiedName, setVerifiedName] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState(null);
 
   useEffect(() => {
     if (editing) setForm({ name: editing.name || '', email: editing.email || '', phone: editing.phone || '', bank_account: editing.bank_account_full || '', bank_code: editing.bank_code || '', department: editing.department || '', job_title: editing.job_title || '', salary: editing.salary || '' });
     else setForm({ name: '', email: '', phone: '', bank_account: '', bank_code: '', department: '', job_title: '', salary: '' });
     setErrors({});
+    setVerifiedName(null);
+    setVerificationError(null);
   }, [editing, open]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleBankChange = (field, value) => {
+    set(field, value);
+    setVerifiedName(null);
+    setVerificationError(null);
+  };
+
+  const handleVerify = async () => {
+    if (!form.bank_account || !/^\d{10}$/.test(form.bank_account)) {
+      toast.error('Enter a valid 10-digit account number.');
+      return;
+    }
+    if (!form.bank_code) {
+      toast.error('Select a bank.');
+      return;
+    }
+    setVerifying(true);
+    setVerificationError(null);
+    try {
+      const res = await verifyAccount(form.bank_account, form.bank_code);
+      setVerifiedName(res.account_name);
+      toast.success(`Account verified: ${res.account_name}`);
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Verification failed. Check the bank details.';
+      setVerificationError(msg);
+      toast.error(msg);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const validate = () => {
     const e = {};
@@ -44,6 +79,7 @@ function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
     if (!/^\d{10}$/.test(form.bank_account)) e.bank_account = 'Must be 10 digits';
     if (!form.bank_code.trim())    e.bank_code = 'Required';
     if (!form.salary || +form.salary <= 0) e.salary = 'Must be > 0';
+    if (!verifiedName)             e.bank_account = 'Verify bank details first';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -73,14 +109,30 @@ function EmployeeModal({ open, onClose, onSaved, banks, editing }) {
           <Input label="Email" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="emeka@company.com" />
           <Input label="Phone" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+234 801 234 5678" />
           <Input label="Monthly salary (₦) *" type="number" value={form.salary} onChange={e => set('salary', e.target.value)} error={errors.salary} placeholder="250000" />
-          <Input label="Account number *" value={form.bank_account} onChange={e => set('bank_account', e.target.value)} error={errors.bank_account} placeholder="0123456789" maxLength={10} style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }} />
+          <Input label="Account number *" value={form.bank_account} onChange={e => handleBankChange('bank_account', e.target.value)} error={errors.bank_account} placeholder="0123456789" maxLength={10} style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }} />
           <div>
             <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: errors.bank_code ? 'var(--red)' : 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>
-            <select value={form.bank_code} onChange={e => set('bank_code', e.target.value)} style={{ width: '100%', borderColor: errors.bank_code ? 'var(--red)' : undefined }}>
+            <select value={form.bank_code} onChange={e => handleBankChange('bank_code', e.target.value)} style={{ width: '100%', borderColor: errors.bank_code ? 'var(--red)' : undefined }}>
               <option value="">Select bank</option>
               {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
             </select>
             {errors.bank_code && <span style={{ fontSize: '0.78rem', color: 'var(--red)' }}>{errors.bank_code}</span>}
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <Button variant="secondary" size="small" onClick={handleVerify} disabled={verifying || !form.bank_account || !form.bank_code}>
+                {verifying ? 'Verifying…' : 'Verify account'}
+              </Button>
+              {verifiedName && (
+                <span style={{ fontSize: '0.85rem', color: 'var(--green)', fontWeight: 600 }}>
+                  <Check size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                  {verifiedName}
+                </span>
+              )}
+              {verificationError && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--red)' }}>{verificationError}</span>
+              )}
+            </div>
           </div>
           <Input label="Department" value={form.department} onChange={e => set('department', e.target.value)} placeholder="Engineering" />
           <Input label="Job title" value={form.job_title} onChange={e => set('job_title', e.target.value)} placeholder="Software Engineer" />

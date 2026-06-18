@@ -66,9 +66,10 @@ export default function CompanySetup() {
 
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast.error('Company name is required.'); return; }
+    if (!form.address.trim()) { toast.error('Address is required.'); return; }
     setLoading(true);
     try {
-      await createCompany({ name: form.name, industry: form.industry || undefined, rc_number: form.rc_number || undefined, email: form.email || undefined, address: form.address || undefined });
+      await createCompany({ name: form.name, industry: form.industry || undefined, rc_number: form.rc_number || undefined, email: form.email || undefined, address: form.address });
       toast.success('Company created! Start adding employees.');
       navigate('/enterprise/employees');
     } catch (err) {
@@ -108,7 +109,7 @@ export default function CompanySetup() {
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <Input label="Company email (optional)" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="hr@company.com" />
-            <Input label="Address (optional)" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Victoria Island, Lagos" />
+            <Input label="Address *" value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Victoria Island, Lagos" />
           </motion.div>
         )}
 
@@ -135,7 +136,7 @@ export default function CompanySetup() {
             : <div />
           }
           {step < 2
-            ? <Button onClick={() => { if (step === 0 && !form.name.trim()) { toast.error('Company name is required.'); return; } setStep(s => s + 1); }}>Continue <ArrowRight size={16} /></Button>
+            ? <Button onClick={() => { if (step === 0 && !form.name.trim()) { toast.error('Company name is required.'); return; } if (step === 1 && !form.address.trim()) { toast.error('Address is required.'); return; } setStep(s => s + 1); }}>Continue <ArrowRight size={16} /></Button>
             : <Button onClick={handleSubmit} disabled={loading}>{loading ? 'Creating…' : 'Create company'}</Button>
           }
         </div>

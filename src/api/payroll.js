@@ -151,3 +151,5 @@ export const getPayslip        = (runId, entryId) => client.get(`/payroll/runs/$
  * @returns {Promise<Object>} A list of banks.
  */
 export const getBanks          = ()      => client.get('/payroll/banks').then(r => r.data);
+
+export const verifyAccount     = (account_number, bank_code) => client.get('/payroll/employees/verify-account', { params: { account_number, bank_code } }).then(r => r.data);
