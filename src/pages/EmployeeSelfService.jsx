@@ -150,7 +150,7 @@ export default function EmployeeSelfService() {
     <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 520, width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <Building size={24} color="var(--teal)" />
+          <Buildings size={24} color="var(--teal)" />
           <h1 style={{ fontSize: '1.3rem' }}>{mode === 'invite' ? 'Join your company payroll' : 'Update your details'}</h1>
         </div>
         <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
