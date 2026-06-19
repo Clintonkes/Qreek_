@@ -36,6 +36,7 @@ import PayrollRunDetail from './pages/PayrollRunDetail.jsx';
 import PaymentLinks from './pages/PaymentLinks.jsx';
 import LinkSettlements from './pages/LinkSettlements.jsx';
 import PublicPayment from './pages/PublicPayment.jsx';
+import EmployeeSelfService from './pages/EmployeeSelfService.jsx';
 
 /**
  * AuthGuard component that protects routes requiring authentication.
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="/register"   element={<Register />} />
         <Route path="/forgot-pin" element={<ForgotPin />} />
         <Route path="/p/:code"    element={<PublicPayment />} />
+        <Route path="/enterprise/employee-edit/:token" element={<EmployeeSelfService />} />
 
         <Route element={<AuthGuard />}>
           <Route element={<PrivateLayout />}>

@@ -153,3 +153,11 @@ export const getPayslip        = (runId, entryId) => client.get(`/payroll/runs/$
 export const getBanks          = ()      => client.get('/payroll/banks').then(r => r.data);
 
 export const verifyAccount     = (account_number, bank_code) => client.get('/payroll/employees/verify-account', { params: { account_number, bank_code } }).then(r => r.data);
+
+export const generateEmployeeLink = (employeeId) => client.post(`/payroll/employees/${employeeId}/generate-link`).then(r => r.data);
+
+export const generateEmployeeInvite = () => client.post('/payroll/employees/generate-invite').then(r => r.data);
+
+export const getEmployeeByToken   = (token) => client.get(`/payroll/employee-self-service/${token}`).then(r => r.data);
+
+export const updateEmployeeByToken = (token, data) => client.put(`/payroll/employee-self-service/${token}`, data).then(r => r.data);
