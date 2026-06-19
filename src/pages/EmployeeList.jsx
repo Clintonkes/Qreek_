@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { LinkSimple, Trash, MagnifyingGlass, CopySimple } from 'phosphor-react';
+import { LinkSimple, Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
+import Input from '../components/ui/Input.jsx';
+import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { getEmployees, removeEmployee, generateEmployeeLink, generateEmployeeInvite } from '../api/payroll.js';
 
@@ -15,8 +17,13 @@ export default function EmployeeList() {
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState('');
   const [deptFilter,setDeptFilter]= useState('');
-  const [generating, setGenerating] = useState(null);
+  
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [copied, setCopied] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
+
+  const [generating, setGenerating] = useState(null);
   const [removing,  setRemoving]  = useState(null);
 
   const load = () => {
@@ -28,21 +35,34 @@ export default function EmployeeList() {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreateInvite = async () => {
+  const handleOpenInvite = () => {
+    setShowInviteModal(true);
+    setInviteLink('');
+    setCopied(false);
+  };
+
+  const handleGenerateInvite = async () => {
     setCreatingInvite(true);
     try {
       const res = await generateEmployeeInvite();
-      try {
-        await navigator.clipboard.writeText(res.link);
-        toast.success('Invitation link copied!');
-      } catch {
-        toast.success(`Link: ${res.link}`, { duration: 10000 });
-      }
+      setInviteLink(res.link);
       load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create invitation.');
     } finally {
       setCreatingInvite(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      toast.success('Link copied to clipboard!');
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      toast.error('Failed to copy. Please copy manually.');
     }
   };
 
@@ -91,12 +111,17 @@ export default function EmployeeList() {
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Employee roster</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
-            {employees.filter(e => e.is_active).length} registered · Monthly payroll: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalPayroll)}</strong>
+            {employees.filter(e => e.is_active).length} active · Monthly payroll: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalPayroll)}</strong>
           </p>
         </div>
-        <Button onClick={handleCreateInvite} disabled={creatingInvite}>
-          {creatingInvite ? 'Creating…' : <><CopySimple size={16} /> Create invitation link</>}
-        </Button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button variant="secondary" onClick={() => toast('Bulk import coming soon')}>
+            <UploadSimple size={16} /> Bulk import
+          </Button>
+          <Button onClick={handleOpenInvite}>
+            <UserPlus size={16} /> Add employee
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -122,8 +147,8 @@ export default function EmployeeList() {
             Create one invitation link and share it with all your employees.<br />
             Each employee fills in their own details — no manual data entry needed.
           </p>
-          <Button onClick={handleCreateInvite} disabled={creatingInvite}>
-            {creatingInvite ? 'Creating…' : <><CopySimple size={16} /> Create invitation link</>}
+          <Button onClick={handleOpenInvite}>
+            <UserPlus size={16} /> Add employee
           </Button>
         </div>
       ) : filtered.length === 0 ? (
@@ -159,6 +184,33 @@ export default function EmployeeList() {
           ))}
         </div>
       )}
+
+      <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title="Add employee" maxWidth={440}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+            Instead of adding employees manually, generate an invitation link and share it with your team. Employees will fill in their own details and verify their bank accounts.
+          </p>
+          
+          {inviteLink ? (
+            <div style={{ marginTop: '0.5rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.4rem', display: 'block' }}>Invitation Link</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Input value={inviteLink} readOnly style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
+                <Button variant="secondary" onClick={copyToClipboard} style={{ padding: '0 1rem' }}>
+                  {copied ? <Check size={18} color="var(--green)" /> : <CopySimple size={18} />}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <Button onClick={handleGenerateInvite} disabled={creatingInvite}>
+                {creatingInvite ? 'Generating link…' : 'Generate link'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </AppShell>
   );
 }
+
