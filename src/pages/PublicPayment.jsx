@@ -12,7 +12,7 @@
  * 5. Conversion: After settlement, it displays an interactive prompt encouraging the user to join Qreek.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock } from 'phosphor-react';
 import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions } from '../api/paymentLinks.js';
@@ -100,6 +100,12 @@ export default function PublicPayment() {
   const [poolLedgerError, setPoolLedgerError] = useState('');
   const [activeTab, setActiveTab] = useState('pay');
   const [paymentError, setPaymentError] = useState('');
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(i);
+  }, []);
 
   const redirectedTransactionId = searchParams.get('transaction_id');
   const redirectedReference = searchParams.get('tx_ref');

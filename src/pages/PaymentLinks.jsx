@@ -228,6 +228,20 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }
  * @param {Object} props.link - Payment link data object.
  * @param {Function} props.onDelete - Callback when the link is deactivated.
  */
+function timeRemaining(expiresAt) {
+  if (!expiresAt) return '';
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diff = expiry.getTime() - now.getTime();
+  if (diff <= 0) return 'Expired';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+}
+
 function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -260,6 +274,11 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
         </div>
         <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', background: statusColor + '20', color: statusColor, fontFamily: 'var(--font-display)', fontWeight: 600 }}>{status}</span>
       </div>
+      {link.pool_id && link.expires_at && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--amber)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <span style={{ fontSize: '0.7rem' }}>⏱</span> {timeRemaining(link.expires_at)}
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
         <div>

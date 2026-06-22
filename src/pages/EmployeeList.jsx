@@ -61,23 +61,20 @@ export default function EmployeeList() {
   const handleGenerateInvite = async () => {
     const existing = getStoredLink();
     if (existing) {
-      toast.error('An invite link already exists for this company.');
-      return;
+      if (!window.confirm('An invite link already exists. Generate a new one? The old link will stop working.')) return;
+      localStorage.removeItem(`qreek_invite_${getCompanyId()}`);
     }
     setCreatingInvite(true);
     try {
       const res = await generateEmployeeInvite();
-      const token = res.link?.split('/').pop() || '';
-      const origin = window.location.origin;
-      const slug = company?.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'general';
-      const cleanLink = `${origin}/invite/${slug}/${token}`;
-      setInviteLink(cleanLink);
-      localStorage.setItem(`qreek_invite_${getCompanyId()}`, cleanLink);
-      toast.success('Invite link generated!');
+      const link = res.link || res.invite_link || res.url || '';
+      if (!link) throw new Error('Server did not return a link');
+      setInviteLink(link);
+      localStorage.setItem(`qreek_invite_${getCompanyId()}`, link);
       setShowInviteModal(false);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create invitation.');
+      toast.error(err.response?.data?.detail || err.message || 'Failed to create invitation. Is the server running?');
     } finally {
       setCreatingInvite(false);
     }
@@ -226,7 +223,7 @@ export default function EmployeeList() {
         </div>
       )}
 
-      <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title="Invite your team" maxWidth={440}>
+      <Modal open={showInviteModal} onClose={creatingInvite ? undefined : () => setShowInviteModal(false)} title="Invite your team" maxWidth={440}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
             Generate a secure link to invite your team. Once shared, your employees can instantly fill out their details and verify their bank accounts—no manual data entry required!
