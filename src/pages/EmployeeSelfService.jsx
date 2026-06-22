@@ -156,7 +156,7 @@ export default function EmployeeSelfService() {
         <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           {mode === 'invite'
             ? `${companyName} has invited you to join their payroll system. Fill in your details below — your bank account will be verified in real-time.`
-            : 'Update your payroll information below. Your bank account will be verified in real-time.'}
+            : 'Update your payroll information below. Your bank details will be verified in real-time.'}
         </p>
 
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
