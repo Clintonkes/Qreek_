@@ -1,8 +1,7 @@
 // Enterprise.jsx is the business operations home for payroll and structured team payouts.
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning, Wallet, X, Link as LinkIcon, CopySimple, Check } from 'phosphor-react';
+import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning, Wallet, Link as LinkIcon, UserPlus, ShareNetwork } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
@@ -10,7 +9,7 @@ import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
-import { getCompany, getAnalytics, depositToWallet, getWalletBalance } from '../api/payroll.js';
+import { getCompany, getAnalytics, depositToWallet, getWalletBalance, generateEmployeeInvite } from '../api/payroll.js';
 import { getLinks } from '../api/paymentLinks.js';
 
 /**
@@ -80,9 +79,11 @@ export default function Enterprise() {
   const [depositing,  setDepositing]  = useState(false);
   const [enterpriseLinks, setEnterpriseLinks] = useState([]);
   const [inviteLink, setInviteLink] = useState('');
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const loadCompany = () => {
     getCompany()
       .then(d => {
         const c = d.company;
@@ -97,7 +98,37 @@ export default function Enterprise() {
       })
       .then(d => { if (d) setAnalytics(d); })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadCompany(); }, []);
+
+  const handleGenerateInvite = async () => {
+    setCreatingInvite(true);
+    try {
+      const res = await generateEmployeeInvite();
+      const link = res.link || res.invite_link || res.url || '';
+      if (!link) throw new Error('Server did not return a link');
+      setInviteLink(link);
+      localStorage.setItem(`qreek_invite_${company?.id || 'default'}`, link);
+      toast.success('Invite link generated!');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.message || 'Failed to create invitation.');
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      toast.success('Link copied!');
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      toast.error('Failed to copy.');
+    }
+  };
 
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmt);
@@ -209,6 +240,31 @@ export default function Enterprise() {
           </div>
         </Modal>
 
+      <div style={{ background: 'linear-gradient(135deg, var(--surface) 0%, rgba(0,212,170,0.04) 100%)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <ShareNetwork size={20} color="var(--teal)" />
+          <div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{company.name} – Employee invite</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Share this link so your team can submit their payroll details</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {inviteLink ? (
+            <>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'none', sm: 'inline' }}>{inviteLink}</span>
+              <CopyButton text={inviteLink} />
+              <Button variant="secondary" onClick={handleGenerateInvite} disabled={creatingInvite} style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}>
+                {creatingInvite ? '…' : 'Regenerate'}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleGenerateInvite} disabled={creatingInvite} style={{ fontSize: '0.85rem' }}>
+              {creatingInvite ? 'Generating…' : <><UserPlus size={16} /> Generate invite link</>}
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
@@ -242,18 +298,6 @@ export default function Enterprise() {
         </div>
       </div>
 
-      {inviteLink && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.25rem' }}>
-              QreekPay {company?.name ? `/ ${company.name}` : ''} · Shareable invite link
-            </div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>{inviteLink}</div>
-          </div>
-          <CopyButton text={inviteLink} />
-        </div>
-      )}
-
       {enterpriseLinks.length > 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginTop: '1.5rem' }}>
           <h3 style={{ fontSize: '0.95rem', marginBottom: '1rem' }}>Payment links</h3>
@@ -274,7 +318,7 @@ export default function Enterprise() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
         <Link to="/enterprise/employees" style={{ textDecoration: 'none' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'var(--trans-fast)' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal)'}
@@ -295,6 +339,18 @@ export default function Enterprise() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Plus size={20} color="var(--amber)" />
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>Payment links</span>
+            </div>
+            <ArrowRight size={16} color="var(--text-3)" />
+          </div>
+        </Link>
+        <Link to="/enterprise/setup" style={{ textDecoration: 'none' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'var(--trans-fast)' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--amber)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Buildings size={20} color="var(--amber)" />
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>Create new company</span>
             </div>
             <ArrowRight size={16} color="var(--text-3)" />
           </div>

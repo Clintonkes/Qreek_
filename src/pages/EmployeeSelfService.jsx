@@ -149,16 +149,17 @@ export default function EmployeeSelfService() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 520, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <Buildings size={24} color="var(--teal)" />
-          <h1 style={{ fontSize: '1.3rem' }}>{mode === 'invite' ? 'Join your company payroll' : 'Update your details'}</h1>
-          <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>QreekPay · Employee onboarding</p>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--teal-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
+            <Buildings size={24} color="var(--teal)" />
+          </div>
+          <h1 style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>{companyName}</h1>
+          <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+            {mode === 'invite'
+              ? 'Your employer has invited you to join their payroll system. Fill in your details below — your bank account will be verified in real-time.'
+              : 'Update your payroll information below. Your bank details will be verified in real-time.'}
+          </p>
         </div>
-        <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-          {mode === 'invite'
-            ? `${companyName} has invited you to join their payroll system. Fill in your details below — your bank account will be verified in real-time.`
-            : 'Update your payroll information below. Your bank details will be verified in real-time.'}
-        </p>
 
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

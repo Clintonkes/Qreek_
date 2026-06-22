@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft } from 'phosphor-react';
+import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft, ArrowSquareOut } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
+import CopyButton from '../components/ui/CopyButton.jsx';
 import { getEmployees, removeEmployee, generateEmployeeInvite, getCompany } from '../api/payroll.js';
 
 const FMT = v => v ? `₦${v.toLocaleString('en-NG', { minimumFractionDigits: 0 })}` : '—';
@@ -116,14 +117,12 @@ export default function EmployeeList() {
 
   return (
     <AppShell title="Employees">
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-        >
-          <ArrowLeft size={16} weight="bold" /> Back to Enterprise
-        </Link>
-      </div>
+      <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)', marginBottom: '1.25rem' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      >
+        <ArrowLeft size={16} weight="bold" /> Back to Enterprise
+      </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -132,13 +131,20 @@ export default function EmployeeList() {
             {employees.filter(e => e.is_active).length} active · Monthly payroll: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalPayroll)}</strong>
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <Button variant="secondary" onClick={() => toast('Bulk import coming soon')}>
             <UploadSimple size={16} /> Bulk import
           </Button>
-          <Button onClick={handleOpenInvite}>
-            <UserPlus size={16} /> Add employee
-          </Button>
+          {inviteLink ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.3rem 0.75rem 0.3rem 1rem' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--teal)', fontWeight: 600, whiteSpace: 'nowrap' }}>Invite link ready</span>
+              <CopyButton text={inviteLink} />
+            </div>
+          ) : (
+            <Button onClick={handleOpenInvite}>
+              <UserPlus size={16} /> Add employee
+            </Button>
+          )}
         </div>
       </div>
 
