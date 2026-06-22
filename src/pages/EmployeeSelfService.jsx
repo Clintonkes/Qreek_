@@ -9,7 +9,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import { getEmployeeByToken, updateEmployeeByToken, verifyAccount, getBanks } from '../api/payroll.js';
 
 export default function EmployeeSelfService() {
-  const { token } = useParams();
+  const { company: companySlug, token } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

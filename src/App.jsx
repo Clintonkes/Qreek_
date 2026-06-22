@@ -47,9 +47,18 @@ function AuthGuard() {
   return isAuthenticated && hasStoredActiveSession() ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
+function FamilyRedirect() {
+  return <Navigate to="/pools" replace />;
+}
+
 function EmployeeEditRedirect() {
   const { token } = useParams();
-  return <Navigate to={`/enterprise/invite/${token}`} replace />;
+  return <Navigate to={`/invite/general/${token}`} replace />;
+}
+
+function OldInviteRedirect() {
+  const { token } = useParams();
+  return <Navigate to={`/invite/general/${token}`} replace />;
 }
 
 const variants = {
@@ -95,7 +104,8 @@ export default function App() {
         <Route path="/register"   element={<Register />} />
         <Route path="/forgot-pin" element={<ForgotPin />} />
         <Route path="/p/:code"    element={<PublicPayment />} />
-        <Route path="/enterprise/invite/:token" element={<EmployeeSelfService />} />
+        <Route path="/invite/:company/:token" element={<EmployeeSelfService />} />
+        <Route path="/enterprise/invite/:token" element={<OldInviteRedirect />} />
         <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
 
         <Route element={<AuthGuard />}>
@@ -104,8 +114,8 @@ export default function App() {
               <Route path="/dashboard"                 element={<Dashboard />} />
               <Route path="/pools"                     element={<Pools />} />
               <Route path="/pools/:poolId"             element={<PoolDetail />} />
-              <Route path="/family"                    element={<Family />} />
-              <Route path="/family/:familyId"          element={<Family />} />
+              <Route path="/family"                    element={<FamilyRedirect />} />
+              <Route path="/family/:familyId"          element={<FamilyRedirect />} />
               <Route path="/settings"                  element={<Settings />} />
               <Route path="/enterprise"                element={<Enterprise />} />
               <Route path="/enterprise/setup"          element={<CompanySetup />} />

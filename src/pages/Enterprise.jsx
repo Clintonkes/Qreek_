@@ -79,14 +79,17 @@ export default function Enterprise() {
   const [depositAmt,  setDepositAmt]  = useState('');
   const [depositing,  setDepositing]  = useState(false);
   const [enterpriseLinks, setEnterpriseLinks] = useState([]);
-  const [inviteLink, setInviteLink] = useState(localStorage.getItem('qreek_employee_invite_link') || '');
+  const [inviteLink, setInviteLink] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     getCompany()
       .then(d => {
-        setCompany(d.company);
-        if (d.company) {
+        const c = d.company;
+        setCompany(c);
+        if (c) {
+          const stored = localStorage.getItem(`qreek_invite_${c.id}`) || '';
+          setInviteLink(stored);
           getWalletBalance().then(w => setWalletBal(w.wallet_balance_ngn || 0)).catch(() => {});
           getLinks().then(ld => setEnterpriseLinks(ld.links || [])).catch(() => {});
           return getAnalytics();

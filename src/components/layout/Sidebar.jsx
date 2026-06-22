@@ -112,7 +112,7 @@ export default function Sidebar() {
          <nav style={{ flex: 1, minHeight: 0, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
            {NAV_MAIN.map(({ to, icon: Icon, label, comingSoon }) => (
-              comingSoon ? (
+               comingSoon ? (
                 <div
                   key={label}
                   style={{
@@ -126,17 +126,23 @@ export default function Sidebar() {
                     fontWeight: 500,
                     fontSize: '0.9rem',
                     cursor: 'not-allowed',
-                    opacity: 0.5,
+                    opacity: 0.45,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                    position: 'relative',
                     justifyContent: collapsed ? 'center' : 'flex-start',
                   }}
-                  title={collapsed ? `${label} · Coming soon` : ''}
+                  title={`${label} · Coming soon`}
                 >
                   <Icon size={18} weight="duotone" />
                   {!collapsed && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
                       <span>{label}</span>
-                      <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 'var(--radius-full)', background: 'var(--amber-faint)', color: 'var(--amber)', fontFamily: 'var(--font-display)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coming soon</span>
+                      <span style={{ fontSize: '0.6rem', padding: '0.12rem 0.45rem', borderRadius: 'var(--radius-full)', background: 'var(--amber-faint)', color: 'var(--amber)', fontFamily: 'var(--font-display)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Coming soon</span>
                     </div>
+                  )}
+                  {collapsed && (
+                    <span style={{ position: 'absolute', bottom: 2, right: 4, fontSize: '0.45rem', color: 'var(--amber)', fontWeight: 700, textTransform: 'uppercase' }}>CS</span>
                   )}
                 </div>
               ) : (

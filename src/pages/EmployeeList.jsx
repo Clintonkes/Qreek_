@@ -41,21 +41,40 @@ export default function EmployeeList() {
 
   useEffect(() => { load(); }, []);
 
+  const getCompanyId = () => company?.id || 'default';
+
+  const getStoredLink = () => {
+    const cid = getCompanyId();
+    return localStorage.getItem(`qreek_invite_${cid}`) || '';
+  };
+
+  useEffect(() => {
+    const stored = getStoredLink();
+    if (stored) setInviteLink(stored);
+  }, [company]);
+
   const handleOpenInvite = () => {
     setShowInviteModal(true);
     setCopied(false);
   };
 
   const handleGenerateInvite = async () => {
+    const existing = getStoredLink();
+    if (existing) {
+      toast.error('An invite link already exists for this company.');
+      return;
+    }
     setCreatingInvite(true);
     try {
       const res = await generateEmployeeInvite();
       const token = res.link?.split('/').pop() || '';
       const origin = window.location.origin;
-      const companySlug = company?.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'join';
-      const cleanLink = `${origin}/enterprise/invite/${token}`;
+      const slug = company?.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'general';
+      const cleanLink = `${origin}/invite/${slug}/${token}`;
       setInviteLink(cleanLink);
-      localStorage.setItem('qreek_employee_invite_link', cleanLink);
+      localStorage.setItem(`qreek_invite_${getCompanyId()}`, cleanLink);
+      toast.success('Invite link generated!');
+      setShowInviteModal(false);
       load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create invitation.');
@@ -101,11 +120,11 @@ export default function EmployeeList() {
   return (
     <AppShell title="Employees">
       <div style={{ marginBottom: '1rem' }}>
-        <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-2)', fontSize: '0.85rem', textDecoration: 'none', transition: 'var(--trans-fast)' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--teal)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+        <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
         >
-          <ArrowLeft size={16} /> Back to Enterprise
+          <ArrowLeft size={16} weight="bold" /> Back to Enterprise
         </Link>
       </div>
 
