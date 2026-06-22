@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { LinkSimple, Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check } from 'phosphor-react';
+import { LinkSimple, Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -107,6 +107,15 @@ export default function EmployeeList() {
 
   return (
     <AppShell title="Employees">
+      <div style={{ marginBottom: '1rem' }}>
+        <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-2)', fontSize: '0.85rem', textDecoration: 'none', transition: 'var(--trans-fast)' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--teal)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+        >
+          <ArrowLeft size={16} /> Back to Enterprise
+        </Link>
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Employee roster</h1>
@@ -142,14 +151,25 @@ export default function EmployeeList() {
       ) : employees.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📨</div>
-          <h3 style={{ marginBottom: '0.5rem' }}>Invite your employees</h3>
+          <h3 style={{ marginBottom: '0.5rem' }}>{inviteLink ? 'Share your invitation link' : 'Invite your employees'}</h3>
           <p style={{ fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '1.25rem' }}>
-            Create one invitation link and share it with all your employees.<br />
-            Each employee fills in their own details — no manual data entry needed.
+            {inviteLink 
+              ? 'Share this secure link with your team. They can fill in their details and verify their bank accounts directly.'
+              : 'Generate a secure link to invite your team. Employees will fill in their own details — no manual data entry needed.'
+            }
           </p>
-          <Button onClick={handleOpenInvite}>
-            <UserPlus size={16} /> Add employee
-          </Button>
+          {inviteLink ? (
+            <div style={{ display: 'flex', gap: '0.5rem', maxWidth: 400, margin: '0 auto' }}>
+              <Input value={inviteLink} readOnly style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
+              <Button variant="secondary" onClick={copyToClipboard} style={{ padding: '0 1rem' }}>
+                {copied ? <Check size={18} color="var(--green)" /> : <CopySimple size={18} />}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleGenerateInvite} disabled={creatingInvite}>
+              {creatingInvite ? 'Generating…' : <><UserPlus size={16} /> Generate link</>}
+            </Button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
@@ -185,10 +205,10 @@ export default function EmployeeList() {
         </div>
       )}
 
-      <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title="Add employee" maxWidth={440}>
+      <Modal open={showInviteModal} onClose={() => setShowInviteModal(false)} title="Invite your team" maxWidth={440}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
-            Instead of adding employees manually, generate an invitation link and share it with your team. Employees will fill in their own details and verify their bank accounts.
+            Generate a secure link to invite your team. Once shared, your employees can instantly fill out their details and verify their bank accounts—no manual data entry required!
           </p>
           
           {inviteLink ? (

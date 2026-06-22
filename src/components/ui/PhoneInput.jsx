@@ -46,17 +46,9 @@ export default function PhoneInput({ label, value = '', onChange, error, placeho
   const [search,  setSearch]  = useState('');
   const dropRef   = useRef(null);
   const inputRef  = useRef(null);
-  const initiated = useRef(false);
 
-  // Sync once when an initial E.164 value is provided (e.g. from sessionStorage)
-  useEffect(() => {
-    if (!initiated.current && value && value.startsWith('+')) {
-      const p = parseE164(value);
-      setCountry(p.country || 'NG');
-      setNumber(p.localNumber || '');
-      initiated.current = true;
-    }
-  }, [value]);
+  // Initial value is already handled by useState. 
+  // No need for a useEffect that overwrites state on first keystroke.
 
   const dial = getCountryCallingCode(country);
   const placeholder_ = placeholder || (country === 'NG' ? '0801 234 5678' : '');

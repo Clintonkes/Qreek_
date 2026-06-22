@@ -36,7 +36,7 @@ const GLOBAL_CSS = `
     0%, 100% { stroke-dashoffset: 120; opacity: 0.25; }
     50%      { stroke-dashoffset: 0; opacity: 0.85; }
   }
-  html { scroll-behavior: smooth; }
+
 
   /* Mobile layout fixes — all buttons visible on every screen */
   @media (max-width: 640px) {
@@ -44,6 +44,7 @@ const GLOBAL_CSS = `
     .hero-ctas a,
     .hero-ctas button   { width: 100% !important; text-align: center !important; }
     .pillars            { flex-direction: column !important; }
+    .pillar-card        { flex-basis: auto !important; overflow: visible !important; }
     .cases-grid         { grid-template-columns: 1fr !important; }
     .trust-grid         { grid-template-columns: 1fr !important; }
     .price-grid         { grid-template-columns: 1fr 1fr !important; }
@@ -129,11 +130,8 @@ function Nav() {
 
         {/* Auth + hamburger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Link to="/login" className="desktop-nav" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.5rem 1rem', borderRadius: 'var(--radius)' }}>
+          <Link to="/login" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.5rem 1rem', borderRadius: 'var(--radius)' }}>
             Sign in
-          </Link>
-          <Link to="/register" style={{ background: 'var(--teal)', color: 'var(--text-inv)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, padding: '0.5rem 1.1rem', borderRadius: 'var(--radius)', whiteSpace: 'nowrap' }}>
-            Get started free
           </Link>
           <button className="mobile-menu-btn" onClick={() => setMenuOpen(o => !o)}
             aria-label="Open menu"
@@ -179,7 +177,7 @@ function Nav() {
 function PillarCard({ icon, tag, title, desc, fee, cta, to, color, g1, g2 }) {
   const [hov, setHov] = useState(false);
   return (
-    <div
+    <div className="pillar-card"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -222,7 +220,7 @@ function PillarCard({ icon, tag, title, desc, fee, cta, to, color, g1, g2 }) {
       <div style={{ position: 'relative' }}>
         <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color, marginBottom: '0.5rem' }}>{tag}</div>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.6rem', lineHeight: 1.3 }}>{title}</h3>
-        <p style={{ fontSize: '0.87rem', color: 'var(--text-2)', lineHeight: 1.75, margin: 0 }}>{desc}</p>
+        <p style={{ fontSize: '0.87rem', color: 'var(--text-2)', lineHeight: 1.75, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>{desc}</p>
       </div>
 
       {/* Footer */}
@@ -649,7 +647,7 @@ export default function Landing() {
   ];
 
   return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text)', overflowX: 'hidden' }}>
+    <div style={{ background: 'var(--bg)', color: 'var(--text)', overflowX: 'clip' }}>
       <style>{GLOBAL_CSS}</style>
       <Nav />
 
