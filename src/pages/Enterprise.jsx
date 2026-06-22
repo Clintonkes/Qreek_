@@ -2,14 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning, Wallet, X } from 'phosphor-react';
+import { Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning, Wallet, X, Link as LinkIcon, CopySimple, Check } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
+import CopyButton from '../components/ui/CopyButton.jsx';
 import { getCompany, getAnalytics, depositToWallet, getWalletBalance } from '../api/payroll.js';
+import { getLinks } from '../api/paymentLinks.js';
 
 /**
  * A reusable UI card to display a key metric or statistic.
@@ -76,6 +78,8 @@ export default function Enterprise() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmt,  setDepositAmt]  = useState('');
   const [depositing,  setDepositing]  = useState(false);
+  const [enterpriseLinks, setEnterpriseLinks] = useState([]);
+  const [inviteLink, setInviteLink] = useState(localStorage.getItem('qreek_employee_invite_link') || '');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,6 +88,7 @@ export default function Enterprise() {
         setCompany(d.company);
         if (d.company) {
           getWalletBalance().then(w => setWalletBal(w.wallet_balance_ngn || 0)).catch(() => {});
+          getLinks().then(ld => setEnterpriseLinks(ld.links || [])).catch(() => {});
           return getAnalytics();
         }
       })
@@ -233,6 +238,38 @@ export default function Enterprise() {
           )}
         </div>
       </div>
+
+      {inviteLink && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.25rem' }}>
+              QreekPay {company?.name ? `/ ${company.name}` : ''} · Shareable invite link
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>{inviteLink}</div>
+          </div>
+          <CopyButton text={inviteLink} />
+        </div>
+      )}
+
+      {enterpriseLinks.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginTop: '1.5rem' }}>
+          <h3 style={{ fontSize: '0.95rem', marginBottom: '1rem' }}>Payment links</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {enterpriseLinks.slice(0, 5).map(link => (
+              <div key={link.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{link.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <LinkIcon size={12} /> {link.url}
+                  </div>
+                </div>
+                <CopyButton text={link.url} />
+              </div>
+            ))}
+          </div>
+          <Link to="/payment-links" style={{ fontSize: '0.82rem', color: 'var(--teal)', display: 'inline-block', marginTop: '0.75rem' }}>View all payment links →</Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
         <Link to="/enterprise/employees" style={{ textDecoration: 'none' }}>

@@ -1,8 +1,6 @@
-// Dashboard.jsx gives signed-in users a payment-first summary of pools, links,
-// and enterprise payout activity so they can choose the next action quickly.
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Buildings, Link as LinkIcon, Users, UsersThree } from 'phosphor-react';
+import { ArrowRight, Buildings, Link as LinkIcon, Users, UsersThree, Clock } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -23,6 +21,20 @@ function greeting() {
 // fmtNgn keeps NGN figures readable anywhere the dashboard surfaces money values.
 function fmtNgn(value) {
   return `₦${(value || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
+}
+
+function timeRemaining(expiresAt) {
+  if (!expiresAt) return '';
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diff = expiry.getTime() - now.getTime();
+  if (diff <= 0) return 'Expired';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
 }
 
 // StatCard is a compact summary tile used for the top-level health indicators.
@@ -210,6 +222,11 @@ export default function Dashboard() {
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
                         {link.is_flexible ? 'Flexible amount' : fmtNgn(link.amount)} · {link.use_count || 0} uses
                       </div>
+                      {link.pool_id && link.expires_at && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                          <Clock size={12} /> {timeRemaining(link.expires_at)}
+                        </div>
+                      )}
                     </div>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--green)' }}>
                       {fmtNgn(link.total_collected)}

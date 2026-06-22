@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
@@ -45,6 +45,11 @@ import EmployeeSelfService from './pages/EmployeeSelfService.jsx';
 function AuthGuard() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   return isAuthenticated && hasStoredActiveSession() ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+function EmployeeEditRedirect() {
+  const { token } = useParams();
+  return <Navigate to={`/enterprise/invite/${token}`} replace />;
 }
 
 const variants = {
@@ -90,7 +95,8 @@ export default function App() {
         <Route path="/register"   element={<Register />} />
         <Route path="/forgot-pin" element={<ForgotPin />} />
         <Route path="/p/:code"    element={<PublicPayment />} />
-        <Route path="/enterprise/employee-edit/:token" element={<EmployeeSelfService />} />
+        <Route path="/enterprise/invite/:token" element={<EmployeeSelfService />} />
+        <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
 
         <Route element={<AuthGuard />}>
           <Route element={<PrivateLayout />}>

@@ -14,7 +14,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets } from 'phosphor-react';
+import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock } from 'phosphor-react';
 import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
@@ -24,6 +24,20 @@ import Spinner from '../components/ui/Spinner.jsx';
 import { formatPhoneNumber } from '../lib/utils.js';
 import { getCheckoutUrl, getTransactionReference, PAYMENT_PROVIDER, QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 import { toast } from 'react-hot-toast';
+
+function timeRemaining(expiresAt) {
+  if (!expiresAt) return '';
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diff = expiry.getTime() - now.getTime();
+  if (diff <= 0) return 'Expired';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+}
 
 const FMT = v => {
   const value = Number(v || 0);
@@ -434,6 +448,11 @@ export default function PublicPayment() {
           </div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>{link.title}</h1>
           {link.description && <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{link.description}</p>}
+          {link.expires_at && (
+            <div style={{ fontSize: '0.78rem', color: isExpired ? 'var(--red)' : 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginTop: '0.5rem' }}>
+              <Clock size={14} /> {isExpired ? 'Expired' : timeRemaining(link.expires_at)}
+            </div>
+          )}
         </div>
 
         {(link.pool_id || link.family_id) && (

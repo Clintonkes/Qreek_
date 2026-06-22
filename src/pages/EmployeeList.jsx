@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { LinkSimple, Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft } from 'phosphor-react';
+import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getEmployees, removeEmployee, generateEmployeeLink, generateEmployeeInvite } from '../api/payroll.js';
+import { getEmployees, removeEmployee, generateEmployeeInvite, getCompany } from '../api/payroll.js';
 
 const FMT = v => v ? `₦${v.toLocaleString('en-NG', { minimumFractionDigits: 0 })}` : '—';
 
@@ -23,13 +23,19 @@ export default function EmployeeList() {
   const [copied, setCopied] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
 
-  const [generating, setGenerating] = useState(null);
   const [removing,  setRemoving]  = useState(null);
+  const [company, setCompany] = useState(null);
 
   const load = () => {
     setLoading(true);
-    getEmployees({ active_only: false })
-      .then(d => setEmployees(d.employees || []))
+    Promise.all([
+      getEmployees({ active_only: false }),
+      getCompany().catch(() => ({ company: null })),
+    ])
+      .then(([d, c]) => {
+        setEmployees(d.employees || []);
+        setCompany(c?.company || null);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -37,7 +43,6 @@ export default function EmployeeList() {
 
   const handleOpenInvite = () => {
     setShowInviteModal(true);
-    setInviteLink('');
     setCopied(false);
   };
 
@@ -45,7 +50,12 @@ export default function EmployeeList() {
     setCreatingInvite(true);
     try {
       const res = await generateEmployeeInvite();
-      setInviteLink(res.link);
+      const token = res.link?.split('/').pop() || '';
+      const origin = window.location.origin;
+      const companySlug = company?.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'join';
+      const cleanLink = `${origin}/enterprise/invite/${token}`;
+      setInviteLink(cleanLink);
+      localStorage.setItem('qreek_employee_invite_link', cleanLink);
       load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create invitation.');
@@ -63,23 +73,6 @@ export default function EmployeeList() {
       setTimeout(() => setCopied(false), 3000);
     } catch {
       toast.error('Failed to copy. Please copy manually.');
-    }
-  };
-
-  const handleGenerateLink = async (emp) => {
-    setGenerating(emp.id);
-    try {
-      const res = await generateEmployeeLink(emp.id);
-      try {
-        await navigator.clipboard.writeText(res.link);
-        toast.success(`Link copied for ${emp.name || 'employee'}`);
-      } catch {
-        toast.success(`Link: ${res.link}`, { duration: 10000 });
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to generate link.');
-    } finally {
-      setGenerating(null);
     }
   };
 
@@ -133,6 +126,20 @@ export default function EmployeeList() {
         </div>
       </div>
 
+      {inviteLink && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.25rem' }}>
+              QreekPay {company?.name ? `/ ${company.name}` : ''} · Shareable invite link
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>{inviteLink}</div>
+          </div>
+          <Button variant="secondary" onClick={copyToClipboard} style={{ flexShrink: 0 }}>
+            {copied ? <><Check size={16} /> Copied</> : <><CopySimple size={16} /> Copy</>}
+          </Button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
           <MagnifyingGlass size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
@@ -154,7 +161,7 @@ export default function EmployeeList() {
           <h3 style={{ marginBottom: '0.5rem' }}>{inviteLink ? 'Share your invitation link' : 'Invite your employees'}</h3>
           <p style={{ fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '1.25rem' }}>
             {inviteLink 
-              ? 'Share this secure link with your team. They can fill in their details and verify their bank accounts directly.'
+              ? 'Share this secure QreekPay link with your team. They can fill in their details and verify their bank accounts directly.'
               : 'Generate a secure link to invite your team. Employees will fill in their own details — no manual data entry needed.'
             }
           </p>
@@ -178,7 +185,7 @@ export default function EmployeeList() {
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span>Employee</span><span>Bank</span><span>Department</span><span>Salary / mo</span><span>Actions</span>
+            <span>Employee</span><span>Bank</span><span>Department</span><span>Salary / mo</span><span></span>
           </div>
           {filtered.map((emp, i) => (
             <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
@@ -192,14 +199,9 @@ export default function EmployeeList() {
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>{emp.department || '—'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', color: 'var(--teal)' }}>{FMT(emp.salary)}</div>
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button onClick={() => handleGenerateLink(emp)} disabled={generating === emp.id} title="Generate self-service edit link" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--teal)', display: 'flex', alignItems: 'center' }}>
-                  {generating === emp.id ? <Spinner size={14} /> : <LinkSimple size={14} />}
-                </button>
-                <button onClick={() => handleRemove(emp)} disabled={removing === emp.id} style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--red)', display: 'flex', alignItems: 'center' }}>
-                  {removing === emp.id ? <Spinner size={14} /> : <Trash size={14} />}
-                </button>
-              </div>
+              <button onClick={() => handleRemove(emp)} disabled={removing === emp.id} title="Remove employee" style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--red)', display: 'flex', alignItems: 'center' }}>
+                {removing === emp.id ? <Spinner size={14} /> : <Trash size={14} />}
+              </button>
             </div>
           ))}
         </div>
@@ -213,7 +215,7 @@ export default function EmployeeList() {
           
           {inviteLink ? (
             <div style={{ marginTop: '0.5rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.4rem', display: 'block' }}>Invitation Link</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.4rem', display: 'block' }}>QreekPay {company?.name ? `/ ${company.name}` : ''} invite link</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <Input value={inviteLink} readOnly style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
                 <Button variant="secondary" onClick={copyToClipboard} style={{ padding: '0 1rem' }}>

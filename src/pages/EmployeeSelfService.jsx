@@ -152,6 +152,7 @@ export default function EmployeeSelfService() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
           <Buildings size={24} color="var(--teal)" />
           <h1 style={{ fontSize: '1.3rem' }}>{mode === 'invite' ? 'Join your company payroll' : 'Update your details'}</h1>
+          <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>QreekPay · Employee onboarding</p>
         </div>
         <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           {mode === 'invite'
