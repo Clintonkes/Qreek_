@@ -19,8 +19,8 @@ export default function EmployeeList() {
   const [search,    setSearch]    = useState('');
   const [deptFilter,setDeptFilter]= useState('');
   
+  const [company, setCompany] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
 
@@ -44,47 +44,31 @@ export default function EmployeeList() {
 
   const getCompanyId = () => company?.id || 'default';
 
-  const getStoredLink = () => {
-    const cid = getCompanyId();
-    return localStorage.getItem(`qreek_invite_${cid}`) || '';
-  };
-
-  useEffect(() => {
-    const stored = getStoredLink();
-    if (stored) setInviteLink(stored);
-  }, [company]);
-
   const handleOpenInvite = () => {
     setShowInviteModal(true);
     setCopied(false);
   };
 
   const handleGenerateInvite = async () => {
-    const existing = getStoredLink();
-    if (existing) {
+    if (company?.invite_link) {
       if (!window.confirm('An invite link already exists. Generate a new one? The old link will stop working.')) return;
-      localStorage.removeItem(`qreek_invite_${getCompanyId()}`);
     }
     setCreatingInvite(true);
     try {
-      const res = await generateEmployeeInvite();
-      const link = res.link || res.invite_link || res.url || '';
-      if (!link) throw new Error('Server did not return a link');
-      setInviteLink(link);
-      localStorage.setItem(`qreek_invite_${getCompanyId()}`, link);
+      await generateEmployeeInvite();
       setShowInviteModal(false);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.detail || err.message || 'Failed to create invitation. Is the server running?');
+      toast.error(err.response?.data?.detail || err.message || 'Failed to create invitation.');
     } finally {
       setCreatingInvite(false);
     }
   };
 
   const copyToClipboard = async () => {
-    if (!inviteLink) return;
+    if (!company?.invite_link) return;
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(company.invite_link);
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 3000);
@@ -135,12 +119,7 @@ export default function EmployeeList() {
           <Button variant="secondary" onClick={() => toast('Bulk import coming soon')}>
             <UploadSimple size={16} /> Bulk import
           </Button>
-          {inviteLink ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.3rem 0.75rem 0.3rem 1rem' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--teal)', fontWeight: 600, whiteSpace: 'nowrap' }}>Invite link ready</span>
-              <CopyButton text={inviteLink} />
-            </div>
-          ) : (
+          {!company?.invite_link && (
             <Button onClick={handleOpenInvite}>
               <UserPlus size={16} /> Add employee
             </Button>
@@ -148,13 +127,13 @@ export default function EmployeeList() {
         </div>
       </div>
 
-      {inviteLink && (
+      {company?.invite_link && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.25rem' }}>
               QreekPay {company?.name ? `/ ${company.name}` : ''} · Shareable invite link
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>{inviteLink}</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', fontFamily: 'var(--font-mono)' }}>{company.invite_link}</div>
           </div>
           <Button variant="secondary" onClick={copyToClipboard} style={{ flexShrink: 0 }}>
             {copied ? <><Check size={16} /> Copied</> : <><CopySimple size={16} /> Copy</>}
@@ -180,21 +159,14 @@ export default function EmployeeList() {
       ) : employees.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📨</div>
-          <h3 style={{ marginBottom: '0.5rem' }}>{inviteLink ? 'Share your invitation link' : 'Invite your employees'}</h3>
+          <h3 style={{ marginBottom: '0.5rem' }}>{company?.invite_link ? 'Share your invitation link' : 'Invite your employees'}</h3>
           <p style={{ fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '1.25rem' }}>
-            {inviteLink 
+            {company?.invite_link 
               ? 'Share this secure QreekPay link with your team. They can fill in their details and verify their bank accounts directly.'
               : 'Generate a secure link to invite your team. Employees will fill in their own details — no manual data entry needed.'
             }
           </p>
-          {inviteLink ? (
-            <div style={{ display: 'flex', gap: '0.5rem', maxWidth: 400, margin: '0 auto' }}>
-              <Input value={inviteLink} readOnly style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
-              <Button variant="secondary" onClick={copyToClipboard} style={{ padding: '0 1rem' }}>
-                {copied ? <Check size={18} color="var(--green)" /> : <CopySimple size={18} />}
-              </Button>
-            </div>
-          ) : (
+          {!company?.invite_link && (
             <Button onClick={handleGenerateInvite} disabled={creatingInvite}>
               {creatingInvite ? 'Generating…' : <><UserPlus size={16} /> Generate link</>}
             </Button>
@@ -235,23 +207,11 @@ export default function EmployeeList() {
             Generate a secure link to invite your team. Once shared, your employees can instantly fill out their details and verify their bank accounts—no manual data entry required!
           </p>
           
-          {inviteLink ? (
-            <div style={{ marginTop: '0.5rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.4rem', display: 'block' }}>QreekPay {company?.name ? `/ ${company.name}` : ''} invite link</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Input value={inviteLink} readOnly style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
-                <Button variant="secondary" onClick={copyToClipboard} style={{ padding: '0 1rem' }}>
-                  {copied ? <Check size={18} color="var(--green)" /> : <CopySimple size={18} />}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <Button onClick={handleGenerateInvite} disabled={creatingInvite}>
-                {creatingInvite ? 'Generating link…' : 'Generate link'}
-              </Button>
-            </div>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <Button onClick={handleGenerateInvite} disabled={creatingInvite}>
+              {creatingInvite ? 'Generating link…' : 'Generate link'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </AppShell>

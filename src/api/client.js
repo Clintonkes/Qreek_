@@ -39,6 +39,12 @@ client.interceptors.request.use(config => {
   }
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  const activeCompany = localStorage.getItem('qreek_active_company');
+  if (activeCompany) {
+    config.headers['x-company-id'] = activeCompany;
+  }
+
   return config;
 });
 

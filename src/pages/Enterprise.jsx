@@ -70,6 +70,7 @@ function RunBar({ run }) {
  * @returns {JSX.Element}
  */
 export default function Enterprise() {
+  const [companies,   setCompanies]   = useState([]);
   const [company,     setCompany]     = useState(null);
   const [analytics,   setAnalytics]   = useState(null);
   const [walletBal,   setWalletBal]   = useState(0);
@@ -78,19 +79,24 @@ export default function Enterprise() {
   const [depositAmt,  setDepositAmt]  = useState('');
   const [depositing,  setDepositing]  = useState(false);
   const [enterpriseLinks, setEnterpriseLinks] = useState([]);
-  const [inviteLink, setInviteLink] = useState('');
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
   const loadCompany = () => {
+    setLoading(true);
     getCompany()
       .then(d => {
-        const c = d.company;
+        setCompanies(d.companies || []);
+        let c = d.company;
+        const activeId = localStorage.getItem('qreek_active_company');
+        if (activeId && d.companies?.length) {
+          const found = d.companies.find(x => x.id === activeId);
+          if (found) c = found;
+        }
         setCompany(c);
         if (c) {
-          const stored = localStorage.getItem(`qreek_invite_${c.id}`) || '';
-          setInviteLink(stored);
+          localStorage.setItem('qreek_active_company', c.id);
           getWalletBalance().then(w => setWalletBal(w.wallet_balance_ngn || 0)).catch(() => {});
           getLinks().then(ld => setEnterpriseLinks(ld.links || [])).catch(() => {});
           return getAnalytics();
@@ -102,15 +108,17 @@ export default function Enterprise() {
 
   useEffect(() => { loadCompany(); }, []);
 
+  const handleSwitchCompany = (id) => {
+    localStorage.setItem('qreek_active_company', id);
+    loadCompany();
+  };
+
   const handleGenerateInvite = async () => {
     setCreatingInvite(true);
     try {
-      const res = await generateEmployeeInvite();
-      const link = res.link || res.invite_link || res.url || '';
-      if (!link) throw new Error('Server did not return a link');
-      setInviteLink(link);
-      localStorage.setItem(`qreek_invite_${company?.id || 'default'}`, link);
+      await generateEmployeeInvite();
       toast.success('Invite link generated!');
+      loadCompany(); // Reload to get the updated invite_link from backend
     } catch (err) {
       toast.error(err.response?.data?.detail || err.message || 'Failed to create invitation.');
     } finally {
@@ -119,9 +127,9 @@ export default function Enterprise() {
   };
 
   const copyInvite = async () => {
-    if (!inviteLink) return;
+    if (!company?.invite_link) return;
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(company.invite_link);
       setCopied(true);
       toast.success('Link copied!');
       setTimeout(() => setCopied(false), 3000);
@@ -197,11 +205,22 @@ export default function Enterprise() {
 
   return (
     <AppShell title="Enterprise">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{company.name}</h1>
-            <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{company.industry || 'Enterprise account'} {company.rc_number ? `· RC ${company.rc_number}` : ''}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+            <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{company.name}</h1>
+            {companies.length > 1 && (
+              <select 
+                value={company.id} 
+                onChange={e => handleSwitchCompany(e.target.value)}
+                style={{ fontSize: '0.85rem', padding: '0.2rem 1.5rem 0.2rem 0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)' }}
+              >
+                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
           </div>
+          <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>{company.industry || 'Enterprise account'} {company.rc_number ? `· RC ${company.rc_number}` : ''}</p>
+        </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <Button variant="secondary" onClick={() => setShowDeposit(true)}><Wallet size={16} /> Fund wallet</Button>
             <Button variant="secondary" onClick={() => navigate('/enterprise/employees')}><Users size={16} /> Employees</Button>
@@ -240,30 +259,34 @@ export default function Enterprise() {
           </div>
         </Modal>
 
-      <div style={{ background: 'linear-gradient(135deg, var(--surface) 0%, rgba(0,212,170,0.04) 100%)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <ShareNetwork size={20} color="var(--teal)" />
-          <div>
+      {company.invite_link ? (
+        <div style={{ background: 'linear-gradient(135deg, var(--surface) 0%, rgba(0,212,170,0.04) 100%)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <ShareNetwork size={20} color="var(--teal)" style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{company.name} – Employee invite</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Share this link so your team can submit their payroll details</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>Share this link so your team can submit their payroll details</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+              {company.invite_link}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <CopyButton text={company.invite_link} />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {inviteLink ? (
-            <>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-2)', fontFamily: 'var(--font-mono)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'none', sm: 'inline' }}>{inviteLink}</span>
-              <CopyButton text={inviteLink} />
-              <Button variant="secondary" onClick={handleGenerateInvite} disabled={creatingInvite} style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}>
-                {creatingInvite ? '…' : 'Regenerate'}
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleGenerateInvite} disabled={creatingInvite} style={{ fontSize: '0.85rem' }}>
-              {creatingInvite ? 'Generating…' : <><UserPlus size={16} /> Generate invite link</>}
-            </Button>
-          )}
+      ) : (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+            <ShareNetwork size={20} color="var(--text-3)" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Employee invite link</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Generate a link to share with your team</div>
+            </div>
+          </div>
+          <Button onClick={handleGenerateInvite} disabled={creatingInvite} style={{ fontSize: '0.85rem', flexShrink: 0 }}>
+            {creatingInvite ? 'Generating…' : <><UserPlus size={16} /> Generate link</>}
+          </Button>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
