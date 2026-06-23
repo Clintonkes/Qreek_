@@ -25,7 +25,6 @@ export default function EmployeeList() {
   const [creatingInvite, setCreatingInvite] = useState(false);
 
   const [removing,  setRemoving]  = useState(null);
-  const [company, setCompany] = useState(null);
 
   const load = () => {
     setLoading(true);
