@@ -49,9 +49,6 @@ export default function EmployeeList() {
   };
 
   const handleGenerateInvite = async () => {
-    if (company?.invite_link) {
-      if (!window.confirm('An invite link already exists. Generate a new one? The old link will stop working.')) return;
-    }
     setCreatingInvite(true);
     try {
       await generateEmployeeInvite();
