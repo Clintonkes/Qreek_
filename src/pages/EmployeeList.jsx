@@ -30,11 +30,19 @@ export default function EmployeeList() {
     setLoading(true);
     Promise.all([
       getEmployees({ active_only: false }),
-      getCompany().catch(() => ({ company: null })),
+      getCompany().catch(() => ({ company: null, companies: [] })),
     ])
       .then(([d, c]) => {
         setEmployees(d.employees || []);
-        setCompany(c?.company || null);
+        // Prefer the active company from localStorage so the invite link is correct
+        const activeId = localStorage.getItem('qreek_active_company');
+        const allCos = c?.companies || [];
+        let active = c?.company || null;
+        if (activeId && allCos.length) {
+          const found = allCos.find(x => x.id === activeId);
+          if (found) active = found;
+        }
+        setCompany(active);
       })
       .finally(() => setLoading(false));
   };
