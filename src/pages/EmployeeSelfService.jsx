@@ -6,7 +6,7 @@ import { Check, Buildings, Bank } from 'phosphor-react';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getEmployeeByToken, updateEmployeeByToken, verifyAccount, getBanks } from '../api/payroll.js';
+import { getEmployeeByToken, updateEmployeeByToken, verifyAccountByToken, getBanks } from '../api/payroll.js';
 
 export default function EmployeeSelfService() {
   const { company: companySlug, token } = useParams();
@@ -73,7 +73,7 @@ export default function EmployeeSelfService() {
     }
     setVerifying(true);
     try {
-      const res = await verifyAccount(form.bank_account, form.bank_code);
+      const res = await verifyAccountByToken(token, form.bank_account, form.bank_code);
       setVerifiedName(res.account_name);
       toast.success(`Account verified: ${res.account_name}`);
     } catch (err) {
@@ -166,7 +166,7 @@ export default function EmployeeSelfService() {
             <Input label="Full name *" value={form.name} onChange={e => set('name', e.target.value)} error={errors.name} placeholder="Your full name" />
             <Input label="Email" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@company.com" />
             <Input label="Phone" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+234 801 234 5678" />
-            <Input label="Monthly salary (₦) *" type="number" value={form.salary} onChange={e => set('salary', e.target.value)} error={errors.salary} placeholder="250000" />
+            <Input label="Monthly salary (₦) *" type="text" inputMode="numeric" value={form.salary} onChange={e => set('salary', e.target.value.replace(/[^0-9.]/g, ''))} error={errors.salary} placeholder="250000" />
             <Input label="Account number *" value={form.bank_account} onChange={e => handleBankChange('bank_account', e.target.value)} error={errors.bank_account} placeholder="0123456789" maxLength={10} style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }} />
             <div>
               <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: errors.bank_code ? 'var(--red)' : 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank *</label>

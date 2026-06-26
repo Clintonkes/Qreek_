@@ -161,3 +161,6 @@ export const generateEmployeeInvite = () => client.post('/payroll/employees/gene
 export const getEmployeeByToken   = (token) => client.get(`/payroll/employee-self-service/${token}`).then(r => r.data);
 
 export const updateEmployeeByToken = (token, data) => client.put(`/payroll/employee-self-service/${token}`, data).then(r => r.data);
+
+export const verifyAccountByToken = (token, account_number, bank_code) =>
+  client.get(`/payroll/employee-self-service/${token}/verify-account`, { params: { account_number, bank_code } }).then(r => r.data);
