@@ -42,6 +42,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 480 }
               background: 'var(--surface)', border: '1px solid var(--border)',
               borderRadius: 'var(--radius-xl)', padding: '1.5rem',
               width: '100%', maxWidth, boxShadow: 'var(--shadow-lg)',
+              maxHeight: 'calc(100vh - 2rem)', overflowY: 'auto',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
