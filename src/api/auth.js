@@ -40,6 +40,10 @@ export const me       = ()     => client.get('/auth/me').then(r => r.data);
  */
 export const changePin = (data) => client.post('/auth/change-pin', data).then(r => r.data);
 
+export const hasPin     = ()     => client.get('/auth/has-pin').then(r => r.data);
+
+export const setPin     = (data) => client.post('/auth/set-pin', data).then(r => r.data);
+
 /**
  * Bank details update API.
  * @param {Object} data - Bank account and code.

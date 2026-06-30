@@ -97,7 +97,7 @@ export default function EmployeeList() {
     if (!addForm.name.trim()) { toast.error('Full name is required.'); return; }
     if (!addForm.salary || parseFloat(addForm.salary) <= 0) { toast.error('Salary must be greater than 0.'); return; }
     if (!addForm.bank_account || !addForm.bank_code) { toast.error('Bank account and bank are required.'); return; }
-    if (!verifiedName && !editingEmp) { toast.error('Please verify the bank account before submitting.'); return; }
+    if (!verifiedName) { toast.error('Please verify the bank account before submitting.'); return; }
 
     const payload = {
       name: addForm.name.trim(),
@@ -209,11 +209,11 @@ export default function EmployeeList() {
 
   return (
     <AppShell title="Employees">
-      <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)', marginBottom: '1.25rem' }}
+      <Link to={localStorage.getItem('qreek_active_company') ? `/enterprise/${localStorage.getItem('qreek_active_company')}` : '/enterprise'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)', marginBottom: '1.25rem' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
         onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
       >
-        <ArrowLeft size={16} weight="bold" /> Back to Enterprise
+        <ArrowLeft size={16} weight="bold" /> Back to {company?.name || 'Enterprise'}
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -443,7 +443,7 @@ export default function EmployeeList() {
                 <Button variant="secondary" onClick={() => setAddStep(2)}>
                   <CaretLeft size={14} weight="bold" /> Back
                 </Button>
-                <Button onClick={handleSaveEmployee} disabled={saving || (!verifiedName && !editingEmp)}>
+                <Button onClick={handleSaveEmployee} disabled={saving || !verifiedName}>
                   {saving ? 'Saving…' : editingEmp ? 'Save changes' : 'Add to payroll'}
                 </Button>
               </div>

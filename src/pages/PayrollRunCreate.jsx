@@ -3,12 +3,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock, CreditCard } from 'phosphor-react';
+import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock, CreditCard, Gear } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { getEmployees, createPayrollRun, createPayrollCheckout, executePayrollRun } from '../api/payroll.js';
+import { hasPin } from '../api/auth.js';
 import { feePercent, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -66,11 +67,13 @@ export default function PayrollRunCreate() {
   const [executing,   setExecuting]  = useState(false);
   const [done,        setDone]       = useState(false);
   const [selectAll,   setSelectAll]  = useState(true);
+  const [pinExists,   setPinExists]  = useState(true);
 
   useEffect(() => {
     getEmployees({ active_only: true })
       .then(d => { setEmployees(d.employees || []); setSelected((d.employees || []).map(e => e.id)); })
       .finally(() => setLoading(false));
+    hasPin().then(r => setPinExists(r.has_pin)).catch(() => {});
   }, []);
 
   const toggleEmp = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -219,6 +222,18 @@ export default function PayrollRunCreate() {
                 </div>
               </div>
 
+              {!pinExists ? (
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--amber-border, rgba(255,193,7,0.3))', borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center' }}>
+                  <Gear size={32} color="var(--amber)" style={{ marginBottom: '0.75rem' }} />
+                  <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Set a transaction PIN first</h3>
+                  <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                    You need a transaction PIN to authorise payroll payments. Go to Settings to create one.
+                  </p>
+                  <Button onClick={() => navigate('/settings')}>
+                    Go to Settings
+                  </Button>
+                </div>
+              ) : (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--text-2)', fontSize: '0.88rem' }}>
                   <Lock size={16} color="var(--teal)" />
@@ -243,6 +258,7 @@ export default function PayrollRunCreate() {
                   <Warning size={13} color="var(--amber)" /> After payment, {preview.length} bank transfers totalling {FMT(totalNet)} will be sent automatically.
                 </div>
               </div>
+              )}
             </motion.div>
           )}
 

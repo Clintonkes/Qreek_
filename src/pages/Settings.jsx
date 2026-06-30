@@ -20,7 +20,7 @@ import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import useAuthStore from '../store/authStore.js';
-import { changePin } from '../api/auth.js';
+import { changePin, hasPin, setPin } from '../api/auth.js';
 
 /**
  * Section component - A structural wrapper for categorizing setting groups.
@@ -54,6 +54,28 @@ export default function Settings() {
 
   const [pinForm,  setPinForm]  = useState({ current_pin: '', new_pin: '', confirm_pin: '' });
   const [savingPin, setSavingPin] = useState(false);
+  const [hasPinFlag, setHasPinFlag] = useState(null);
+
+  useEffect(() => {
+    hasPin().then(r => setHasPinFlag(r.has_pin)).catch(() => setHasPinFlag(false));
+  }, []);
+
+  const handleSetPin = async (e) => {
+    e.preventDefault();
+    if (pinForm.new_pin !== pinForm.confirm_pin) { toast.error('PINs do not match'); return; }
+    if (pinForm.new_pin.length < 4) { toast.error('PIN must be at least 4 digits'); return; }
+    setSavingPin(true);
+    try {
+      await setPin({ new_pin: pinForm.new_pin });
+      toast.success('Transaction PIN set successfully');
+      setPinForm({ current_pin: '', new_pin: '', confirm_pin: '' });
+      setHasPinFlag(true);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to set PIN');
+    } finally {
+      setSavingPin(false);
+    }
+  };
 
   /**
    * handleChangePin - Securely updates the user's security PIN.
@@ -106,28 +128,47 @@ export default function Settings() {
         </div>
       </Section>
 
-
-
-      <Section title="Change PIN">
-        <form onSubmit={handleChangePin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Input
-            label="Current PIN" type="password" inputMode="numeric" maxLength={6}
-            value={pinForm.current_pin} onChange={e => setPinForm(f => ({ ...f, current_pin: e.target.value.replace(/\D/g,'') }))}
-            placeholder="••••"
-          />
-          <Input
-            label="New PIN" type="password" inputMode="numeric" maxLength={6}
-            value={pinForm.new_pin} onChange={e => setPinForm(f => ({ ...f, new_pin: e.target.value.replace(/\D/g,'') }))}
-            placeholder="••••"
-          />
-          <Input
-            label="Confirm new PIN" type="password" inputMode="numeric" maxLength={6}
-            value={pinForm.confirm_pin} onChange={e => setPinForm(f => ({ ...f, confirm_pin: e.target.value.replace(/\D/g,'') }))}
-            placeholder="••••"
-          />
-          <Button type="submit" loading={savingPin} variant="secondary">Change PIN</Button>
-        </form>
-      </Section>
+      {hasPinFlag === false ? (
+        <Section title="Set transaction PIN">
+          <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
+            You haven't set a transaction PIN yet. Create one — you'll need it to authorise payroll runs and other payments.
+          </p>
+          <form onSubmit={handleSetPin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Input
+              label="New PIN" type="password" inputMode="numeric" maxLength={6}
+              value={pinForm.new_pin} onChange={e => setPinForm(f => ({ ...f, new_pin: e.target.value.replace(/\D/g,'') }))}
+              placeholder="••••"
+            />
+            <Input
+              label="Confirm PIN" type="password" inputMode="numeric" maxLength={6}
+              value={pinForm.confirm_pin} onChange={e => setPinForm(f => ({ ...f, confirm_pin: e.target.value.replace(/\D/g,'') }))}
+              placeholder="••••"
+            />
+            <Button type="submit" loading={savingPin} variant="secondary">Set PIN</Button>
+          </form>
+        </Section>
+      ) : (
+        <Section title="Change PIN">
+          <form onSubmit={handleChangePin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Input
+              label="Current PIN" type="password" inputMode="numeric" maxLength={6}
+              value={pinForm.current_pin} onChange={e => setPinForm(f => ({ ...f, current_pin: e.target.value.replace(/\D/g,'') }))}
+              placeholder="••••"
+            />
+            <Input
+              label="New PIN" type="password" inputMode="numeric" maxLength={6}
+              value={pinForm.new_pin} onChange={e => setPinForm(f => ({ ...f, new_pin: e.target.value.replace(/\D/g,'') }))}
+              placeholder="••••"
+            />
+            <Input
+              label="Confirm new PIN" type="password" inputMode="numeric" maxLength={6}
+              value={pinForm.confirm_pin} onChange={e => setPinForm(f => ({ ...f, confirm_pin: e.target.value.replace(/\D/g,'') }))}
+              placeholder="••••"
+            />
+            <Button type="submit" loading={savingPin} variant="secondary">Change PIN</Button>
+          </form>
+        </Section>
+      )}
 
       <Section title="Referral">
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
