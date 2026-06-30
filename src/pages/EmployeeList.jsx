@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft, ArrowSquareOut } from 'phosphor-react';
+import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft, Bank, CaretRight, CaretLeft, PencilSimple } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
-import { getEmployees, removeEmployee, generateEmployeeInvite, getCompany } from '../api/payroll.js';
+import { getEmployees, removeEmployee, generateEmployeeInvite, getCompany, addEmployee, updateEmployee, getBanks, verifyAccount } from '../api/payroll.js';
 
 const FMT = v => v ? `₦${v.toLocaleString('en-NG', { minimumFractionDigits: 0 })}` : '—';
 
@@ -25,6 +25,110 @@ export default function EmployeeList() {
   const [creatingInvite, setCreatingInvite] = useState(false);
 
   const [removing,  setRemoving]  = useState(null);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEmp, setEditingEmp] = useState(null);
+  const [addStep, setAddStep] = useState(1);
+  const [banks, setBanks] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifiedName, setVerifiedName] = useState('');
+  const [addForm, setAddForm] = useState({
+    name: '', email: '', phone: '',
+    department: '', job_title: '', salary: '',
+    bank_account: '', bank_code: '',
+  });
+
+  const setForm = (key, value) => setAddForm(prev => ({ ...prev, [key]: value }));
+
+  const resetAddForm = () => {
+    setAddForm({ name: '', email: '', phone: '', department: '', job_title: '', salary: '', bank_account: '', bank_code: '' });
+    setAddStep(1);
+    setVerifiedName('');
+    setEditingEmp(null);
+  };
+
+  const handleOpenAdd = () => {
+    if (banks.length === 0) {
+      getBanks().then(d => setBanks(d.banks || [])).catch(() => {});
+    }
+    setShowAddModal(true);
+  };
+
+  const handleOpenEdit = (emp) => {
+    if (banks.length === 0) {
+      getBanks().then(d => setBanks(d.banks || [])).catch(() => {});
+    }
+    setEditingEmp(emp);
+    setAddForm({
+      name: emp.name || '',
+      email: emp.email || '',
+      phone: emp.phone || '',
+      department: emp.department || '',
+      job_title: emp.job_title || '',
+      salary: emp.salary ? String(emp.salary) : '',
+      bank_account: emp.bank_account_full || emp.bank_account || '',
+      bank_code: emp.bank_code || '',
+    });
+    setVerifiedName('');
+    setAddStep(1);
+    setShowAddModal(true);
+  };
+
+  const handleVerifyAccount = async () => {
+    if (!addForm.bank_account || addForm.bank_account.length !== 10 || !addForm.bank_code) {
+      toast.error('Enter a valid 10-digit account number and select a bank.');
+      return;
+    }
+    setVerifying(true);
+    setVerifiedName('');
+    try {
+      const res = await verifyAccount(addForm.bank_account, addForm.bank_code);
+      setVerifiedName(res.account_name);
+      toast.success('Account verified!');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Verification failed.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleSaveEmployee = async () => {
+    if (!addForm.name.trim()) { toast.error('Full name is required.'); return; }
+    if (!addForm.salary || parseFloat(addForm.salary) <= 0) { toast.error('Salary must be greater than 0.'); return; }
+    if (!addForm.bank_account || !addForm.bank_code) { toast.error('Bank account and bank are required.'); return; }
+    if (!verifiedName && !editingEmp) { toast.error('Please verify the bank account before submitting.'); return; }
+
+    const payload = {
+      name: addForm.name.trim(),
+      email: addForm.email || undefined,
+      phone: addForm.phone || undefined,
+      department: addForm.department || undefined,
+      job_title: addForm.job_title || undefined,
+      salary: parseFloat(addForm.salary),
+      bank_account: addForm.bank_account,
+      bank_code: addForm.bank_code,
+    };
+
+    setSaving(true);
+    try {
+      if (editingEmp) {
+        await updateEmployee(editingEmp.id, payload);
+        toast.success(`${addForm.name.trim()} updated.`);
+      } else {
+        await addEmployee(payload);
+        toast.success(`${addForm.name.trim()} added to payroll.`);
+      }
+      setShowAddModal(false);
+      resetAddForm();
+      load();
+    } catch (err) {
+      const msg = editingEmp ? 'Failed to update employee.' : 'Failed to add employee.';
+      toast.error(err.response?.data?.detail || err.message || msg);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const load = () => {
     setLoading(true);
@@ -124,10 +228,13 @@ export default function EmployeeList() {
             <UploadSimple size={16} /> Bulk import
           </Button>
           {!company?.invite_link && (
-            <Button onClick={handleOpenInvite}>
-              <UserPlus size={16} /> Add employee
+            <Button variant="secondary" onClick={handleOpenInvite}>
+              <UserPlus size={16} /> Invite link
             </Button>
           )}
+          <Button onClick={handleOpenAdd}>
+            <UserPlus size={16} /> Add employee
+          </Button>
         </div>
       </div>
 
@@ -182,11 +289,11 @@ export default function EmployeeList() {
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 72px', minWidth: 800, gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span>Employee</span><span>Bank</span><span>Department</span><span>Salary / mo</span><span></span>
           </div>
           {filtered.map((emp, i) => (
-            <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr auto', minWidth: 800, gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+            <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 72px', minWidth: 800, gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{emp.name || '—'}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{emp.job_title || emp.email || emp.phone || '—'}</div>
@@ -197,9 +304,14 @@ export default function EmployeeList() {
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>{emp.department || '—'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', color: 'var(--teal)' }}>{FMT(emp.salary)}</div>
-              <button onClick={() => handleRemove(emp)} disabled={removing === emp.id} title="Remove employee" style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--red)', display: 'flex', alignItems: 'center' }}>
-                {removing === emp.id ? <Spinner size={14} /> : <Trash size={14} />}
-              </button>
+              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                <button onClick={() => handleOpenEdit(emp)} title="Edit employee" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--text-2)', display: 'flex', alignItems: 'center' }}>
+                  <PencilSimple size={14} />
+                </button>
+                <button onClick={() => handleRemove(emp)} disabled={removing === emp.id} title="Remove employee" style={{ background: 'var(--red-faint)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.4rem', cursor: 'pointer', color: 'var(--red)', display: 'flex', alignItems: 'center' }}>
+                  {removing === emp.id ? <Spinner size={14} /> : <Trash size={14} />}
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -216,6 +328,127 @@ export default function EmployeeList() {
               {creatingInvite ? 'Generating link…' : 'Generate link'}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Tripartite (3-step) employee addition / edit form */}
+      <Modal open={showAddModal} onClose={() => { if (!saving) { setShowAddModal(false); resetAddForm(); } }} title={editingEmp ? 'Edit employee' : 'Add employee'} maxWidth={520}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Step indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+            {['Personal info', 'Employment', 'Bank details'].map((label, i) => {
+              const step = i + 1;
+              const done = addStep > step;
+              const active = addStep === step;
+              return (
+                <React.Fragment key={step}>
+                  {i > 0 && <div style={{ flex: 1, height: 2, background: done ? 'var(--teal)' : 'var(--border)', borderRadius: 1 }} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{
+                      width: 26, height: 26, borderRadius: '50%',
+                      background: done ? 'var(--teal)' : active ? 'var(--teal)' : 'var(--surface-2)',
+                      border: `2px solid ${done || active ? 'var(--teal)' : 'var(--border)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.72rem', fontWeight: 700,
+                      color: done || active ? '#fff' : 'var(--text-3)',
+                      transition: 'var(--trans-fast)',
+                    }}>
+                      {done ? <Check size={12} weight="bold" /> : step}
+                    </div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: active || done ? 600 : 400, color: active || done ? 'var(--text)' : 'var(--text-3)' }}>
+                      {label}
+                    </span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* Step 1: Personal info */}
+          {addStep === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Input label="Full name *" value={addForm.name} onChange={e => setForm('name', e.target.value)} placeholder="e.g. Chisom Okafor" />
+              <Input label="Email" type="email" value={addForm.email} onChange={e => setForm('email', e.target.value)} placeholder="e.g. chisom@example.com" />
+              <Input label="Phone" type="tel" value={addForm.phone} onChange={e => setForm('phone', e.target.value)} placeholder="e.g. 08031234567" />
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <Button onClick={() => setAddStep(2)} disabled={!addForm.name.trim()}>
+                  Next <CaretRight size={14} weight="bold" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Employment details */}
+          {addStep === 2 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Input label="Department" value={addForm.department} onChange={e => setForm('department', e.target.value)} placeholder="e.g. Engineering" />
+              <Input label="Job title" value={addForm.job_title} onChange={e => setForm('job_title', e.target.value)} placeholder="e.g. Senior Developer" />
+              <Input label="Monthly salary (₦) *" type="text" inputMode="numeric" value={addForm.salary} onChange={e => setForm('salary', e.target.value.replace(/[^0-9.]/g, ''))} placeholder="e.g. 500000" />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <Button variant="secondary" onClick={() => setAddStep(1)}>
+                  <CaretLeft size={14} weight="bold" /> Back
+                </Button>
+                <Button onClick={() => setAddStep(3)} disabled={!addForm.salary || parseFloat(addForm.salary) <= 0}>
+                  Next <CaretRight size={14} weight="bold" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Bank details */}
+          {addStep === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>
+                  Bank *
+                </label>
+                <select
+                  value={addForm.bank_code}
+                  onChange={e => { setForm('bank_code', e.target.value); setVerifiedName(''); }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.9rem' }}
+                >
+                  <option value="">Select bank</option>
+                  {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                </select>
+              </div>
+
+              <Input
+                label="Account number *"
+                value={addForm.bank_account}
+                onChange={e => { setForm('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setVerifiedName(''); }}
+                placeholder="10-digit account number"
+                maxLength={10}
+                containerStyle={{ fontFamily: 'var(--font-mono)' }}
+              />
+
+              <Button
+                variant="secondary"
+                onClick={handleVerifyAccount}
+                disabled={!addForm.bank_account || addForm.bank_account.length !== 10 || !addForm.bank_code || verifying}
+                fullWidth
+              >
+                {verifying ? 'Verifying…' : 'Verify account'}
+              </Button>
+
+              {verifiedName && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', background: 'rgba(0,212,170,0.1)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', color: 'var(--teal)', fontSize: '0.85rem' }}>
+                  <Check size={16} weight="bold" />
+                  <span><strong>{verifiedName}</strong> — account verified</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <Button variant="secondary" onClick={() => setAddStep(2)}>
+                  <CaretLeft size={14} weight="bold" /> Back
+                </Button>
+                <Button onClick={handleSaveEmployee} disabled={saving || (!verifiedName && !editingEmp)}>
+                  {saving ? 'Saving…' : editingEmp ? 'Save changes' : 'Add to payroll'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </AppShell>

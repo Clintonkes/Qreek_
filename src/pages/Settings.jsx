@@ -20,7 +20,7 @@ import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import useAuthStore from '../store/authStore.js';
-import { changePin, saveBank, listBanks } from '../api/auth.js';
+import { changePin } from '../api/auth.js';
 
 /**
  * Section component - A structural wrapper for categorizing setting groups.
@@ -52,35 +52,8 @@ export default function Settings() {
   const { user, logout, updateUser } = useAuthStore();
   const navigate = useNavigate();
 
-  const [banks, setBanks]   = useState([]);
-  const [bankForm, setBankForm] = useState({ account_number: '', bank_code: '' });
   const [pinForm,  setPinForm]  = useState({ current_pin: '', new_pin: '', confirm_pin: '' });
-  const [saving,   setSaving]   = useState(false);
   const [savingPin, setSavingPin] = useState(false);
-
-  useEffect(() => {
-    listBanks().then(d => setBanks(d.banks || [])).catch(() => {});
-  }, []);
-
-  /**
-   * handleSaveBank - Processes and persists the user's default payout bank account.
-   * Flow: Validates inputs -> calls saveBank API -> updates global user state -> shows success toast.
-   * @param {React.FormEvent} e - Form submission event.
-   */
-  const handleSaveBank = async (e) => {
-    e.preventDefault();
-    if (!bankForm.account_number || !bankForm.bank_code) { toast.error('Fill in account details'); return; }
-    setSaving(true);
-    try {
-      const data = await saveBank(bankForm);
-      updateUser({ ...user, bank_account: bankForm.account_number, bank_code: bankForm.bank_code, bank_name: data.bank_name });
-      toast.success(`Default account saved — ${data.bank_name}`);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save bank');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   /**
    * handleChangePin - Securely updates the user's security PIN.
@@ -133,29 +106,7 @@ export default function Settings() {
         </div>
       </Section>
 
-      <Section title="Default bank account">
-        {user?.bank_account && (
-          <div style={{ marginBottom: '1rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-            Current: <strong>{user.bank_name}</strong> — ****{user.bank_account?.slice(-4)}
-          </div>
-        )}
-        <form onSubmit={handleSaveBank} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Input
-            label="Account number"
-            type="text" maxLength={10} inputMode="numeric"
-            value={bankForm.account_number} onChange={e => setBankForm(f => ({ ...f, account_number: e.target.value.replace(/\D/g,'') }))}
-            placeholder="0123456789"
-          />
-          <div>
-            <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Bank</label>
-            <select value={bankForm.bank_code} onChange={e => setBankForm(f => ({ ...f, bank_code: e.target.value }))} style={{ width: '100%' }}>
-              <option value="">Select bank</option>
-              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-            </select>
-          </div>
-          <Button type="submit" loading={saving} variant="secondary">Save account</Button>
-        </form>
-      </Section>
+
 
       <Section title="Change PIN">
         <form onSubmit={handleChangePin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

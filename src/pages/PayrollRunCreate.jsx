@@ -3,12 +3,12 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock } from 'phosphor-react';
+import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock, CreditCard } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getEmployees, createPayrollRun, executePayrollRun } from '../api/payroll.js';
+import { getEmployees, createPayrollRun, createPayrollCheckout, executePayrollRun } from '../api/payroll.js';
 import { feePercent, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -92,16 +92,22 @@ export default function PayrollRunCreate() {
     }
   };
 
-  const handleExecute = async () => {
+  const handlePayWithPin = async () => {
     if (!pin || pin.length < 4) { toast.error('Enter your PIN.'); return; }
     if (!run) return;
     setExecuting(true);
     try {
-      await executePayrollRun(run.id, { pin, provider: 'flutterwave' });
-      setDone(true);
-      setStep(3);
+      const { checkout_url } = await createPayrollCheckout(run.id, { pin });
+      if (checkout_url) {
+        window.open(checkout_url, '_blank');
+        setDone(true);
+        setStep(3);
+        toast.success('Proceed to Flutterwave to complete payment.');
+      } else {
+        toast.error('No checkout URL returned.');
+      }
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Execution failed. Check your PIN.');
+      toast.error(err.response?.data?.detail || 'Incorrect PIN or checkout failed.');
     } finally {
       setExecuting(false);
     }
@@ -216,7 +222,7 @@ export default function PayrollRunCreate() {
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--text-2)', fontSize: '0.88rem' }}>
                   <Lock size={16} color="var(--teal)" />
-                  Enter your Qreek PIN to authorise this payroll
+                  Enter your QREEK PIN to authorise, then pay via Flutterwave
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <Input
@@ -227,14 +233,14 @@ export default function PayrollRunCreate() {
                     maxLength={6}
                     style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.3em', fontSize: '1.2rem', maxWidth: 160 }}
                     containerStyle={{ flex: 0 }}
-                    onKeyDown={e => { if (e.key === 'Enter') handleExecute(); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handlePayWithPin(); }}
                   />
-                  <Button onClick={handleExecute} disabled={executing || pin.length < 4} style={{ height: 46 }}>
-                    {executing ? <><Spinner size={16} /> Sending payments…</> : `Pay ${preview.length} employees`}
+                  <Button onClick={handlePayWithPin} disabled={executing || pin.length < 4} style={{ height: 46 }}>
+                    {executing ? <><Spinner size={16} /> Verifying…</> : `Pay ₦${run.total_gross?.toLocaleString('en-NG', { maximumFractionDigits: 0 }) || '0'} with Flutterwave`}
                   </Button>
                 </div>
                 <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Warning size={13} color="var(--amber)" /> This will immediately initiate {preview.length} bank transfers totalling {FMT(totalNet)}. This action cannot be undone.
+                  <Warning size={13} color="var(--amber)" /> After payment, {preview.length} bank transfers totalling {FMT(totalNet)} will be sent automatically.
                 </div>
               </div>
             </motion.div>
@@ -242,10 +248,10 @@ export default function PayrollRunCreate() {
 
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              <CheckCircle size={56} color="var(--green)" weight="fill" style={{ marginBottom: '1rem' }} />
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Payroll is processing!</h2>
+              <CreditCard size={56} color="var(--green)" weight="fill" style={{ marginBottom: '1rem' }} />
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Payment submitted!</h2>
               <p style={{ color: 'var(--text-2)', maxWidth: 420, margin: '0 auto 2rem', lineHeight: 1.7 }}>
-                {preview.length} salary payments are being sent now. Each employee will receive their money within 5 minutes.
+                Complete the payment in the Flutterwave tab. Once confirmed, {preview.length} salary payments will be sent automatically.
               </p>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                 <Button variant="secondary" onClick={() => navigate('/enterprise/payroll')}>View all runs</Button>

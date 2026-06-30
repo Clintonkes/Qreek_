@@ -118,6 +118,7 @@ export default function App() {
               <Route path="/family/:familyId"          element={<FamilyRedirect />} />
               <Route path="/settings"                  element={<Settings />} />
               <Route path="/enterprise"                element={<Enterprise />} />
+              <Route path="/enterprise/:businessId"   element={<Enterprise />} />
               <Route path="/enterprise/setup"          element={<CompanySetup />} />
               <Route path="/enterprise/employees"      element={<EmployeeList />} />
               <Route path="/enterprise/payroll"        element={<PayrollRuns />} />

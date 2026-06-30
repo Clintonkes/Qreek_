@@ -1,33 +1,24 @@
-// Enterprise.jsx — Multi-business payroll dashboard for enterprise account owners.
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import {
   Buildings, Users, Money, ChartBar, ArrowRight, Plus, Lightning,
-  Wallet, UserPlus, ShareNetwork, Check, CaretRight, ArrowLeft,
+  UserPlus, ShareNetwork, CaretRight, ArrowLeft,
 } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import Button from '../components/ui/Button.jsx';
-import Input from '../components/ui/Input.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import {
-  getCompany, getAnalytics, depositToWallet, getWalletBalance, generateEmployeeInvite,
+  getCompany, getAnalytics, generateEmployeeInvite,
 } from '../api/payroll.js';
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmtNgn = (v) =>
   v >= 1_000_000
     ? `₦${(v / 1_000_000).toFixed(2)}M`
     : `₦${(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-/**
- * A metric card used in the stats grid.
- */
 function StatCard({ icon: Icon, label, value, color = 'var(--teal)', sub }) {
   return (
     <div style={{
@@ -45,9 +36,6 @@ function StatCard({ icon: Icon, label, value, color = 'var(--teal)', sub }) {
   );
 }
 
-/**
- * A single recent payroll run row.
- */
 function RunBar({ run }) {
   const color = run.status === 'completed' ? 'var(--green)'
     : run.status === 'partial' ? 'var(--amber)' : 'var(--red)';
@@ -67,89 +55,68 @@ function RunBar({ run }) {
   );
 }
 
-/**
- * Business selection card shown in the "all businesses" overview.
- */
-function BusinessCard({ company, isActive, onSelect }) {
-  const [hovered, setHovered] = useState(false);
+function BusinessCard({ company }) {
   return (
-    <button
-      onClick={onSelect}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        all: 'unset', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.75rem',
-        background: isActive ? 'linear-gradient(135deg, rgba(0,212,170,0.08), rgba(0,212,170,0.02))' : 'var(--surface)',
-        border: `1px solid ${isActive ? 'var(--teal)' : hovered ? 'var(--teal-border)' : 'var(--border)'}`,
+    <Link to={`/enterprise/${company.id}`} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 'var(--radius-lg)', padding: '1.25rem 1.5rem',
-        transition: 'all 0.18s ease', textAlign: 'left', width: '100%', boxSizing: 'border-box',
+        cursor: 'pointer', transition: 'all 0.18s ease',
       }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 'var(--radius)',
-            background: isActive ? 'rgba(0,212,170,0.15)' : 'var(--surface-2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.1rem',
-          }}>
-            🏢
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{company.name}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
-              {company.industry || 'Enterprise'}{company.rc_number ? ` · RC ${company.rc_number}` : ''}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--teal)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,212,170,0.08), rgba(0,212,170,0.02))'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)'; }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 'var(--radius)',
+              background: 'var(--surface-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.1rem',
+            }}>
+              🏢
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{company.name}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                {company.industry || 'Enterprise'}{company.rc_number ? ` · RC ${company.rc_number}` : ''}
+              </div>
             </div>
           </div>
         </div>
-        {isActive && (
-          <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', background: 'rgba(0,212,170,0.15)', color: 'var(--teal)', borderRadius: 'var(--radius-full)', fontWeight: 700 }}>
-            Active
-          </span>
-        )}
-      </div>
-      <div style={{ display: 'flex', gap: '1.5rem' }}>
-        <div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Employees</div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{company.employee_count || 0}</div>
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Employees</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{company.employee_count || 0}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Total paid</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{fmtNgn(company.total_paid_ngn || 0)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Status</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{company.is_verified ? 'Verified' : 'Active'}</div>
+          </div>
         </div>
-        <div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Total paid</div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{fmtNgn(company.total_paid_ngn || 0)}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.15rem' }}>Wallet</div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{fmtNgn(company.wallet_balance_ngn || 0)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--teal)', fontWeight: 600 }}>
+          Manage business <CaretRight size={12} weight="bold" />
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: isActive ? 'var(--teal)' : 'var(--text-3)', fontWeight: 600 }}>
-        {isActive ? 'Currently viewing' : 'Click to manage'} <CaretRight size={12} weight="bold" />
-      </div>
-    </button>
+    </Link>
   );
 }
 
-// ── Main Component ───────────────────────────────────────────────────────────
-
-/**
- * Enterprise dashboard. Shows all of the authenticated owner's businesses,
- * allows switching between them, and displays per-business analytics.
- */
 export default function Enterprise() {
+  const { businessId } = useParams();
+  const navigate = useNavigate();
   const [companies,     setCompanies]     = useState([]);
-  const [company,       setCompany]       = useState(null);   // active company
+  const [company,       setCompany]       = useState(null);
   const [analytics,     setAnalytics]     = useState(null);
-  const [walletBal,     setWalletBal]     = useState(0);
   const [loading,       setLoading]       = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [showDeposit,   setShowDeposit]   = useState(false);
-  const [depositAmt,    setDepositAmt]    = useState('');
-  const [depositing,    setDepositing]    = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
-  const [view,          setView]          = useState('overview'); // 'overview' | 'detail'
-  const navigate = useNavigate();
-
-  // ── Data loading ──────────────────────────────────────────────────────────
 
   const loadCompanyList = useCallback(async () => {
     setLoading(true);
@@ -158,55 +125,43 @@ export default function Enterprise() {
       const cos = d.companies || [];
       setCompanies(cos);
 
-      let active = null;
-      const savedId = localStorage.getItem('qreek_active_company');
-      if (savedId && cos.length) {
-        active = cos.find(c => c.id === savedId) || cos[0];
-      } else if (cos.length) {
-        active = cos[0];
-      }
-
-      if (active) {
-        localStorage.setItem('qreek_active_company', active.id);
+      if (businessId) {
+        const found = cos.find(c => c.id === businessId);
+        if (found) {
+          setCompany(found);
+        } else {
+          toast.error('Business not found.');
+          navigate('/enterprise');
+        }
+      } else if (cos.length === 1) {
+        setCompany(cos[0]);
+      } else if (cos.length > 0) {
+        const savedId = localStorage.getItem('qreek_active_company');
+        const active = cos.find(c => c.id === savedId) || cos[0];
         setCompany(active);
-        // If only 1 company, jump straight to detail
-        if (cos.length === 1) setView('detail');
       }
     } catch {
       toast.error('Could not load enterprise data.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [businessId, navigate]);
 
   const loadAnalytics = useCallback(async () => {
     if (!company) return;
     setAnalyticsLoading(true);
     try {
-      const [w, a] = await Promise.all([
-        getWalletBalance().catch(() => ({ wallet_balance_ngn: company.wallet_balance_ngn || 0 })),
-        getAnalytics().catch(() => null),
-      ]);
-      setWalletBal(w.wallet_balance_ngn || 0);
+      const a = await getAnalytics().catch(() => null);
       if (a) setAnalytics(a);
     } catch {
-      // non-critical; page still shows with company data
+      // non-critical
     } finally {
       setAnalyticsLoading(false);
     }
   }, [company]);
 
   useEffect(() => { loadCompanyList(); }, [loadCompanyList]);
-  useEffect(() => { if (company && view === 'detail') loadAnalytics(); }, [company, view]);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleSelectBusiness = (c) => {
-    localStorage.setItem('qreek_active_company', c.id);
-    setCompany(c);
-    setAnalytics(null);
-    setView('detail');
-  };
+  useEffect(() => { if (company) loadAnalytics(); }, [company, loadAnalytics]);
 
   const handleGenerateInvite = async () => {
     setCreatingInvite(true);
@@ -214,33 +169,10 @@ export default function Enterprise() {
       await generateEmployeeInvite();
       toast.success('Invite link generated!');
       await loadCompanyList();
-      // Re-apply active company after reload
-      setView('detail');
     } catch (err) {
       toast.error(err.response?.data?.detail || err.message || 'Failed to create invite link.');
     } finally {
       setCreatingInvite(false);
-    }
-  };
-
-  const handleDeposit = async () => {
-    const amt = parseFloat(depositAmt);
-    if (!amt || amt <= 0) { toast.error('Enter a valid amount.'); return; }
-    if (amt > 10_000_000) { toast.error('Max ₦10,000,000 per deposit.'); return; }
-    setDepositing(true);
-    try {
-      const res = await depositToWallet({ amount: amt });
-      if (res.checkout_url) {
-        window.open(res.checkout_url, '_blank');
-        toast.success('Deposit checkout opened.');
-      }
-      setShowDeposit(false);
-      setDepositAmt('');
-      setTimeout(() => loadAnalytics(), 5000);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Deposit failed.');
-    } finally {
-      setDepositing(false);
     }
   };
 
@@ -278,11 +210,10 @@ export default function Enterprise() {
     </AppShell>
   );
 
-  // ── Render: overview (multiple businesses) ────────────────────────────────
+  // ── Render: business list view (no businessId) ───────────────────────────
 
-  if (view === 'overview' || !company) return (
+  if (!businessId) return (
     <AppShell title="Enterprise">
-      {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -297,7 +228,6 @@ export default function Enterprise() {
         </div>
       </div>
 
-      {/* Business cards grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
@@ -305,42 +235,28 @@ export default function Enterprise() {
         marginBottom: '2rem',
       }}>
         {companies.map(c => (
-          <BusinessCard
-            key={c.id}
-            company={c}
-            isActive={company?.id === c.id}
-            onSelect={() => handleSelectBusiness(c)}
-          />
+          <BusinessCard key={c.id} company={c} />
         ))}
       </div>
     </AppShell>
   );
 
-  // ── Render: detail view (single business) ─────────────────────────────────
+  // ── Render: single business detail ───────────────────────────────────────
 
-  const activeCompany = companies.find(c => c.id === company.id) || company;
+  const activeCompany = companies.find(c => c.id === company?.id) || company;
 
   return (
-    <AppShell title="Enterprise">
-      {/* Back / business switcher header */}
+    <AppShell title={activeCompany?.name || 'Business'}>
+      {/* Back to all businesses */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        {companies.length > 1 ? (
-          <button
-            onClick={() => setView('overview')}
-            style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.83rem', fontWeight: 600, transition: 'var(--trans-fast)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-          >
-            <ArrowLeft size={14} weight="bold" /> All businesses
-          </button>
-        ) : (
-          <div />
-        )}
+        <Link to="/enterprise" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 1rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-2)', fontSize: '0.83rem', fontWeight: 600, textDecoration: 'none', transition: 'var(--trans-fast)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'var(--teal-border)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+        >
+          <ArrowLeft size={14} weight="bold" /> All businesses
+        </Link>
 
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <Button variant="secondary" onClick={() => setShowDeposit(true)}>
-            <Wallet size={15} /> Fund wallet
-          </Button>
           <Button variant="secondary" onClick={() => navigate('/enterprise/employees')}>
             <Users size={15} /> Employees
           </Button>
@@ -366,20 +282,17 @@ export default function Enterprise() {
           🏢
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)' }}>{activeCompany.name}</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)' }}>{activeCompany?.name}</div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
-            {activeCompany.industry || 'Enterprise account'}
-            {activeCompany.rc_number ? ` · RC ${activeCompany.rc_number}` : ''}
-            {activeCompany.is_verified ? ' · ✓ Verified' : ''}
+            {activeCompany?.industry || 'Enterprise account'}
+            {activeCompany?.rc_number ? ` · RC ${activeCompany.rc_number}` : ''}
+            {activeCompany?.is_verified ? ' · ✓ Verified' : ''}
           </div>
         </div>
         {companies.length > 1 && (
           <select
-            value={company.id}
-            onChange={e => {
-              const found = companies.find(c => c.id === e.target.value);
-              if (found) handleSelectBusiness(found);
-            }}
+            value={activeCompany?.id}
+            onChange={e => navigate(`/enterprise/${e.target.value}`)}
             style={{ fontSize: '0.83rem', padding: '0.35rem 1.5rem 0.35rem 0.6rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer' }}
           >
             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -387,17 +300,16 @@ export default function Enterprise() {
         )}
       </div>
 
-      {/* Stats grid */}
+      {/* Stats grid — no wallet */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 180px), 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <StatCard icon={Wallet}    label="Wallet balance" value={fmtNgn(walletBal)}                           color="var(--teal)"  sub="company wallet" />
-        <StatCard icon={Money}     label="Total paid"     value={fmtNgn(analytics?.total_paid_ngn || activeCompany.total_paid_ngn)} color="var(--teal)" />
-        <StatCard icon={Users}     label="Employees"      value={analytics?.employee_count ?? activeCompany.employee_count ?? 0}   color="var(--blue)"  sub="active on payroll" />
+        <StatCard icon={Money}     label="Total paid"     value={fmtNgn(analytics?.total_paid_ngn || activeCompany?.total_paid_ngn)} color="var(--teal)" />
+        <StatCard icon={Users}     label="Employees"      value={analytics?.employee_count ?? activeCompany?.employee_count ?? 0}   color="var(--blue)"  sub="active on payroll" />
         <StatCard icon={ChartBar}  label="Payroll runs"   value={analytics?.runs_history?.length || 0}        color="var(--amber)" />
-        <StatCard icon={Buildings} label="Status"         value={activeCompany.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.2% payroll fee" />
+        <StatCard icon={Buildings} label="Status"         value={activeCompany?.is_verified ? 'Verified' : 'Active'} color="var(--green)" sub="0.2% payroll fee" />
       </div>
 
       {/* Employee invite link section */}
-      {activeCompany.invite_link ? (
+      {activeCompany?.invite_link ? (
         <div style={{
           background: 'linear-gradient(135deg, var(--surface) 0%, rgba(0,212,170,0.05) 100%)',
           border: '1px solid var(--teal-border)',
@@ -453,7 +365,6 @@ export default function Enterprise() {
 
       {/* Two-column: recent runs + department breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {/* Recent payroll runs */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.4rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
             <h3 style={{ fontSize: '0.9rem', margin: 0 }}>Recent payroll runs</h3>
@@ -471,7 +382,6 @@ export default function Enterprise() {
           )}
         </div>
 
-        {/* Department breakdown */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.4rem' }}>
           <h3 style={{ fontSize: '0.9rem', marginBottom: '1.1rem' }}>Department breakdown</h3>
           {analyticsLoading ? (
@@ -515,31 +425,6 @@ export default function Enterprise() {
           </Link>
         ))}
       </div>
-
-      {/* Fund wallet modal */}
-      <Modal open={showDeposit} onClose={() => setShowDeposit(false)} title="Fund company wallet" maxWidth={420}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>
-            Deposit NGN into <strong>{activeCompany.name}</strong>'s wallet to cover payroll runs.
-            Funds are processed via Flutterwave secure checkout.
-          </p>
-          <Input
-            label="Amount (₦)"
-            type="number"
-            value={depositAmt}
-            onChange={e => setDepositAmt(e.target.value)}
-            placeholder="e.g. 500000"
-            min={1}
-            max={10_000_000}
-          />
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setShowDeposit(false)}>Cancel</Button>
-            <Button onClick={handleDeposit} disabled={depositing || !depositAmt}>
-              {depositing ? 'Opening checkout…' : `Deposit ${depositAmt ? `₦${parseFloat(depositAmt).toLocaleString()}` : ''}`}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </AppShell>
   );
 }

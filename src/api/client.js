@@ -53,6 +53,12 @@ client.interceptors.response.use(
   async err => {
     if (err.response?.status === 401) {
       const originalRequest = err.config;
+
+      // Don't intercept auth/login 401 — that's expected wrong-credential errors
+      if (originalRequest?.url?.includes('/auth/login')) {
+        return Promise.reject(err);
+      }
+
       const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.refreshToken);
 
       if (refreshToken && !originalRequest?._retry && !originalRequest?.url?.includes('/auth/refresh')) {
