@@ -8,8 +8,7 @@ import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
-import { getEmployees, createPayrollRun, createPayrollCheckout, executePayrollRun } from '../api/payroll.js';
-import { hasPin } from '../api/auth.js';
+import { getEmployees, createPayrollRun, createPayrollCheckout, executePayrollRun, hasCompanyPaymentPin } from '../api/payroll.js';
 import { feePercent, QREEK_FEES } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -73,7 +72,7 @@ export default function PayrollRunCreate() {
     getEmployees({ active_only: true })
       .then(d => { setEmployees(d.employees || []); setSelected((d.employees || []).map(e => e.id)); })
       .finally(() => setLoading(false));
-    hasPin().then(r => setPinExists(r.has_pin)).catch(() => {});
+    hasCompanyPaymentPin().then(r => setPinExists(r.has_payment_pin)).catch(() => {});
   }, []);
 
   const toggleEmp = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -225,9 +224,9 @@ export default function PayrollRunCreate() {
               {!pinExists ? (
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--amber-border, rgba(255,193,7,0.3))', borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center' }}>
                   <Gear size={32} color="var(--amber)" style={{ marginBottom: '0.75rem' }} />
-                  <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Set a transaction PIN first</h3>
+                  <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Set a payroll PIN first</h3>
                   <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-                    You need a transaction PIN to authorise payroll payments. Go to Settings to create one.
+                    You need a payroll transaction PIN to authorise payments. Go to Settings to set one — it's separate from your login PIN.
                   </p>
                   <Button onClick={() => navigate('/settings')}>
                     Go to Settings
@@ -237,7 +236,7 @@ export default function PayrollRunCreate() {
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--text-2)', fontSize: '0.88rem' }}>
                   <Lock size={16} color="var(--teal)" />
-                  Enter your QREEK PIN to authorise, then pay via Flutterwave
+                  Enter your payroll PIN to authorise, then pay via Flutterwave
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <Input

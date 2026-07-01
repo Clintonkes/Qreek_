@@ -152,6 +152,10 @@ export const getPayslip        = (runId, entryId) => client.get(`/payroll/runs/$
  */
 export const getBanks          = ()      => client.get('/payroll/banks').then(r => r.data);
 
+export const setCompanyPaymentPin = (d) => client.post('/payroll/company/set-payment-pin', d).then(r => r.data);
+
+export const hasCompanyPaymentPin = () => client.get('/payroll/company/has-payment-pin').then(r => r.data);
+
 export const createPayrollCheckout = (runId, d) => client.post(`/payroll/runs/${runId}/checkout`, d).then(r => r.data);
 
 export const verifyAccount     = (account_number, bank_code) => client.get('/payroll/employees/verify-account', { params: { account_number, bank_code } }).then(r => r.data);

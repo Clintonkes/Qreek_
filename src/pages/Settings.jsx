@@ -21,6 +21,7 @@ import Input from '../components/ui/Input.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
 import useAuthStore from '../store/authStore.js';
 import { changePin, hasPin, setPin } from '../api/auth.js';
+import { setCompanyPaymentPin, hasCompanyPaymentPin } from '../api/payroll.js';
 
 /**
  * Section component - A structural wrapper for categorizing setting groups.
@@ -56,8 +57,13 @@ export default function Settings() {
   const [savingPin, setSavingPin] = useState(false);
   const [hasPinFlag, setHasPinFlag] = useState(null);
 
+  const [payPinForm, setPayPinForm] = useState({ pin: '', confirm: '' });
+  const [savingPayPin, setSavingPayPin] = useState(false);
+  const [hasPayPinFlag, setHasPayPinFlag] = useState(null);
+
   useEffect(() => {
     hasPin().then(r => setHasPinFlag(r.has_pin)).catch(() => setHasPinFlag(false));
+    hasCompanyPaymentPin().then(r => setHasPayPinFlag(r.has_payment_pin)).catch(() => setHasPayPinFlag(false));
   }, []);
 
   const handleSetPin = async (e) => {
@@ -74,6 +80,23 @@ export default function Settings() {
       toast.error(err.response?.data?.detail || 'Failed to set PIN');
     } finally {
       setSavingPin(false);
+    }
+  };
+
+  const handleSetPayPin = async (e) => {
+    e.preventDefault();
+    if (payPinForm.pin !== payPinForm.confirm) { toast.error('PINs do not match'); return; }
+    if (payPinForm.pin.length < 4) { toast.error('PIN must be at least 4 digits'); return; }
+    setSavingPayPin(true);
+    try {
+      await setCompanyPaymentPin({ pin: payPinForm.pin });
+      toast.success('Payroll transaction PIN set successfully');
+      setPayPinForm({ pin: '', confirm: '' });
+      setHasPayPinFlag(true);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to set payroll PIN');
+    } finally {
+      setSavingPayPin(false);
     }
   };
 
@@ -169,6 +192,29 @@ export default function Settings() {
           </form>
         </Section>
       )}
+
+      <Section title="Payroll transaction PIN">
+        <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
+          {hasPayPinFlag
+            ? 'This PIN is used to authorise payroll runs. It is separate from your login PIN.'
+            : "You haven't set a payroll transaction PIN yet. You'll need this to run payroll."}
+        </p>
+        <form onSubmit={handleSetPayPin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <Input
+            label={hasPayPinFlag ? 'New payroll PIN' : 'Set payroll PIN'} type="password" inputMode="numeric" maxLength={6}
+            value={payPinForm.pin} onChange={e => setPayPinForm(f => ({ ...f, pin: e.target.value.replace(/\D/g,'') }))}
+            placeholder="••••"
+          />
+          <Input
+            label="Confirm PIN" type="password" inputMode="numeric" maxLength={6}
+            value={payPinForm.confirm} onChange={e => setPayPinForm(f => ({ ...f, confirm: e.target.value.replace(/\D/g,'') }))}
+            placeholder="••••"
+          />
+          <Button type="submit" loading={savingPayPin} variant="secondary">
+            {hasPayPinFlag ? 'Change payroll PIN' : 'Set payroll PIN'}
+          </Button>
+        </form>
+      </Section>
 
       <Section title="Referral">
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
