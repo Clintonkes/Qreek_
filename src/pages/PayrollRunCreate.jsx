@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock, CreditCard, Gear } from 'phosphor-react';
+import { ArrowLeft, ArrowRight, Warning, CheckCircle, Lock, CreditCard, Gear, Eye, EyeSlash } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -67,6 +67,7 @@ export default function PayrollRunCreate() {
   const [done,        setDone]       = useState(false);
   const [selectAll,   setSelectAll]  = useState(true);
   const [pinExists,   setPinExists]  = useState(true);
+  const [showPin,     setShowPin]    = useState(false);
 
   useEffect(() => {
     getEmployees({ active_only: true })
@@ -233,28 +234,64 @@ export default function PayrollRunCreate() {
                   </Button>
                 </div>
               ) : (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--text-2)', fontSize: '0.88rem' }}>
-                  <Lock size={16} color="var(--teal)" />
-                  Enter your payroll PIN to authorise, then pay via Flutterwave
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center' }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: 'color-mix(in srgb, var(--teal) 14%, transparent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 1rem',
+                }}>
+                  <Lock size={26} color="var(--teal)" weight="fill" />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                  <Input
-                    type="password"
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.4rem' }}>Authorise payroll</h3>
+                <p style={{ fontSize: '0.83rem', color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 1.75rem' }}>
+                  Enter your payroll PIN to verify this run and proceed to Flutterwave checkout.
+                </p>
+                <div style={{ position: 'relative', maxWidth: 280, margin: '0 auto 1.25rem' }}>
+                  <input
+                    type={showPin ? 'text' : 'password'}
                     value={pin}
+                    inputMode="numeric"
+                    autoFocus
                     onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="••••••"
+                    placeholder="• • • • • •"
                     maxLength={6}
-                    style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.3em', fontSize: '1.2rem', maxWidth: 160 }}
-                    containerStyle={{ flex: 0 }}
                     onKeyDown={e => { if (e.key === 'Enter') handlePayWithPin(); }}
+                    style={{
+                      display: 'block', width: '100%', height: 58, boxSizing: 'border-box',
+                      background: 'var(--surface-2)', color: 'var(--text)',
+                      border: '1.5px solid var(--border)', borderRadius: 'var(--radius)',
+                      fontFamily: 'var(--font-mono)', fontSize: '1.6rem',
+                      letterSpacing: '0.55em', textAlign: 'center',
+                      paddingRight: 44, paddingLeft: 12,
+                      outline: 'none', transition: 'border-color 0.15s',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--teal)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; }}
                   />
-                  <Button onClick={handlePayWithPin} disabled={executing || pin.length < 4} style={{ height: 46 }}>
-                    {executing ? <><Spinner size={16} /> Verifying…</> : `Pay ₦${run.total_gross?.toLocaleString('en-NG', { maximumFractionDigits: 0 }) || '0'} with Flutterwave`}
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(s => !s)}
+                    tabIndex={-1}
+                    style={{
+                      position: 'absolute', right: 10, top: 0, bottom: 0,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--text-3)', display: 'flex', alignItems: 'center', padding: 4,
+                    }}
+                  >
+                    {showPin ? <EyeSlash size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Warning size={13} color="var(--amber)" /> After payment, {preview.length} bank transfers totalling {FMT(totalNet)} will be sent automatically.
+                <Button
+                  onClick={handlePayWithPin}
+                  disabled={executing || pin.length < 4}
+                  style={{ width: '100%', maxWidth: 280, display: 'block', margin: '0 auto', height: 50, fontSize: '0.95rem' }}
+                >
+                  {executing ? <><Spinner size={16} /> Verifying…</> : <>Pay {FMT(run.total_gross)} with Flutterwave</>}
+                </Button>
+                <div style={{ marginTop: '1.25rem', fontSize: '0.76rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                  <Warning size={13} color="var(--amber)" />
+                  {preview.length} transfer{preview.length !== 1 ? 's' : ''} totalling {FMT(totalNet)} dispatched after payment
                 </div>
               </div>
               )}
