@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import useAuthStore from '../store/authStore.js';
 import useTradeStore from '../store/tradeStore.js';
+import { getWebSocketBaseUrl } from '../lib/runtimeConfig.js';
 
-const WS_BASE = import.meta.env.VITE_WS_URL || '';
+const WS_BASE = getWebSocketBaseUrl();
 
 /**
  * Custom hook for managing the WebSocket connection to the Qreek trade interface.

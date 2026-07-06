@@ -16,8 +16,9 @@
 
 import axios from 'axios';
 import useAuthStore, { AUTH_STORAGE_KEYS, clearStoredSession, isSessionExpired } from '../store/authStore.js';
+import { getApiBaseUrl } from '../lib/runtimeConfig.js';
 
-const BASE = import.meta.env.VITE_API_URL || '/api/v1';
+const BASE = getApiBaseUrl();
 
 /**
  * Configured Axios client for making API requests to the backend.
