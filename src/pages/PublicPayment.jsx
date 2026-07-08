@@ -300,7 +300,7 @@ export default function PublicPayment() {
     }
   };
 
-  if (loading) return <div data-reveal style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size={40} /></div>;
+  if (loading) return <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size={40} /></div>;
 
   if (error) return (
     <div data-reveal style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -322,8 +322,8 @@ export default function PublicPayment() {
     const qreekFee = receipt?.fee || calculateFee(recipientAmount, QREEK_FEES.paymentLink);
     const providerFee = receipt?.provider_fee || Math.max(amount - settledAmount, 0);
     return (
-    <div data-reveal style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div data-reveal style={{ maxWidth: 480, width: '100%', textAlign: 'center', background: 'var(--surface)', padding: '3rem 2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ maxWidth: 480, width: '100%', textAlign: 'center', background: 'var(--surface)', padding: '3rem 2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ width: 64, height: 64, borderRadius: '50%', background: payoutDone ? 'var(--green-faint)' : 'var(--teal-faint)', color: payoutDone ? 'var(--green)' : 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
           {payoutDone ? <CheckCircle size={40} weight="fill" /> : <Spinner size={34} />}
         </div>
@@ -446,8 +446,8 @@ export default function PublicPayment() {
   );
 
   return (
-    <div data-reveal style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div data-reveal style={{ maxWidth: 480, width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem', boxShadow: 'var(--shadow)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ maxWidth: 480, width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem', boxShadow: 'var(--shadow)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-2)', marginBottom: '1rem' }}>
             Qreek<span style={{ color: 'var(--teal)' }}>Pay</span>

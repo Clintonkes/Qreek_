@@ -102,7 +102,7 @@ export default function Login() {
   };
 
   return (
-    <div data-reveal style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <Link to="/" style={{ position: 'fixed', top: '1.25rem', left: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-2)', fontSize: '0.85rem', textDecoration: 'none', transition: 'var(--trans-fast)' }}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--teal)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
@@ -110,7 +110,7 @@ export default function Login() {
         <ArrowLeft size={16} /> Home
       </Link>
 
-      <div data-reveal style={{ width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem' }}>
+      <div style={{ width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.4rem', marginBottom: '0.5rem' }}>
             Qreek<span style={{ color: 'var(--teal)' }}>Pay</span>

@@ -17,11 +17,11 @@ import { useLocation } from 'react-router-dom';
 import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
 import PrivateLayout from './components/layout/PrivateLayout.jsx';
 import PublicPageShell from './components/layout/PublicPageShell.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import ForgotPin from './pages/ForgotPin.jsx';
 
 const Landing = lazy(() => import('./pages/Landing.jsx'));
-const Login = lazy(() => import('./pages/Login.jsx'));
-const Register = lazy(() => import('./pages/Register.jsx'));
-const ForgotPin = lazy(() => import('./pages/ForgotPin.jsx'));
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Pools = lazy(() => import('./pages/Pools.jsx'));
 const PoolDetail = lazy(() => import('./pages/PoolDetail.jsx'));

@@ -102,10 +102,9 @@ export default function PayrollRunCreate() {
     try {
       const { checkout_url } = await createPayrollCheckout(run.id, { pin });
       if (checkout_url) {
-        window.open(checkout_url, '_blank');
-        setDone(true);
-        setStep(3);
-        toast.success('Proceed to Flutterwave to complete payment.');
+        sessionStorage.setItem('qreek:pending_payroll_run', run.id);
+        window.location.assign(checkout_url);
+        return;
       } else {
         toast.error('No checkout URL returned.');
       }
