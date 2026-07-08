@@ -8,6 +8,11 @@ import './index.css';
  * Entry point for the React application.
  * Initializes the root element, renders the App component, and configures global notification toasts.
  */
+const redirectPath = new URLSearchParams(window.location.search).get('path');
+if (redirectPath && redirectPath.startsWith('/')) {
+  window.history.replaceState({}, '', redirectPath);
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
