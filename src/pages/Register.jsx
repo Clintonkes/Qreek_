@@ -135,7 +135,7 @@ export default function Register() {
   };
 
   return (
-    <div
+    <div data-reveal
       style={{
         minHeight: '100vh',
         background: 'var(--bg)',
@@ -146,7 +146,7 @@ export default function Register() {
       }}
     >
       <Link to="/" style={{ position: 'fixed', top: '1.25rem', left: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-2)', fontSize: '0.85rem', textDecoration: 'none' }}><ArrowLeft size={16} /> Home</Link>
-      <div
+      <div data-reveal
         style={{
           width: '100%',
           maxWidth: 440,

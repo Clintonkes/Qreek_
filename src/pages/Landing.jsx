@@ -174,10 +174,10 @@ function Nav() {
 }
 
 /* ─── Animated Pillar Card ───────────────────────────────────────────────── */
-function PillarCard({ icon, tag, title, desc, fee, cta, to, color, g1, g2 }) {
+function PillarCard({ icon, tag, title, desc, fee, cta, to, color, g1, g2, revealDelay = 0 }) {
   const [hov, setHov] = useState(false);
   return (
-    <div className="pillar-card"
+    <div className="pillar-card" data-reveal data-reveal-delay={revealDelay}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -235,10 +235,12 @@ function PillarCard({ icon, tag, title, desc, fee, cta, to, color, g1, g2 }) {
 }
 
 /* ─── Trust feature card with top-border reveal + bg fill ────────────────── */
-function TrustCard({ icon, title, desc, color }) {
+function TrustCard({ icon, title, desc, color, revealDelay = 0 }) {
   const [hov, setHov] = useState(false);
   return (
     <div
+      data-reveal
+      data-reveal-delay={revealDelay}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -263,10 +265,12 @@ function TrustCard({ icon, title, desc, color }) {
 }
 
 /* ─── Use-case card ──────────────────────────────────────────────────────── */
-function UseCase({ tag, color, title, body }) {
+function UseCase({ tag, color, title, body, revealDelay = 0 }) {
   const [hov, setHov] = useState(false);
   return (
     <div
+      data-reveal
+      data-reveal-delay={revealDelay}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -289,10 +293,12 @@ function UseCase({ tag, color, title, body }) {
 }
 
 /* ─── Price box with hover lift + gradient text ───────────────────────────── */
-function PriceBox({ label, pct, note, color }) {
+function PriceBox({ label, pct, note, color, revealDelay = 0 }) {
   const [hov, setHov] = useState(false);
   return (
     <div
+      data-reveal
+      data-reveal-delay={revealDelay}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -311,9 +317,9 @@ function PriceBox({ label, pct, note, color }) {
 }
 
 /* ─── How-it-works step ──────────────────────────────────────────────────── */
-function Step({ n, title, desc }) {
+function Step({ n, title, desc, revealDelay = 0 }) {
   return (
-    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+    <div data-reveal data-reveal-delay={revealDelay} style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
       <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, var(--teal), var(--teal-dim))', color: 'var(--text-inv)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.95rem', flexShrink: 0, fontFamily: 'var(--font-mono)', boxShadow: '0 4px 16px rgba(0,212,170,0.3)' }}>{n}</div>
       <div style={{ paddingTop: '0.2rem' }}>
         <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.3rem' }}>{title}</div>
@@ -328,7 +334,7 @@ function SL({ children, color = 'var(--teal)' }) {
   return <div style={{ fontSize: '0.73rem', fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color, marginBottom: '0.75rem' }}>{children}</div>;
 }
 
-function ModeAction({ action }) {
+function ModeAction({ action, revealDelay = 0 }) {
   return (
     <div style={{
       background: 'rgba(6,14,26,0.42)',
@@ -336,7 +342,7 @@ function ModeAction({ action }) {
       borderRadius: 'var(--radius)',
       padding: '0.9rem',
       minHeight: 104,
-    }}>
+    }} data-reveal data-reveal-delay={revealDelay}>
       <div style={{ fontSize: '1.3rem', marginBottom: '0.45rem' }}>{action.icon}</div>
       <div style={{ fontSize: '0.84rem', fontWeight: 800, marginBottom: '0.25rem' }}>{action.title}</div>
       <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.78rem', lineHeight: 1.55 }}>{action.copy}</p>
@@ -357,7 +363,7 @@ function ModeShowcase({ modes }) {
   }, [modes.length]);
 
   return (
-    <section id="modes" style={{ padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+    <section id="modes" data-reveal style={{ padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
       <div style={{
         position: 'absolute',
         inset: '-20% -10%',
@@ -485,7 +491,7 @@ function ModeShowcase({ modes }) {
             </div>
 
             <div className="mode-action-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              {mode.actions.map(action => <ModeAction key={action.title} action={action} />)}
+              {mode.actions.map((action, idx) => <ModeAction key={action.title} action={action} revealDelay={idx * 70} />)}
             </div>
 
             <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
@@ -652,7 +658,7 @@ export default function Landing() {
       <Nav />
 
       {/* ════════ HERO ════════ */}
-      <section id="hero" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 4rem', ...C, position: 'relative', overflow: 'hidden' }}>
+      <section id="hero" data-reveal style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 4rem', ...C, position: 'relative', overflow: 'hidden' }}>
         {/* Background orbs */}
         <div style={{ position: 'absolute', top: '12%', left: '8%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,212,170,0.09), transparent)', pointerEvents: 'none', animation: 'pulseGlow 7s ease infinite' }} />
         <div style={{ position: 'absolute', bottom: '8%', right: '4%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,166,35,0.07), transparent)', pointerEvents: 'none', animation: 'pulseGlow 9s ease infinite 2s' }} />
@@ -710,27 +716,27 @@ export default function Landing() {
       <ModeShowcase modes={MODES} />
 
       {/* ════════ FEATURES / THREE PILLARS ════════ */}
-      <section id="features" style={SEC()}>
+      <section id="features" data-reveal style={SEC()}>
         <div style={{ ...C, marginBottom: '3rem' }}>
           <SL>Three products. One platform.</SL>
           <h2 style={H2}>Built for how Nigeria moves money</h2>
         </div>
         <div className="pillars" style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {PILLARS.map(p => <PillarCard key={p.tag} {...p} />)}
+          {PILLARS.map((p, idx) => <PillarCard key={p.tag} {...p} revealDelay={idx * 90} />)}
         </div>
       </section>
 
       {/* ════════ HOW IT WORKS ════════ */}
-      <section id="how-it-works" style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '5rem 1.5rem' }}>
+      <section id="how-it-works" data-reveal style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '5rem 1.5rem' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ ...C, marginBottom: '3rem' }}>
             <SL>How it works</SL>
             <h2 style={H2}>Simple. Transparent. Trusted.</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.25rem' }}>
-            <Step n="01" title="Create a pool or link in 2 minutes" desc="Sign up with your phone number. Create a payment pool for your group, or a payment link for your clients. No forms, no bank visit, no approvals needed." />
-            <Step n="02" title="Share — your people pay in their browser" desc="Group members or clients open the link on any device. They pay using card, bank transfer, or USSD through Flutterwave secure checkout. No Qreek account needed to pay." />
-            <Step n="03" title="Qreek records it. Everyone sees it." desc="The moment Flutterwave confirms the payment, Qreek updates your ledger in real time. Payer gets a receipt. Pool shows who paid. Funds settle from Flutterwave directly to the recipient bank." />
+            <Step n="01" title="Create a pool or link in 2 minutes" desc="Sign up with your phone number. Create a payment pool for your group, or a payment link for your clients. No forms, no bank visit, no approvals needed." revealDelay={0} />
+            <Step n="02" title="Share — your people pay in their browser" desc="Group members or clients open the link on any device. They pay using card, bank transfer, or USSD through Flutterwave secure checkout. No Qreek account needed to pay." revealDelay={80} />
+            <Step n="03" title="Qreek records it. Everyone sees it." desc="The moment Flutterwave confirms the payment, Qreek updates your ledger in real time. Payer gets a receipt. Pool shows who paid. Funds settle from Flutterwave directly to the recipient bank." revealDelay={160} />
           </div>
 
           {/* Custody disclaimer card */}
@@ -747,18 +753,18 @@ export default function Landing() {
       </section>
 
       {/* ════════ USE CASES ════════ */}
-      <section id="use-cases" style={SEC()}>
+      <section id="use-cases" data-reveal style={SEC()}>
         <div style={{ ...C, marginBottom: '3rem' }}>
           <SL color="var(--amber)">Who uses Qreek</SL>
           <h2 style={H2}>Built for the way Nigeria actually pays</h2>
         </div>
         <div className="cases-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
-          {CASES.map(c => <UseCase key={c.tag + c.title} {...c} />)}
+          {CASES.map((c, idx) => <UseCase key={c.tag + c.title} {...c} revealDelay={idx * 70} />)}
         </div>
       </section>
 
       {/* ════════ TRUST SIGNALS ════════ */}
-      <section style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '5rem 1.5rem' }}>
+      <section data-reveal style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '5rem 1.5rem' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', ...C }}>
           <SL>Why trust Qreek</SL>
           <h2 style={{ ...H2, marginBottom: '0.75rem' }}>The accountability layer Nigeria was missing</h2>
@@ -766,23 +772,23 @@ export default function Landing() {
             Not a new bank. Your community payments, finally with the infrastructure they deserve.
           </p>
           <div className="trust-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.1rem', textAlign: 'left' }}>
-            {TRUST.map(t => <TrustCard key={t.title} {...t} />)}
+            {TRUST.map((t, idx) => <TrustCard key={t.title} {...t} revealDelay={idx * 75} />)}
           </div>
         </div>
       </section>
 
       {/* ════════ PRICING ════════ */}
-      <section id="pricing" style={SEC({ ...C })}>
+      <section id="pricing" data-reveal style={SEC({ ...C })}>
         <SL>Pricing</SL>
         <h2 style={{ ...H2, marginBottom: '0.75rem' }}>The most affordable transparent rates in Nigeria</h2>
         <p style={{ color: 'var(--text-2)', maxWidth: 540, margin: '0 auto 2.5rem', lineHeight: 1.8, fontSize: '1rem' }}>
           No monthly fees. No setup costs. You only pay when money moves — and the fee is always shown before you confirm.
         </p>
         <div className="price-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: '1.1rem', maxWidth: 860, margin: '0 auto 1.5rem' }}>
-          <PriceBox label="Pool contributions" pct="0.15%" color="var(--teal)"   note="Per contribution paid by pool member" />
-          <PriceBox label="Payment links"      pct="0.25%" color="var(--amber)"  note="Per payment received through your link" />
-          <PriceBox label="Enterprise payroll" pct="0.2%" color="var(--purple)" note="Per salary disbursed in a payroll run" />
-          <PriceBox label="No monthly fee"     pct="Free"  color="var(--green)"  note="No subscription, no setup, no withdrawal fee" />
+          <PriceBox label="Pool contributions" pct="0.15%" color="var(--teal)"   note="Per contribution paid by pool member" revealDelay={0} />
+          <PriceBox label="Payment links"      pct="0.25%" color="var(--amber)"  note="Per payment received through your link" revealDelay={70} />
+          <PriceBox label="Enterprise payroll" pct="0.2%" color="var(--purple)" note="Per salary disbursed in a payroll run" revealDelay={140} />
+          <PriceBox label="No monthly fee"     pct="Free"  color="var(--green)"  note="No subscription, no setup, no withdrawal fee" revealDelay={210} />
         </div>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto' }}>
           All payments processed by Flutterwave. Flutterwave processing fees apply separately. Bank transfer payments are typically ₦10–₦30 flat — the most affordable option for your group.
@@ -790,7 +796,7 @@ export default function Landing() {
       </section>
 
       {/* ════════ CTA ════════ */}
-      <section style={{ padding: '6rem 1.5rem', ...C, background: 'linear-gradient(135deg, rgba(0,212,170,0.06) 0%, rgba(245,166,35,0.04) 100%)', borderTop: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
+      <section data-reveal style={{ padding: '6rem 1.5rem', ...C, background: 'linear-gradient(135deg, rgba(0,212,170,0.06) 0%, rgba(245,166,35,0.04) 100%)', borderTop: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '50%', left: '50%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,212,170,0.05), transparent)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', animation: 'pulseGlow 9s ease infinite' }} />
         <div style={{ position: 'relative' }}>
           <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.02em' }}>
@@ -812,7 +818,7 @@ export default function Landing() {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', padding: '2.5rem 1.5rem', ...C }}>
+      <footer data-reveal style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--border)', padding: '2.5rem 1.5rem', ...C }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.75rem' }}>
           Qreek<span style={{ color: 'var(--teal)' }}>Finance</span>
         </div>

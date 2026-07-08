@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
 import PrivateLayout from './components/layout/PrivateLayout.jsx';
+import PublicPageShell from './components/layout/PublicPageShell.jsx';
 
 const Landing = lazy(() => import('./pages/Landing.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
@@ -84,14 +85,7 @@ function AnimatedOutlet() {
 }
 
 function RouteFallback() {
-  return (
-    <div style={{ minHeight: '56vh', display: 'grid', placeItems: 'center', padding: '2rem 1rem' }}>
-      <div style={{ width: 'min(420px, 100%)', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: 'var(--shadow-soft)', padding: '1.25rem 1.1rem', textAlign: 'center' }}>
-        <div style={{ fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>Loading Qreek</div>
-        <div style={{ color: 'var(--muted)', lineHeight: 1.6 }}>Preparing the next screen.</div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 /**
@@ -109,16 +103,18 @@ function RouteFallback() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<RouteFallback />}>
+      <Suspense fallback={null}>
         <Routes>
-          <Route path="/"           element={<Landing />} />
-          <Route path="/login"      element={<Login />} />
-          <Route path="/register"   element={<Register />} />
-          <Route path="/forgot-pin" element={<ForgotPin />} />
-          <Route path="/p/:code"    element={<PublicPayment />} />
-          <Route path="/invite/:company/:token" element={<EmployeeSelfService />} />
-          <Route path="/enterprise/invite/:token" element={<OldInviteRedirect />} />
-          <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
+          <Route element={<PublicPageShell />}>
+            <Route path="/"           element={<Landing />} />
+            <Route path="/login"      element={<Login />} />
+            <Route path="/register"   element={<Register />} />
+            <Route path="/forgot-pin" element={<ForgotPin />} />
+            <Route path="/p/:code"    element={<PublicPayment />} />
+            <Route path="/invite/:company/:token" element={<EmployeeSelfService />} />
+            <Route path="/enterprise/invite/:token" element={<OldInviteRedirect />} />
+            <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
+          </Route>
 
           <Route element={<AuthGuard />}>
             <Route element={<PrivateLayout />}>

@@ -121,7 +121,7 @@ export default function EmployeeSelfService() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)' }}>
+      <div data-reveal style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)' }}>
         <Spinner size={36} />
       </div>
     );
@@ -129,8 +129,8 @@ export default function EmployeeSelfService() {
 
   if (submitted) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 440, width: '100%', textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '3rem 2rem' }}>
+      <div data-reveal style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
+        <motion.div data-reveal initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 440, width: '100%', textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '3rem 2rem' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--green-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <Check size={28} color="var(--green)" />
           </div>
@@ -147,8 +147,8 @@ export default function EmployeeSelfService() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 520, width: '100%' }}>
+      <div data-reveal style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg)', padding: '1rem' }}>
+      <motion.div data-reveal initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 520, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--teal-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
             <Buildings size={24} color="var(--teal)" />
