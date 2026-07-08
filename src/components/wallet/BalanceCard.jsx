@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 
 const COIN_COLORS = {
@@ -21,7 +21,7 @@ function fmtNGN(v) {
   return `₦${v.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-export default function BalanceCard({ coin, balance, ngnValue, index = 0 }) {
+function BalanceCard({ coin, balance, ngnValue, index = 0 }) {
   const color = COIN_COLORS[coin] || 'var(--teal)';
 
   return (
@@ -66,3 +66,5 @@ export default function BalanceCard({ coin, balance, ngnValue, index = 0 }) {
     </motion.div>
   );
 }
+
+export default memo(BalanceCard);

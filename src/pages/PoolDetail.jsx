@@ -1,5 +1,5 @@
 // PoolDetail.jsx drills into a single payment pool, including members, requests, and payout activity.
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -65,6 +65,8 @@ function ActivityItem({ item, currentPhone }) {
     </motion.div>
   );
 }
+
+const MemoActivityItem = memo(ActivityItem);
 
 function PoolLinkModal({ open, onClose, poolId, banks, onCreated }) {
   const [form, setForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', due_date: '' });
@@ -272,6 +274,9 @@ export default function PoolDetail() {
   const [loading,   setLoading]   = useState(true);
   const [showLink,  setShowLink]  = useState(false);
   const [tab,       setTab]       = useState('activity');
+  const [activityPage, setActivityPage] = useState(1);
+  const [membersPage, setMembersPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const load = useCallback(async () => {
     try {
@@ -297,6 +302,31 @@ export default function PoolDetail() {
   }, [poolId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    setActivityPage(1);
+    setMembersPage(1);
+  }, [tab]);
+
+  const members = pool?.members || [];
+  const activityTotalPages = Math.max(1, Math.ceil(activity.length / PAGE_SIZE));
+  const visibleActivity = useMemo(() => {
+    const start = (Math.min(activityPage, activityTotalPages) - 1) * PAGE_SIZE;
+    return activity.slice(start, start + PAGE_SIZE);
+  }, [activity, activityPage, activityTotalPages]);
+  const membersTotalPages = Math.max(1, Math.ceil(members.length / PAGE_SIZE));
+  const visibleMembers = useMemo(() => {
+    const start = (Math.min(membersPage, membersTotalPages) - 1) * PAGE_SIZE;
+    return members.slice(start, start + PAGE_SIZE);
+  }, [members, membersPage, membersTotalPages]);
+
+  useEffect(() => {
+    if (activityPage > activityTotalPages) setActivityPage(activityTotalPages);
+  }, [activityPage, activityTotalPages]);
+
+  useEffect(() => {
+    if (membersPage > membersTotalPages) setMembersPage(membersTotalPages);
+  }, [membersPage, membersTotalPages]);
 
   if (loading) return <AppShell title="Pool"><div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size={36} /></div></AppShell>;
   if (!pool)   return <AppShell title="Pool"><div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>Pool not found.</div></AppShell>;
@@ -348,13 +378,26 @@ export default function PoolDetail() {
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
                 No activity yet.
               </div>
-            ) : activity.map(item => <ActivityItem key={item.id} item={item} currentPhone="" />)}
+            ) : (
+              <>
+                {visibleActivity.map(item => <MemoActivityItem key={item.id} item={item} currentPhone="" />)}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem', padding: '0.85rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', background: 'var(--surface)', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                    Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(activityPage, activityTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(activityPage, activityTotalPages) * PAGE_SIZE, activity.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{activity.length}</strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Button variant="secondary" onClick={() => setActivityPage(p => Math.max(1, p - 1))} disabled={activityPage <= 1}>Prev</Button>
+                    <Button variant="secondary" onClick={() => setActivityPage(p => Math.min(activityTotalPages, p + 1))} disabled={activityPage >= activityTotalPages}>Next</Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {tab === 'members' && (
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            {(pool.members || []).map((m, i) => (
+            {visibleMembers.map((m, i) => (
               <div key={m.phone} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--teal)', color: 'var(--text-inv)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem' }}>
@@ -368,6 +411,17 @@ export default function PoolDetail() {
                 <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', background: m.role === 'admin' ? 'var(--teal-faint)' : 'var(--surface-2)', color: m.role === 'admin' ? 'var(--teal)' : 'var(--text-3)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>{m.role}</span>
               </div>
             ))}
+            {members.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.85rem 1rem', borderTop: '1px solid var(--border)', background: 'var(--surface-2)', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                  Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(membersPage, membersTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(membersPage, membersTotalPages) * PAGE_SIZE, members.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{members.length}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button variant="secondary" onClick={() => setMembersPage(p => Math.max(1, p - 1))} disabled={membersPage <= 1}>Prev</Button>
+                  <Button variant="secondary" onClick={() => setMembersPage(p => Math.min(membersTotalPages, p + 1))} disabled={membersPage >= membersTotalPages}>Next</Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, memo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { ArrowRight, Link as LinkIcon, Plus, UsersThree, Wallet, PaperPlaneTilt, Coins } from 'phosphor-react';
@@ -78,6 +78,8 @@ function FamilyCard({ family, onOpen }) {
   );
 }
 
+const MemoFamilyCard = memo(FamilyCard, (prev, next) => prev.family === next.family);
+
 export default function Family() {
   const navigate = useNavigate();
   const { familyId } = useParams();
@@ -93,6 +95,12 @@ export default function Family() {
   const [showLink, setShowLink] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [membersPage, setMembersPage] = useState(1);
+  const [linksPage, setLinksPage] = useState(1);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [transfersPage, setTransfersPage] = useState(1);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [createForm, setCreateForm] = useState({ name: '', description: '' });
   const [joinCode, setJoinCode] = useState('');
@@ -308,6 +316,24 @@ export default function Family() {
   const ledger = data.ledger || [];
   const summary = data.summary || {};
   const isAdmin = family?.role === 'admin' || data.is_admin;
+  const membersTotalPages = Math.max(1, Math.ceil(members.length / PAGE_SIZE));
+  const linksTotalPages = Math.max(1, Math.ceil(links.length / PAGE_SIZE));
+  const requestsTotalPages = Math.max(1, Math.ceil(requests.length / PAGE_SIZE));
+  const transfersTotalPages = Math.max(1, Math.ceil(transfers.length / PAGE_SIZE));
+  const ledgerTotalPages = Math.max(1, Math.ceil(ledger.length / PAGE_SIZE));
+  const visibleMembers = useMemo(() => members.slice((Math.min(membersPage, membersTotalPages) - 1) * PAGE_SIZE, Math.min(membersPage, membersTotalPages) * PAGE_SIZE), [members, membersPage, membersTotalPages]);
+  const visibleLinks = useMemo(() => links.slice((Math.min(linksPage, linksTotalPages) - 1) * PAGE_SIZE, Math.min(linksPage, linksTotalPages) * PAGE_SIZE), [links, linksPage, linksTotalPages]);
+  const visibleRequests = useMemo(() => requests.slice((Math.min(requestsPage, requestsTotalPages) - 1) * PAGE_SIZE, Math.min(requestsPage, requestsTotalPages) * PAGE_SIZE), [requests, requestsPage, requestsTotalPages]);
+  const visibleTransfers = useMemo(() => transfers.slice((Math.min(transfersPage, transfersTotalPages) - 1) * PAGE_SIZE, Math.min(transfersPage, transfersTotalPages) * PAGE_SIZE), [transfers, transfersPage, transfersTotalPages]);
+  const visibleLedger = useMemo(() => ledger.slice((Math.min(ledgerPage, ledgerTotalPages) - 1) * PAGE_SIZE, Math.min(ledgerPage, ledgerTotalPages) * PAGE_SIZE), [ledger, ledgerPage, ledgerTotalPages]);
+
+  useEffect(() => {
+    if (membersPage > membersTotalPages) setMembersPage(membersTotalPages);
+    if (linksPage > linksTotalPages) setLinksPage(linksTotalPages);
+    if (requestsPage > requestsTotalPages) setRequestsPage(requestsTotalPages);
+    if (transfersPage > transfersTotalPages) setTransfersPage(transfersTotalPages);
+    if (ledgerPage > ledgerTotalPages) setLedgerPage(ledgerTotalPages);
+  }, [membersPage, membersTotalPages, linksPage, linksTotalPages, requestsPage, requestsTotalPages, transfersPage, transfersTotalPages, ledgerPage, ledgerTotalPages]);
 
   return (
     <AppShell title="Family">
@@ -342,7 +368,7 @@ export default function Family() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {families.map(familyItem => <FamilyCard key={familyItem.id} family={familyItem} onOpen={navigate} />)}
+                  {families.map(familyItem => <MemoFamilyCard key={familyItem.id} family={familyItem} onOpen={navigate} />)}
                 </div>
               )}
             </>
@@ -388,7 +414,7 @@ export default function Family() {
                     <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: '1.5rem 0' }}>No members loaded yet.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {members.map(member => (
+                      {visibleMembers.map(member => (
                         <div key={`${member.phone}-${member.joined_at}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', padding: '0.8rem 0.85rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-2)' }}>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{member.name || member.phone}</div>
@@ -397,6 +423,17 @@ export default function Family() {
                           <Pill tone={member.role === 'admin' ? 'teal' : 'surface'}>{member.role || 'member'}</Pill>
                         </div>
                       ))}
+                      {members.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                            Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(membersPage, membersTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(membersPage, membersTotalPages) * PAGE_SIZE, members.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{members.length}</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button variant="secondary" onClick={() => setMembersPage(p => Math.max(1, p - 1))} disabled={membersPage <= 1}>Prev</Button>
+                            <Button variant="secondary" onClick={() => setMembersPage(p => Math.min(membersTotalPages, p + 1))} disabled={membersPage >= membersTotalPages}>Next</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
@@ -412,7 +449,7 @@ export default function Family() {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {links.map(link => (
+                      {visibleLinks.map(link => (
                         <div key={link.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.85rem', background: 'var(--bg-2)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start' }}>
                             <div style={{ minWidth: 0 }}>
@@ -430,6 +467,17 @@ export default function Family() {
                           </div>
                         </div>
                       ))}
+                      {links.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                            Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(linksPage, linksTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(linksPage, linksTotalPages) * PAGE_SIZE, links.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{links.length}</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button variant="secondary" onClick={() => setLinksPage(p => Math.max(1, p - 1))} disabled={linksPage <= 1}>Prev</Button>
+                            <Button variant="secondary" onClick={() => setLinksPage(p => Math.min(linksTotalPages, p + 1))} disabled={linksPage >= linksTotalPages}>Next</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
@@ -445,7 +493,7 @@ export default function Family() {
                     <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: '1.5rem 0' }}>No family requests yet.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {requests.map(request => (
+                      {visibleRequests.map(request => (
                         <div key={request.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.85rem', background: 'var(--bg-2)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                             <div style={{ minWidth: 0 }}>
@@ -467,6 +515,17 @@ export default function Family() {
                           )}
                         </div>
                       ))}
+                      {requests.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                            Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(requestsPage, requestsTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(requestsPage, requestsTotalPages) * PAGE_SIZE, requests.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{requests.length}</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button variant="secondary" onClick={() => setRequestsPage(p => Math.max(1, p - 1))} disabled={requestsPage <= 1}>Prev</Button>
+                            <Button variant="secondary" onClick={() => setRequestsPage(p => Math.min(requestsTotalPages, p + 1))} disabled={requestsPage >= requestsTotalPages}>Next</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
@@ -480,7 +539,7 @@ export default function Family() {
                     <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: '1.5rem 0' }}>No transfer records yet.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {transfers.map(transfer => (
+                      {visibleTransfers.map(transfer => (
                         <div key={transfer.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.85rem', background: 'var(--bg-2)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                             <div style={{ minWidth: 0 }}>
@@ -504,6 +563,17 @@ export default function Family() {
                           )}
                         </div>
                       ))}
+                      {transfers.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                            Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(transfersPage, transfersTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(transfersPage, transfersTotalPages) * PAGE_SIZE, transfers.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{transfers.length}</strong>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button variant="secondary" onClick={() => setTransfersPage(p => Math.max(1, p - 1))} disabled={transfersPage <= 1}>Prev</Button>
+                            <Button variant="secondary" onClick={() => setTransfersPage(p => Math.min(transfersTotalPages, p + 1))} disabled={transfersPage >= transfersTotalPages}>Next</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
@@ -531,7 +601,7 @@ export default function Family() {
                         </tr>
                       </thead>
                       <tbody>
-                        {ledger.map((entry, index) => (
+                        {visibleLedger.map((entry, index) => (
                           <tr key={`${entry.type}-${entry.reference || index}`} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td style={{ padding: '0.5rem' }}>{entry.created_at ? new Date(entry.created_at).toLocaleString('en-NG') : '-'}</td>
                             <td style={{ padding: '0.5rem' }}><Pill tone={entry.type === 'contribution' ? 'teal' : entry.type === 'transfer' ? 'amber' : 'surface'}>{entry.type}</Pill></td>
@@ -547,6 +617,17 @@ export default function Family() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                {ledger.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '0.9rem', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                      Showing <strong style={{ color: 'var(--text-1)' }}>{(Math.min(ledgerPage, ledgerTotalPages) - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(Math.min(ledgerPage, ledgerTotalPages) * PAGE_SIZE, ledger.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{ledger.length}</strong>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button variant="secondary" onClick={() => setLedgerPage(p => Math.max(1, p - 1))} disabled={ledgerPage <= 1}>Prev</Button>
+                      <Button variant="secondary" onClick={() => setLedgerPage(p => Math.min(ledgerTotalPages, p + 1))} disabled={ledgerPage >= ledgerTotalPages}>Next</Button>
+                    </div>
                   </div>
                 )}
               </section>

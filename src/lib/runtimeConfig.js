@@ -12,9 +12,15 @@ function readEnv(key, fallback = '') {
 }
 
 export function getApiBaseUrl() {
-  return readEnv('VITE_API_URL', '/api/v1');
+  const raw = readEnv('VITE_API_URL', '/api/v1').trim();
+  if (!raw) return '/api/v1';
+  if (raw.endsWith('/api/v1')) return raw.replace(/\/+$/, '');
+  if (raw.endsWith('/api/v1/')) return raw.replace(/\/+$/, '');
+  if (raw.endsWith('/api')) return `${raw.replace(/\/+$/, '')}/v1`;
+  if (raw.includes('/api/v1')) return raw.replace(/\/+$/, '');
+  return `${raw.replace(/\/+$/, '')}/api/v1`;
 }
 
 export function getWebSocketBaseUrl() {
-  return readEnv('VITE_WS_URL', '');
+  return readEnv('VITE_WS_URL', '').trim();
 }

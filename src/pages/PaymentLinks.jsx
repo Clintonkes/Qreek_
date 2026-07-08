@@ -1,6 +1,6 @@
 // PaymentLinks.jsx manages shareable collection links so users can accept payments
 // into their own payment workflows without exposing raw bank details every time.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Link, Plus, Trash, PencilSimple, ListChecks } from 'phosphor-react';
@@ -338,6 +338,8 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
   );
 }
 
+const MemoLinkCard = memo(LinkCard, (prev, next) => prev.link === next.link);
+
 /**
  * PaymentLinks component - Dashboard for managing shareable payment URLs.
  * Users can create links to collect funds directly into their designated bank accounts
@@ -353,6 +355,8 @@ export default function PaymentLinks() {
   const [linksLoaded, setLinksLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 9;
 
   const load = () => {
     setLoading(true);
@@ -387,9 +391,19 @@ export default function PaymentLinks() {
   // Strictly filter to only active (non-deactivated) links. Deactivated are hard-deleted on backend (see deactivate_link)
   // but we filter client-side too for safety + any cached/inflight data. This ensures deleted/deactivated
   // links no longer appear in dashboard or list (per user request + screenshot of lingering deactivated links).
-  const displayLinks = links.filter(l => l.is_active !== false);
-  const totalCollected = displayLinks.reduce((s, l) => s + (l.total_collected || 0), 0);
-  const hasPersonalLink = displayLinks.some(l => !l.pool_id);
+  const displayLinks = useMemo(() => links.filter(l => l.is_active !== false), [links]);
+  const totalCollected = useMemo(() => displayLinks.reduce((s, l) => s + (l.total_collected || 0), 0), [displayLinks]);
+  const hasPersonalLink = useMemo(() => displayLinks.some(l => !l.pool_id), [displayLinks]);
+  const totalPages = Math.max(1, Math.ceil(displayLinks.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleLinks = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return displayLinks.slice(start, start + PAGE_SIZE);
+  }, [displayLinks, currentPage]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell title="Payment links">
@@ -415,9 +429,10 @@ export default function PaymentLinks() {
           <Button onClick={() => setShowCreate(true)}>Create your first link</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayLinks.map(link => (
-            <LinkCard
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleLinks.map(link => (
+            <MemoLinkCard
               key={link.id}
               link={link}
               onDelete={handleDelete}
@@ -425,7 +440,21 @@ export default function PaymentLinks() {
               onViewSettlements={(selectedLink) => navigate(`/payment-links/${selectedLink.id}/settlements`)}
             />
           ))}
-        </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem', padding: '0.9rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', background: 'var(--surface)', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+              Showing <strong style={{ color: 'var(--text-1)' }}>{(currentPage - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(currentPage * PAGE_SIZE, displayLinks.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{displayLinks.length}</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button variant="secondary" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                Prev
+              </Button>
+              <Button variant="secondary" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       <CreateLinkModal 

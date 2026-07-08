@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ArrowDown, ArrowUp, ArrowsLeftRight, CircleWavyCheck } from 'phosphor-react';
 import Badge from '../ui/Badge.jsx';
 import dayjs from 'dayjs';
@@ -19,7 +19,7 @@ function fmtNGN(v) {
   return `₦${v.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default function TxRow({ tx }) {
+function TxRow({ tx }) {
   const meta = TYPE_META[tx.tx_type] || TYPE_META.sell;
   const Icon = meta.icon;
   const statusVariant = tx.status === 'completed' ? 'completed' : tx.status === 'processing' || tx.status === 'pending' ? 'processing' : 'failed';
@@ -58,3 +58,5 @@ export default function TxRow({ tx }) {
     </div>
   );
 }
+
+export default memo(TxRow);

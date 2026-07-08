@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Buildings, Link as LinkIcon, Users, UsersThree, Clock } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
@@ -77,9 +77,9 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    // Load the main payment data in parallel, then enrich enterprise metrics only if a company exists.
+    // Load the main payment data in parallel and stop blocking the page as soon as the core data arrives.
     Promise.allSettled([getPools(), getFamilies(), getLinks(), getCompany()])
-      .then(async ([poolsResult, familiesResult, linksResult, companyResult]) => {
+      .then(([poolsResult, familiesResult, linksResult, companyResult]) => {
         const nextPools = poolsResult.status === 'fulfilled' ? poolsResult.value.pools || [] : [];
         const nextFamilies = familiesResult.status === 'fulfilled' ? familiesResult.value.families || [] : [];
         const nextLinks = linksResult.status === 'fulfilled' ? linksResult.value.links || [] : [];
@@ -89,23 +89,43 @@ export default function Dashboard() {
         setFamilies(nextFamilies);
         setLinks(nextLinks);
         setCompany(nextCompany);
-
-        if (nextCompany) {
-          try {
-            const metrics = await getAnalytics();
-            setAnalytics(metrics);
-          } catch {}
-        }
       })
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!company) {
+      setAnalytics(null);
+      return;
+    }
+
+    let alive = true;
+    getAnalytics()
+      .then(metrics => {
+        if (alive) setAnalytics(metrics);
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, [company]);
+
   // Derive lightweight dashboard figures once the remote data has loaded.
-  const activeLinks = links.filter(link => link.is_active);
-  const totalCollected = links.reduce((sum, link) => sum + (link.total_collected || 0), 0);
-  const totalMembers = pools.reduce((sum, pool) => sum + (pool.member_count || 0), 0);
-  const totalFamilyMembers = families.reduce((sum, family) => sum + (family.member_count || 0), 0);
-  const activePools = pools.filter(pool => pool.pool_type === 'fiat').length || pools.length;
+  const { activeLinks, totalCollected, totalMembers, totalFamilyMembers, activePools } = useMemo(() => {
+    const active = links.filter(link => link.is_active);
+    const collected = links.reduce((sum, link) => sum + (link.total_collected || 0), 0);
+    const members = pools.reduce((sum, pool) => sum + (pool.member_count || 0), 0);
+    const familyMembers = families.reduce((sum, family) => sum + (family.member_count || 0), 0);
+    const poolsCount = pools.filter(pool => pool.pool_type === 'fiat').length || pools.length;
+    return {
+      activeLinks: active,
+      totalCollected: collected,
+      totalMembers: members,
+      totalFamilyMembers: familyMembers,
+      activePools: poolsCount,
+    };
+  }, [links, pools, families]);
 
   return (
     <AppShell title="Dashboard">

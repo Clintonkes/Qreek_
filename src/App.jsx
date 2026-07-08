@@ -10,33 +10,31 @@
  * 3. Navigation: Provides the high-level application layout and global state integration.
  */
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import useAuthStore, { hasStoredActiveSession } from './store/authStore.js';
 import PrivateLayout from './components/layout/PrivateLayout.jsx';
 
-// Eager imports (no lazy loading) for instant response on navigation/clicks, avoids dynamic module fetch MIME errors in prod
-import Landing from './pages/Landing.jsx';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import ForgotPin from './pages/ForgotPin.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Pools from './pages/Pools.jsx';
-import PoolDetail from './pages/PoolDetail.jsx';
-import Family from './pages/Family.jsx';
-import Settings from './pages/Settings.jsx';
-import Enterprise from './pages/Enterprise.jsx';
-import CompanySetup from './pages/CompanySetup.jsx';
-import EmployeeList from './pages/EmployeeList.jsx';
-import PayrollRuns from './pages/PayrollRuns.jsx';
-import PayrollRunCreate from './pages/PayrollRunCreate.jsx';
-import PayrollRunDetail from './pages/PayrollRunDetail.jsx';
-import PaymentLinks from './pages/PaymentLinks.jsx';
-import LinkSettlements from './pages/LinkSettlements.jsx';
-import PublicPayment from './pages/PublicPayment.jsx';
-import EmployeeSelfService from './pages/EmployeeSelfService.jsx';
+const Landing = lazy(() => import('./pages/Landing.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const ForgotPin = lazy(() => import('./pages/ForgotPin.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Pools = lazy(() => import('./pages/Pools.jsx'));
+const PoolDetail = lazy(() => import('./pages/PoolDetail.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Enterprise = lazy(() => import('./pages/Enterprise.jsx'));
+const CompanySetup = lazy(() => import('./pages/CompanySetup.jsx'));
+const EmployeeList = lazy(() => import('./pages/EmployeeList.jsx'));
+const PayrollRuns = lazy(() => import('./pages/PayrollRuns.jsx'));
+const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
+const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
+const PaymentLinks = lazy(() => import('./pages/PaymentLinks.jsx'));
+const LinkSettlements = lazy(() => import('./pages/LinkSettlements.jsx'));
+const PublicPayment = lazy(() => import('./pages/PublicPayment.jsx'));
+const EmployeeSelfService = lazy(() => import('./pages/EmployeeSelfService.jsx'));
 
 /**
  * AuthGuard component that protects routes requiring authentication.
@@ -77,9 +75,22 @@ function AnimatedOutlet() {
   return (
     <AnimatePresence mode="wait">
       <motion.div key={location.pathname} variants={variants} initial="initial" animate="animate" exit="exit">
-        <Outlet />
+        <Suspense fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '56vh', display: 'grid', placeItems: 'center', padding: '2rem 1rem' }}>
+      <div style={{ width: 'min(420px, 100%)', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: 'var(--shadow-soft)', padding: '1.25rem 1.1rem', textAlign: 'center' }}>
+        <div style={{ fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>Loading Qreek</div>
+        <div style={{ color: 'var(--muted)', lineHeight: 1.6 }}>Preparing the next screen.</div>
+      </div>
+    </div>
   );
 }
 
@@ -98,43 +109,45 @@ function AnimatedOutlet() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/"           element={<Landing />} />
-        <Route path="/login"      element={<Login />} />
-        <Route path="/register"   element={<Register />} />
-        <Route path="/forgot-pin" element={<ForgotPin />} />
-        <Route path="/p/:code"    element={<PublicPayment />} />
-        <Route path="/invite/:company/:token" element={<EmployeeSelfService />} />
-        <Route path="/enterprise/invite/:token" element={<OldInviteRedirect />} />
-        <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/"           element={<Landing />} />
+          <Route path="/login"      element={<Login />} />
+          <Route path="/register"   element={<Register />} />
+          <Route path="/forgot-pin" element={<ForgotPin />} />
+          <Route path="/p/:code"    element={<PublicPayment />} />
+          <Route path="/invite/:company/:token" element={<EmployeeSelfService />} />
+          <Route path="/enterprise/invite/:token" element={<OldInviteRedirect />} />
+          <Route path="/enterprise/employee-edit/:token" element={<EmployeeEditRedirect />} />
 
-        <Route element={<AuthGuard />}>
-          <Route element={<PrivateLayout />}>
-            <Route element={<AnimatedOutlet />}>
-              <Route path="/dashboard"                 element={<Dashboard />} />
-              <Route path="/pools"                     element={<Pools />} />
-              <Route path="/pools/:poolId"             element={<PoolDetail />} />
-              <Route path="/family"                    element={<FamilyRedirect />} />
-              <Route path="/family/:familyId"          element={<FamilyRedirect />} />
-              <Route path="/settings"                  element={<Settings />} />
-              <Route path="/enterprise"                element={<Enterprise />} />
-              <Route path="/enterprise/:businessId"   element={<Enterprise />} />
-              <Route path="/enterprise/setup"          element={<CompanySetup />} />
-              <Route path="/enterprise/employees"      element={<EmployeeList />} />
-              <Route path="/enterprise/payroll"        element={<PayrollRuns />} />
-              <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
-              <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
-              <Route path="/payment-links"             element={<PaymentLinks />} />
-              <Route path="/payment-links/:linkId/settlements" element={<LinkSettlements />} />
+          <Route element={<AuthGuard />}>
+            <Route element={<PrivateLayout />}>
+              <Route element={<AnimatedOutlet />}>
+                <Route path="/dashboard"                 element={<Dashboard />} />
+                <Route path="/pools"                     element={<Pools />} />
+                <Route path="/pools/:poolId"             element={<PoolDetail />} />
+                <Route path="/family"                    element={<FamilyRedirect />} />
+                <Route path="/family/:familyId"          element={<FamilyRedirect />} />
+                <Route path="/settings"                  element={<Settings />} />
+                <Route path="/enterprise"                element={<Enterprise />} />
+                <Route path="/enterprise/:businessId"   element={<Enterprise />} />
+                <Route path="/enterprise/setup"          element={<CompanySetup />} />
+                <Route path="/enterprise/employees"      element={<EmployeeList />} />
+                <Route path="/enterprise/payroll"        element={<PayrollRuns />} />
+                <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
+                <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
+                <Route path="/payment-links"             element={<PaymentLinks />} />
+                <Route path="/payment-links/:linkId/settlements" element={<LinkSettlements />} />
+              </Route>
             </Route>
           </Route>
-        </Route>
 
-        <Route path="/trade"  element={<Navigate to="/dashboard" replace />} />
-        <Route path="/wallet" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/alerts" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*"       element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="/trade"  element={<Navigate to="/dashboard" replace />} />
+          <Route path="/wallet" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/alerts" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"       element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

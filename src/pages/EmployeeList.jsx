@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Trash, MagnifyingGlass, CopySimple, UserPlus, UploadSimple, Check, ArrowLeft, Bank, CaretRight, CaretLeft, PencilSimple } from 'phosphor-react';
@@ -18,6 +18,9 @@ export default function EmployeeList() {
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState('');
   const [deptFilter,setDeptFilter]= useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  const deferredSearch = useDeferredValue(search);
   
   const [company, setCompany] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -201,11 +204,26 @@ export default function EmployeeList() {
   const depts     = useMemo(() => [...new Set(employees.filter(e => e.department).map(e => e.department).filter(Boolean))].sort(), [employees]);
   const filtered  = useMemo(() => employees.filter(e => {
     if (!e.is_active) return false;
-    const q = search.toLowerCase();
+    const q = deferredSearch.toLowerCase();
     const name = (e.name || '').toLowerCase();
     return (!q || name.includes(q) || (e.email || '').toLowerCase().includes(q)) && (!deptFilter || e.department === deptFilter);
-  }), [employees, search, deptFilter]);
+  }), [employees, deferredSearch, deptFilter]);
   const totalPayroll = useMemo(() => employees.filter(e => e.is_active && e.salary).reduce((s, e) => s + (e.salary || 0), 0), [employees]);
+  const totalEmployees = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalEmployees / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleEmployees = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [deferredSearch, deptFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell title="Employees">
@@ -288,11 +306,11 @@ export default function EmployeeList() {
           No employees match your search.
         </div>
       ) : (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 72px', minWidth: 800, gap: '0', padding: '0.75rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span>Employee</span><span>Bank</span><span>Department</span><span>Salary / mo</span><span></span>
           </div>
-          {filtered.map((emp, i) => (
+          {visibleEmployees.map((emp, i) => (
             <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr 72px', minWidth: 800, gap: '0', padding: '1rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{emp.name || '—'}</div>
@@ -314,6 +332,19 @@ export default function EmployeeList() {
               </div>
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.9rem 1.25rem', borderTop: '1px solid var(--border)', background: 'var(--surface-2)', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+              Showing <strong style={{ color: 'var(--text-1)' }}>{(currentPage - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(currentPage * PAGE_SIZE, totalEmployees)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{totalEmployees}</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button variant="secondary" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                <CaretLeft size={14} weight="bold" /> Prev
+              </Button>
+              <Button variant="secondary" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+                Next <CaretRight size={14} weight="bold" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -454,4 +485,3 @@ export default function EmployeeList() {
     </AppShell>
   );
 }
-

@@ -1,5 +1,5 @@
 // PayrollRunDetail.jsx shows the full breakdown of one payroll batch and its entry-level outcomes.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, ArrowLeft, DownloadSimple, Repeat } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
@@ -31,6 +31,8 @@ export default function PayrollRunDetail() {
   const [data,      setData]    = useState(null);
   const [loading,   setLoading] = useState(true);
   const [retrying,  setRetrying] = useState(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   const load = () => {
     setLoading(true);
@@ -170,19 +172,34 @@ export default function PayrollRunDetail() {
     win.print();
   };
 
+  const run = data?.run || null;
+  const entries = data?.entries || [];
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleEntries = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return entries.slice(start, start + PAGE_SIZE);
+  }, [entries, currentPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [runId]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   if (loading) return (
     <AppShell title="Payroll run">
       <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Spinner size={36} /></div>
     </AppShell>
   );
 
-  if (!data) return (
+  if (!run) return (
     <AppShell title="Payroll run">
       <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>Run not found.</div>
     </AppShell>
   );
-
-  const { run, entries } = data;
 
   return (
     <AppShell title={`Payroll — ${run.period_label}`}>
@@ -235,7 +252,7 @@ export default function PayrollRunDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto auto', minWidth: 800, gap: '0', padding: '0.6rem 1.25rem', background: 'var(--surface-2)', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase' }}>
             <span>Employee</span><span>Gross</span><span>Net</span><span>Reference</span><span>Status</span><span />
           </div>
-          {entries.map((entry, i) => (
+          {visibleEntries.map((entry, i) => (
             <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto auto', minWidth: 800, gap: '0', padding: '0.85rem 1.25rem', borderTop: i > 0 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{entry.employee_name}</div>
@@ -260,6 +277,20 @@ export default function PayrollRunDetail() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem', padding: '0.9rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', background: 'var(--surface)', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+            Showing <strong style={{ color: 'var(--text-1)' }}>{(currentPage - 1) * PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(currentPage * PAGE_SIZE, entries.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{entries.length}</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="secondary" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+              Prev
+            </Button>
+            <Button variant="secondary" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+              Next
+            </Button>
+          </div>
         </div>
       </div>
     </AppShell>

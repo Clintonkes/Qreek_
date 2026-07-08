@@ -1,5 +1,5 @@
 // Wallet.jsx is a legacy balance page retained while the product shifts toward payment-first dashboards.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import AppShell from '../components/layout/AppShell.jsx';
 import BalanceCard from '../components/wallet/BalanceCard.jsx';
 import TxRow from '../components/wallet/TxRow.jsx';
@@ -28,6 +28,7 @@ export default function Wallet() {
   const [hasMore,   setHasMore]   = useState(false);
   const [filter,    setFilter]    = useState('all');
   const [showZero,  setShowZero]  = useState(false);
+  const TX_PAGE_SIZE = 25;
 
   useEffect(() => {
     getPortfolioValue().then(setPortfolio).finally(() => setLoading(false));
@@ -49,7 +50,22 @@ export default function Wallet() {
 
   const balances = portfolio?.breakdown || {};
   const visibleCoins = COINS.filter(c => showZero || c === 'NGN' || (balances[c]?.balance || 0) > 0);
-  const filtered = filter === 'all' ? history : history.filter(tx => tx.tx_type === filter);
+  const filtered = useMemo(() => (filter === 'all' ? history : history.filter(tx => tx.tx_type === filter)), [history, filter]);
+  const [txPage, setTxPage] = useState(1);
+  const txTotalPages = Math.max(1, Math.ceil(filtered.length / TX_PAGE_SIZE));
+  const currentTxPage = Math.min(txPage, txTotalPages);
+  const visibleHistory = useMemo(() => {
+    const start = (currentTxPage - 1) * TX_PAGE_SIZE;
+    return filtered.slice(start, start + TX_PAGE_SIZE);
+  }, [filtered, currentTxPage]);
+
+  useEffect(() => {
+    setTxPage(1);
+  }, [filter]);
+
+  useEffect(() => {
+    if (txPage > txTotalPages) setTxPage(txTotalPages);
+  }, [txPage, txTotalPages]);
 
   return (
     <AppShell title="Wallet">
@@ -104,8 +120,24 @@ export default function Wallet() {
               </div>
             ) : (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '0 1rem' }}>
-                {filtered.map(tx => <TxRow key={tx.id} tx={tx} />)}
+                {visibleHistory.map(tx => <TxRow key={tx.id} tx={tx} />)}
                 {txLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem' }}><Spinner size={24} /></div>}
+              </div>
+            )}
+
+            {filtered.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem', padding: '0.9rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', background: 'var(--surface)', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                  Showing <strong style={{ color: 'var(--text-1)' }}>{(currentTxPage - 1) * TX_PAGE_SIZE + 1}</strong>-<strong style={{ color: 'var(--text-1)' }}>{Math.min(currentTxPage * TX_PAGE_SIZE, filtered.length)}</strong> of <strong style={{ color: 'var(--text-1)' }}>{filtered.length}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button variant="secondary" onClick={() => setTxPage(p => Math.max(1, p - 1))} disabled={currentTxPage <= 1}>
+                    Prev
+                  </Button>
+                  <Button variant="secondary" onClick={() => setTxPage(p => Math.min(txTotalPages, p + 1))} disabled={currentTxPage >= txTotalPages}>
+                    Next
+                  </Button>
+                </div>
               </div>
             )}
 
