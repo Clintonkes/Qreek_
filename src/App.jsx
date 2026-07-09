@@ -32,6 +32,7 @@ const EmployeeList = lazy(() => import('./pages/EmployeeList.jsx'));
 const PayrollRuns = lazy(() => import('./pages/PayrollRuns.jsx'));
 const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
 const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
+const PayrollCheckoutReturn = lazy(() => import('./pages/PayrollCheckoutReturn.jsx'));
 const PaymentLinks = lazy(() => import('./pages/PaymentLinks.jsx'));
 const LinkSettlements = lazy(() => import('./pages/LinkSettlements.jsx'));
 const PublicPayment = lazy(() => import('./pages/PublicPayment.jsx'));
@@ -132,6 +133,7 @@ export default function App() {
                 <Route path="/enterprise/payroll"        element={<PayrollRuns />} />
                 <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
                 <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
+                <Route path="/enterprise/payroll/:runId/checkout/return" element={<PayrollCheckoutReturn />} />
                 <Route path="/payment-links"             element={<PaymentLinks />} />
                 <Route path="/payment-links/:linkId/settlements" element={<LinkSettlements />} />
               </Route>

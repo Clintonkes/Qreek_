@@ -1,5 +1,5 @@
 // PayrollRunDetail.jsx shows the full breakdown of one payroll batch and its entry-level outcomes.
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, ArrowLeft, DownloadSimple, Repeat } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
@@ -34,12 +34,18 @@ export default function PayrollRunDetail() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     getPayrollRun(runId).then(d => setData(d)).finally(() => setLoading(false));
-  };
+  }, [runId]);
 
-  useEffect(() => { load(); }, [runId]);
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!run || !['pending', 'processing'].includes(run.status)) return undefined;
+    const timer = window.setInterval(load, 5000);
+    return () => window.clearInterval(timer);
+  }, [run, load]);
 
   const handleRetry = async (entryId) => {
     setRetrying(entryId);

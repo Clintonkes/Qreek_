@@ -157,6 +157,7 @@ export const setCompanyPaymentPin = (d) => client.post('/payroll/company/set-pay
 export const hasCompanyPaymentPin = () => client.get('/payroll/company/has-payment-pin').then(r => r.data);
 
 export const createPayrollCheckout = (runId, d) => client.post(`/payroll/runs/${runId}/checkout`, d).then(r => r.data);
+export const confirmPayrollCheckout = (runId, d) => client.post(`/payroll/runs/${runId}/checkout/confirm`, d).then(r => r.data);
 
 export const verifyAccount     = (account_number, bank_code) => client.get('/payroll/employees/verify-account', { params: { account_number, bank_code } }).then(r => r.data);
 
