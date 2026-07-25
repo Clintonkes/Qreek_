@@ -23,7 +23,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_ENTERPRISE = [
-  { to: '/enterprise', icon: Buildings, label: 'Enterprise' },
+  { to: null, icon: Buildings, label: 'Enterprise', comingSoon: true },
 ];
 
 const NAV_BOTTOM = [
@@ -179,31 +179,66 @@ export default function Sidebar() {
              </span>
            </div>
 
-           {NAV_ENTERPRISE.map(({ to, icon: Icon, label }) => (
-             <NavLink
-               key={to}
-               to={to}
-               style={({ isActive }) => ({
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: collapsed ? '0' : '0.75rem',
-                 padding: '0.75rem 0.9rem',
-                 borderRadius: '14px',
-                 color: isActive ? 'var(--amber)' : 'var(--text-2)',
-                 background: isActive ? 'linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05))' : 'transparent',
-                 border: isActive ? '1px solid rgba(245,166,35,0.25)' : '1px solid transparent',
-                 fontFamily: 'var(--font-display)',
-                 fontWeight: 500,
-                 fontSize: '0.9rem',
-                 transition: 'var(--trans-fast)',
-                 textDecoration: 'none',
-                 justifyContent: collapsed ? 'center' : 'flex-start',
-               })}
-               title={collapsed ? label : ''}
-             >
-               <Icon size={18} weight="duotone" />
-               {!collapsed && <span>{label}</span>}
-             </NavLink>
+           {NAV_ENTERPRISE.map(({ to, icon: Icon, label, comingSoon }) => (
+             comingSoon ? (
+               <div
+                 key={label}
+                 style={{
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: collapsed ? '0' : '0.75rem',
+                   padding: '0.75rem 0.9rem',
+                   borderRadius: '14px',
+                   color: 'var(--text-3)',
+                   fontFamily: 'var(--font-display)',
+                   fontWeight: 500,
+                   fontSize: '0.9rem',
+                   cursor: 'not-allowed',
+                   opacity: 0.45,
+                   pointerEvents: 'none',
+                   userSelect: 'none',
+                   position: 'relative',
+                   justifyContent: collapsed ? 'center' : 'flex-start',
+                 }}
+                 title={`${label} · Coming soon`}
+               >
+                 <Icon size={18} weight="duotone" />
+                 {!collapsed && (
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                     <span>{label}</span>
+                     <span style={{ fontSize: '0.6rem', padding: '0.12rem 0.45rem', borderRadius: 'var(--radius-full)', background: 'var(--amber-faint)', color: 'var(--amber)', fontFamily: 'var(--font-display)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Coming soon</span>
+                   </div>
+                 )}
+                 {collapsed && (
+                   <span style={{ position: 'absolute', bottom: 2, right: 4, fontSize: '0.45rem', color: 'var(--amber)', fontWeight: 700, textTransform: 'uppercase' }}>CS</span>
+                 )}
+               </div>
+             ) : (
+               <NavLink
+                 key={to}
+                 to={to}
+                 style={({ isActive }) => ({
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: collapsed ? '0' : '0.75rem',
+                   padding: '0.75rem 0.9rem',
+                   borderRadius: '14px',
+                   color: isActive ? 'var(--amber)' : 'var(--text-2)',
+                   background: isActive ? 'linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05))' : 'transparent',
+                   border: isActive ? '1px solid rgba(245,166,35,0.25)' : '1px solid transparent',
+                   fontFamily: 'var(--font-display)',
+                   fontWeight: 500,
+                   fontSize: '0.9rem',
+                   transition: 'var(--trans-fast)',
+                   textDecoration: 'none',
+                   justifyContent: collapsed ? 'center' : 'flex-start',
+                 })}
+                 title={collapsed ? label : ''}
+               >
+                 <Icon size={18} weight="duotone" />
+                 {!collapsed && <span>{label}</span>}
+               </NavLink>
+             )
            ))}
 
           <div style={{ flex: 1 }} />

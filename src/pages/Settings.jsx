@@ -228,6 +228,34 @@ export default function Settings() {
         </div>
       </Section>
 
+      <Section title="Support">
+        <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '0.75rem' }}>
+          Have a question, spotted an issue, or need help with a transaction? Reach us directly — we typically respond within a few hours.
+        </p>
+        <a
+          href="mailto:info@qreekfinance.org"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            color: 'var(--teal)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.88rem',
+            fontWeight: 500,
+            textDecoration: 'none',
+            padding: '0.5rem 0.85rem',
+            borderRadius: 'var(--radius)',
+            border: '1px solid var(--teal-border)',
+            background: 'var(--teal-faint)',
+            transition: 'var(--trans-fast)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,170,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--teal-faint)'; }}
+        >
+          info@qreekfinance.org
+        </a>
+      </Section>
+
       <Section title="Danger zone">
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
           Logging out will clear your session from this device.

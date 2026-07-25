@@ -7,7 +7,7 @@ const NAV = [
   { to: '/pools',      icon: Users,         label: 'Pools' },
   { to: null,          icon: UsersThree,    label: 'Family', comingSoon: true },
   { to: '/payment-links', icon: LinkIcon,   label: 'Links' },
-  { to: '/enterprise', icon: Buildings,     label: 'Business' },
+  { to: null,          icon: Buildings,     label: 'Business', comingSoon: true },
 ];
 
 export default function MobileNav() {
