@@ -87,7 +87,7 @@ export default function PublicPayment() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '', amount: '', note: '' });
-  const [paying, setPaying] = useState(false);
+  const [paying, setPaying] = useState(!!(searchParams.get('transaction_id') || searchParams.get('tx_ref')));
   const [success, setSuccess] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [checkingSettlement, setCheckingSettlement] = useState(false);
@@ -370,6 +370,15 @@ export default function PublicPayment() {
     </div>
     );
   }
+
+  if (paying) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+      <Spinner size={40} />
+      <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+        {redirectedTransactionId || redirectedReference ? 'Confirming your payment…' : 'Opening payment checkout…'}
+      </p>
+    </div>
+  );
 
   const renderPoolLedger = () => (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem', marginBottom: '0.5rem' }}>

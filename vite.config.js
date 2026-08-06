@@ -11,6 +11,7 @@ export default defineConfig({
           if (!id.includes('node_modules')) return;
           if (id.includes('react-dom') || id.includes('react-router-dom')) return 'react-vendor';
           if (id.includes('framer-motion')) return 'motion-vendor';
+          if (id.includes('@phosphor-icons') || id.includes('phosphor-react')) return 'icons-vendor';
           if (id.includes('recharts')) return 'charts-vendor';
           if (id.includes('axios')) return 'http-vendor';
           return 'vendor';

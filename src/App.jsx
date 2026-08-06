@@ -26,12 +26,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Pools = lazy(() => import('./pages/Pools.jsx'));
 const PoolDetail = lazy(() => import('./pages/PoolDetail.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
-const Enterprise = lazy(() => import('./pages/Enterprise.jsx'));
-const CompanySetup = lazy(() => import('./pages/CompanySetup.jsx'));
-const EmployeeList = lazy(() => import('./pages/EmployeeList.jsx'));
-const PayrollRuns = lazy(() => import('./pages/PayrollRuns.jsx'));
-const PayrollRunCreate = lazy(() => import('./pages/PayrollRunCreate.jsx'));
-const PayrollRunDetail = lazy(() => import('./pages/PayrollRunDetail.jsx'));
 const PayrollCheckoutReturn = lazy(() => import('./pages/PayrollCheckoutReturn.jsx'));
 const PaymentLinks = lazy(() => import('./pages/PaymentLinks.jsx'));
 const LinkSettlements = lazy(() => import('./pages/LinkSettlements.jsx'));
@@ -49,6 +43,20 @@ function AuthGuard() {
 
 function FamilyRedirect() {
   return <Navigate to="/pools" replace />;
+}
+
+function EnterpriseComingSoon() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '1.5rem', textAlign: 'center', padding: '2rem' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Enterprise</h2>
+      <p style={{ color: 'var(--text-2)', maxWidth: 380, lineHeight: 1.6, fontSize: '0.95rem' }}>
+        Enterprise tools are in development. Payroll, team management, and business analytics are on their way.
+      </p>
+      <span style={{ background: 'rgba(245,166,35,0.15)', color: 'var(--amber)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: '2rem', padding: '0.3rem 1rem', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        Coming Soon
+      </span>
+    </div>
+  );
 }
 
 function EmployeeEditRedirect() {
@@ -126,13 +134,13 @@ export default function App() {
                 <Route path="/family"                    element={<FamilyRedirect />} />
                 <Route path="/family/:familyId"          element={<FamilyRedirect />} />
                 <Route path="/settings"                  element={<Settings />} />
-                <Route path="/enterprise"                element={<Enterprise />} />
-                <Route path="/enterprise/:businessId"   element={<Enterprise />} />
-                <Route path="/enterprise/setup"          element={<CompanySetup />} />
-                <Route path="/enterprise/employees"      element={<EmployeeList />} />
-                <Route path="/enterprise/payroll"        element={<PayrollRuns />} />
-                <Route path="/enterprise/payroll/run"    element={<PayrollRunCreate />} />
-                <Route path="/enterprise/payroll/:runId" element={<PayrollRunDetail />} />
+                <Route path="/enterprise"                element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/:businessId"   element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/setup"          element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/employees"      element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/payroll"        element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/payroll/run"    element={<EnterpriseComingSoon />} />
+                <Route path="/enterprise/payroll/:runId" element={<EnterpriseComingSoon />} />
                 <Route path="/enterprise/payroll/:runId/checkout/return" element={<PayrollCheckoutReturn />} />
                 <Route path="/payment-links"             element={<PaymentLinks />} />
                 <Route path="/payment-links/:linkId/settlements" element={<LinkSettlements />} />
