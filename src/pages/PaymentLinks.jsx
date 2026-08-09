@@ -3,13 +3,14 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Link, Plus, Trash, PencilSimple, ListChecks } from 'phosphor-react';
+import { Link, Plus, Trash, PencilSimple, ListChecks, QrCode } from 'phosphor-react';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import BankSelect from '../components/ui/BankSelect.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
+import QRCodeCard from '../components/ui/QRCodeCard.jsx';
 import { getLinks, createLink, deleteLink, updateLink, verifyBankAccount } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import { getBanks } from '../api/payroll.js';
@@ -274,6 +275,7 @@ function timeRemaining(expiresAt) {
 function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const handleDelete = async () => {
     setConfirmOpen(false);
@@ -341,6 +343,9 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
       <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {link.is_active && (
           <>
+            <button onClick={() => setQrOpen(true)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: link.pool_id ? 'var(--amber)' : 'var(--teal)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <QrCode size={13} /> QR
+            </button>
             <button onClick={handleEditClick} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.25rem 0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <PencilSimple size={13} /> Edit
             </button>
@@ -353,6 +358,11 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
           </>
         )}
       </div>
+
+      {/* QR Code modal */}
+      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title={`QR — ${link.title}`} maxWidth={360}>
+        <QRCodeCard url={link.url} title={link.title} isPool={!!link.pool_id} />
+      </Modal>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Delete Link" maxWidth={400}>
         <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>

@@ -56,3 +56,12 @@ export const saveBank  = (data) => client.post('/auth/save-bank',  data).then(r 
  * @returns {Promise<Object>} A list of banks for withdrawal and deposits.
  */
 export const listBanks = ()     => client.get('/auth/banks').then(r => r.data);
+
+/**
+ * Public user profile — returns name and active standalone payment links for a given referral code.
+ * No auth required.
+ * @param {string} referralCode - The user's referral/public code.
+ * @returns {Promise<Object>} { name, referral_code, links }
+ */
+export const getUserProfile = (referralCode) =>
+  client.get(`/auth/profile/${referralCode.toUpperCase()}`).then(r => r.data);
