@@ -360,8 +360,14 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
       </div>
 
       {/* QR Code modal */}
-      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title={`QR — ${link.title}`} maxWidth={360}>
-        <QRCodeCard url={link.url} title={link.title} isPool={!!link.pool_id} />
+      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="Payment QR Code" maxWidth={460}>
+        <QRCodeCard
+          url={link.url}
+          title={link.title}
+          isPool={!!link.pool_id}
+          isFlexible={link.is_flexible}
+          amount={link.amount}
+        />
       </Modal>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Delete Link" maxWidth={400}>
