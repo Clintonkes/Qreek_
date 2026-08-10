@@ -14,6 +14,7 @@ export default defineConfig({
           if (id.includes('@phosphor-icons') || id.includes('phosphor-react')) return 'icons-vendor';
           if (id.includes('recharts')) return 'charts-vendor';
           if (id.includes('axios')) return 'http-vendor';
+          if (id.includes('jspdf')) return 'jspdf-vendor';
           return 'vendor';
         },
       },
