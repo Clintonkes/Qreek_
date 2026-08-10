@@ -194,6 +194,7 @@ async function downloadPdf({ url, title, isPool, isFlexible, amount }) {
   pdf.save(`qreek-pay-${isPool ? 'pool' : 'link'}.pdf`);
 }
 
+
 export default function QRCodeCard({ url, title, isPool, isFlexible, amount }) {
   const previewRef = useRef(null);
   const [busy, setBusy] = useState(false);
