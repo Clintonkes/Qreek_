@@ -194,7 +194,7 @@ export default function Enterprise() {
         <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🏢</div>
         <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem' }}>Set up your enterprise account</h1>
         <p style={{ color: 'var(--text-2)', marginBottom: '2rem', lineHeight: 1.7 }}>
-          Manage employee payroll, stage funds, and run structured batch payouts to any Nigerian bank — all from one dashboard.
+          Manage employee payroll, stage funds, and run structured batch payouts to any Nigerian bank, all from one dashboard.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxWidth: 320, margin: '0 auto 2rem' }}>
           {['Manage salary for multiple businesses', '0.2% payroll fee, no surprises', 'PIN-secured payout execution', 'Bulk import up to 500 employees'].map((t, i) => (
@@ -204,7 +204,7 @@ export default function Enterprise() {
           ))}
         </div>
         <Button style={{ padding: '0.85rem 2rem', fontSize: '1rem' }} onClick={() => navigate('/enterprise/setup')}>
-          Get started — it&apos;s free <ArrowRight size={18} />
+          Get started, it&apos;s free <ArrowRight size={18} />
         </Button>
       </div>
     </AppShell>

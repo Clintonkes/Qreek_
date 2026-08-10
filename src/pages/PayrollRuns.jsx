@@ -58,7 +58,7 @@ function RunCard({ run }) {
 
         {run.status === 'partial' && (
           <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--amber)', background: 'var(--amber-faint)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.75rem' }}>
-            {run.paid_count} paid · {run.failed_count} failed — click to view details
+            {run.paid_count} paid, {run.failed_count} failed. Click to view details.
           </div>
         )}
         {run.note && (

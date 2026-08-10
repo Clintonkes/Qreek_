@@ -232,7 +232,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
               {bankStatus.state === 'checking' && 'Verifying bank account...'}
               {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
               {bankStatus.state === 'failed' && 'Bank account could not be verified.'}
-              {bankStatus.state === 'idle' && (editing?.bank_name ? `Current bank: ${editing.bank_name}${editing.bank_account ? ` (****${editing.bank_account.slice(-4)})` : ''} — fill both fields above to change.` : 'Fill both fields to change the destination bank.')}
+              {bankStatus.state === 'idle' && (editing?.bank_name ? `Current bank: ${editing.bank_name}${editing.bank_account ? ` (****${editing.bank_account.slice(-4)})` : ''}. Fill both fields above to change.` : 'Fill both fields to change the destination bank.')}
             </div>
           </div>
         )}
@@ -334,7 +334,7 @@ function LinkCard({ link, onDelete, onEdit, onViewSettlements }) {
 
       {link.bank_name && (
         <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
-          Bank: {link.bank_name} · {link.bank_account || '****'}
+          Bank: {link.bank_name}, {link.bank_account || '****'}
         </div>
       )}
 
@@ -461,7 +461,7 @@ export default function PaymentLinks() {
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Payment links</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
-            {displayLinks.length} active · Total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
+            {displayLinks.length} active, total collected: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalCollected)}</strong>
           </p>
         </div>
         {linksLoaded && !hasPersonalLink && <Button onClick={() => setShowCreate(true)}><Plus size={16} /> Create link</Button>}
@@ -475,7 +475,7 @@ export default function PaymentLinks() {
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <Link size={40} color="var(--border-light)" style={{ marginBottom: '1rem' }} />
           <div style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>No payment links yet.</div>
-          <p style={{ fontSize: '0.85rem', maxWidth: 360, margin: '0 auto 1.5rem' }}>Create a shareable link that anyone can use to pay you — your clients, customers, or pool members.</p>
+          <p style={{ fontSize: '0.85rem', maxWidth: 360, margin: '0 auto 1.5rem' }}>Create a shareable link that anyone can use to pay you. Your clients, customers, or pool members.</p>
           <Button onClick={() => setShowCreate(true)}>Create your first link</Button>
         </div>
       ) : (

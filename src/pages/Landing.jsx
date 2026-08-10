@@ -116,7 +116,7 @@ function PoolMockup() {
       <div aria-hidden style={{ position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: '50%', background: `radial-gradient(circle, ${C}18, transparent)`, pointerEvents: 'none' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', position: 'relative' }}>
         <div>
-          <div style={{ fontSize: '0.63rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: C, marginBottom: 4 }}>Pool · Communal</div>
+          <div style={{ fontSize: '0.63rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: C, marginBottom: 4 }}>Pool, Communal</div>
           <div style={{ fontWeight: 900, fontSize: '1rem' }}>Adaeze Market Circle</div>
         </div>
         <div style={{ background: `${C}15`, border: `1px solid ${C}40`, borderRadius: 8, padding: '0.28rem 0.6rem', fontSize: '0.7rem', color: C, fontWeight: 800 }}>Active</div>
@@ -145,7 +145,7 @@ function PoolMockup() {
         ))}
       </div>
       <div style={{ marginTop: '1rem', padding: '0.65rem', background: `${C}08`, border: `1px solid ${C}18`, borderRadius: 10, fontSize: '0.76rem', color: 'var(--text-2)', textAlign: 'center', position: 'relative' }}>
-        20 members · 17 paid · 3 pending
+        20 members, 17 paid, 3 pending
       </div>
     </div>
   );
@@ -175,7 +175,7 @@ function LinkMockup() {
           <div key={m} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, padding: '0.3rem 0.55rem', fontSize: '0.7rem', color: 'var(--text-3)' }}>{m}</div>
         ))}
       </div>
-      <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-3)', position: 'relative' }}>🔒 Secured by Flutterwave · CBN-licensed</div>
+      <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-3)', position: 'relative' }}>🔒 Secured by Flutterwave, CBN-licensed</div>
     </div>
   );
 }
@@ -225,7 +225,7 @@ function PayrollMockup() {
         ))}
       </div>
       <div style={{ marginTop: '1rem', padding: '0.65rem 0.75rem', background: 'rgba(46,213,115,0.06)', border: '1px solid rgba(46,213,115,0.18)', borderRadius: 10, fontSize: '0.76rem', color: '#2ed573', display: 'flex', alignItems: 'center', gap: '0.4rem', position: 'relative' }}>
-        ✓ All 47 transfers confirmed · Receipt ready
+        ✓ All 47 transfers confirmed. Receipt ready
       </div>
     </div>
   );
@@ -305,7 +305,7 @@ function HeroSlider() {
     {
       tag: 'Payment Pools',
       lines: ['Your ajo group,', 'now with a', 'live ledger.'],
-      sub: 'Every member sees every naira — who paid, how much, and when. Powered by Flutterwave.',
+      sub: 'Every member sees every naira. Who paid, how much, and when. Powered by Flutterwave.',
       cta: 'Create a pool',
       accent: '#00d4aa',
       mesh1: 'rgba(0,212,170,0.15)',
@@ -315,7 +315,7 @@ function HeroSlider() {
     {
       tag: 'Payment Links',
       lines: ['One link.', 'Any payment.', 'Instant receipt.'],
-      sub: 'Create a link in 2 minutes. Clients pay via card, transfer, or USSD — no Qreek account needed.',
+      sub: 'Create a link in 2 minutes. Clients pay via card, transfer, or USSD. No Qreek account needed.',
       cta: 'Create a link',
       accent: '#f5a623',
       mesh1: 'rgba(245,166,35,0.13)',
@@ -441,12 +441,12 @@ function HeroSlider() {
 /* ─── Product Showcase (Adobe "Everything you need" section) ─────────────── */
 function ProductShowcase() {
   const cards = [
-    { color: '#00d4aa', icon: '🏦', tag: 'Communal',       title: 'Payment Pools',         body: 'For ajo groups, committees, and circles. Every member sees every naira paid — in real time, with no disputes.' },
-    { color: '#f5a623', icon: '🔗', tag: 'Solo & Merchant', title: 'Payment Links',         body: 'One link. Card, transfer, or USSD. Clients pay in browser — automatic receipt every time.' },
+    { color: '#00d4aa', icon: '🏦', tag: 'Communal',       title: 'Payment Pools',         body: 'For ajo groups, committees, and circles. Every member sees every naira paid, in real time, with no disputes.' },
+    { color: '#f5a623', icon: '🔗', tag: 'Solo & Merchant', title: 'Payment Links',         body: 'One link. Card, transfer, or USSD. Clients pay in browser. Automatic receipt every time.' },
     { color: '#9b59b6', icon: '💼', tag: 'Business',        title: 'Enterprise Payroll',    body: 'Bulk salary runs. PIN approval. Per-employee status. Printable receipts. No monthly subscription.' },
-    { color: '#2ed573', icon: '👁️', tag: 'Transparency',   title: 'Live Activity Feed',    body: 'See who paid, who has not, and the running total — all members, one source of truth.' },
+    { color: '#2ed573', icon: '👁️', tag: 'Transparency',   title: 'Live Activity Feed',    body: 'See who paid, who has not, and the running total. All members, one source of truth.' },
     { color: '#4a90e2', icon: '🔐', tag: 'Security',        title: 'PIN-Secured Auth',      body: 'Every financial action requires your secure PIN. Five wrong attempts locks the account instantly.' },
-    { color: '#f87171', icon: '📋', tag: 'Proof',           title: 'Webhook Receipts',      body: 'Flutterwave webhook confirmation is the source of truth — not screenshots, not DMs.' },
+    { color: '#f87171', icon: '📋', tag: 'Proof',           title: 'Webhook Receipts',      body: 'Flutterwave webhook confirmation is the source of truth. Not screenshots, not DMs.' },
   ];
   return (
     <section style={{ padding: '5.5rem 0', background: 'var(--bg)' }}>
@@ -457,7 +457,7 @@ function ProductShowcase() {
             Everything you need to collect, track, and pay.
           </h2>
           <p style={{ fontSize: '1.05rem', color: 'var(--text-2)', maxWidth: 500, margin: '0 auto', lineHeight: 1.85 }}>
-            Whether you are an ajo group of 5 or a company of 500 — Qreek has the right product for how you move money.
+            Whether you are an ajo group of 5 or a company of 500, Qreek has the right product for how you move money.
           </p>
         </Reveal>
       </div>
@@ -608,7 +608,7 @@ function ModeCarousel({ modes }) {
 function HowItWorks() {
   const steps = [
     { n: '01', title: 'Create in 2 minutes', body: 'Sign up with your phone number. Create a pool, a payment link, or a payroll run. No forms, no bank visits, no approvals required.' },
-    { n: '02', title: 'Share — they pay in browser', body: 'Members or clients open your link on any device. They pay through Flutterwave — card, bank transfer, or USSD. No Qreek account needed to pay.' },
+    { n: '02', title: 'Share. They pay in browser.', body: 'Members or clients open your link on any device. They pay through Flutterwave: card, bank transfer, or USSD. No Qreek account needed to pay.' },
     { n: '03', title: 'Ledger updates instantly', body: 'The moment Flutterwave confirms, Qreek marks the payment. Payer gets a receipt. Funds settle bank-to-bank. Qreek never touches them.' },
   ];
   return (
@@ -634,7 +634,7 @@ function HowItWorks() {
         <Reveal delay={80} style={{ marginTop: '2.75rem', background: 'rgba(0,212,170,0.04)', border: '1px solid rgba(0,212,170,0.12)', borderRadius: 14, padding: '1.35rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
           <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>🔐</span>
           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.82 }}>
-            Every naira paid through Qreek is processed by <strong style={{ color: 'var(--text)', fontWeight: 700 }}>Flutterwave</strong> — a CBN-licensed Payment Solution Provider. Funds flow directly from payer bank to recipient bank.{' '}
+            Every naira paid through Qreek is processed by <strong style={{ color: 'var(--text)', fontWeight: 700 }}>Flutterwave</strong>, a CBN-licensed Payment Solution Provider. Funds flow directly from payer bank to recipient bank.{' '}
             <strong style={{ color: 'var(--text)', fontWeight: 700 }}>Qreek is never in the middle of your money.</strong>
           </p>
         </Reveal>
@@ -686,11 +686,11 @@ function UseCaseCarousel({ cases }) {
 /* ─── Trust Section ──────────────────────────────────────────────────────── */
 function TrustSection() {
   const items = [
-    { icon: '🏛️', color: '#00d4aa', title: 'CBN-licensed processing',   desc: 'Flutterwave is the PSP. Qreek records the event — it never handles the money.' },
+    { icon: '🏛️', color: '#00d4aa', title: 'CBN-licensed processing',   desc: 'Flutterwave is the PSP. Qreek records the event. It never handles the money.' },
     { icon: '🚫', color: '#f87171', title: 'Zero fund custody',          desc: 'Naira flows from payer to recipient bank. Qreek is not in the chain.' },
-    { icon: '👁️', color: '#4a90e2', title: 'Full member transparency',   desc: 'Every member sees the same ledger — no hidden amounts, no hidden members.' },
+    { icon: '👁️', color: '#4a90e2', title: 'Full member transparency',   desc: 'Every member sees the same ledger. No hidden amounts, no hidden members.' },
     { icon: '🔐', color: '#f5a623', title: 'PIN-secured transactions',   desc: 'Five wrong PIN attempts locks the account. All actions require your PIN.' },
-    { icon: '📋', color: '#2ed573', title: 'Immutable receipts',         desc: 'Flutterwave webhook is the source of truth — not a screenshot or a claim.' },
+    { icon: '📋', color: '#2ed573', title: 'Immutable receipts',         desc: 'Flutterwave webhook is the source of truth. Not a screenshot or a claim.' },
     { icon: '🆘', color: '#9b59b6', title: 'Dispute reporting',          desc: 'Any member can flag a suspicious payment directly inside the pool.' },
   ];
   return (
@@ -818,7 +818,7 @@ export default function Landing() {
     { name: 'Merchant', icon: '🛍️', kicker: 'Sales and deposits', color: '#2ed573', alt: '#f5a623',
       title: 'Turn everyday selling into organised payment operations.',
       summary: 'For sellers, agencies, and service providers who need command over deposits, repeat clients, and payment proof.',
-      actions: [{ icon: '🏷️', title: 'Name each collection', copy: 'Label payments by client, order, or project.' }, { icon: '💸', title: 'Accept all channels', copy: 'Card, transfer, or USSD through Flutterwave checkout.' }, { icon: '🔔', title: 'See alerts instantly', copy: 'Confirmed payments show clear status — no uncertainty.' }, { icon: '📚', title: 'Review history', copy: 'Filter by customer, amount, date, and receipt state.' }],
+      actions: [{ icon: '🏷️', title: 'Name each collection', copy: 'Label payments by client, order, or project.' }, { icon: '💸', title: 'Accept all channels', copy: 'Card, transfer, or USSD through Flutterwave checkout.' }, { icon: '🔔', title: 'See alerts instantly', copy: 'Confirmed payments show clear status. No uncertainty.' }, { icon: '📚', title: 'Review history', copy: 'Filter by customer, amount, date, and receipt state.' }],
       stats: [{ value: 'Any', label: 'channel' }, { value: 'Clean', label: 'receipts' }, { value: 'Fast', label: 'follow-up' }],
       path: ['Set purpose', 'Share', 'Confirm', 'Receipt', 'Follow up'],
       nodes: [{ x: 228, y: 118, icon: '🛍️', label: 'Shop' }, { x: 88, y: 116, icon: '🧑', label: 'Client' }, { x: 328, y: 68, icon: '🧾', label: 'Order' }, { x: 346, y: 192, icon: '✅', label: 'Paid' }] },
@@ -832,12 +832,12 @@ export default function Landing() {
   ];
 
   const CASES = [
-    { tag: 'Ajo Group',           color: '#00d4aa', title: 'Adaeze market women circle — 20 members',      body: 'Each member contributes ₦10,000 monthly via Flutterwave checkout. The activity feed shows who paid and who is pending — no more arguments, no more screenshots. Fee: ₦15 per contribution.' },
+    { tag: 'Ajo Group',           color: '#00d4aa', title: 'Adaeze market women circle, 20 members',      body: 'Each member contributes ₦10,000 monthly via Flutterwave checkout. The activity feed shows who paid and who is pending. No more arguments, no more screenshots. Fee: ₦15 per contribution.' },
     { tag: 'Merchant',            color: '#f5a623', title: 'Tokunbo, a Lagos fashion designer',             body: 'Shares one Qreek link in her Instagram bio. Clients pay flexible amounts for deposits and custom orders. Every payment confirmed automatically. No account needed to pay.' },
     { tag: 'Church',              color: '#2ed573', title: 'Pastor James building fund committee',          body: 'Creates a Qreek pool for building fund contributions. Members pay from anywhere in Nigeria. The committee sees the running total live. Every naira is accounted for with a receipt.' },
-    { tag: 'Enterprise',          color: '#9b59b6', title: 'TechBridge Solutions — 47 employees',           body: 'CFO confirms payroll in 4 minutes. All 47 salary transfers fire in parallel. Each employee gets a bank alert. Printable receipt for accounting. No subscription required.' },
-    { tag: 'Student Association', color: '#00d4aa', title: 'UNILAG Engineering — Final Year Levy',          body: 'Collects ₦15,000 project levy from 300 students via a Qreek pool. Members pay from their phones. Committee sees exactly who paid and who is outstanding. No cash-handling.' },
-    { tag: 'Small Business',      color: '#f5a623', title: 'Chidi web agency — collecting project deposits', body: 'Sends a Qreek payment link to each client instead of sharing account numbers. Client pays via card or bank transfer. Instant confirmation and a clean receipt every time.' },
+    { tag: 'Enterprise',          color: '#9b59b6', title: 'TechBridge Solutions, 47 employees',            body: 'CFO confirms payroll in 4 minutes. All 47 salary transfers fire in parallel. Each employee gets a bank alert. Printable receipt for accounting. No subscription required.' },
+    { tag: 'Student Association', color: '#00d4aa', title: 'UNILAG Engineering, Final Year Levy',           body: 'Collects ₦15,000 project levy from 300 students via a Qreek pool. Members pay from their phones. Committee sees exactly who paid and who is outstanding. No cash-handling.' },
+    { tag: 'Small Business',      color: '#f5a623', title: 'Chidi web agency, collecting project deposits',  body: 'Sends a Qreek payment link to each client instead of sharing account numbers. Client pays via card or bank transfer. Instant confirmation and a clean receipt every time.' },
   ];
 
   return (
@@ -848,9 +848,9 @@ export default function Landing() {
       <Marquee />
       <ProductShowcase />
       <section id="features" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <ProductSection tag="Payment Pools" headline="Ajo, esusu, and group collections — with a live ledger" body="Create a pool, share the invite code in your WhatsApp group, and request contributions. Every member pays through Flutterwave checkout. The activity feed shows who paid, how much, and when — in real time, visible to all members." fee="0.15% per contribution" cta="Create a pool" to="/register" color="#00d4aa" side="right" MockupComponent={PoolMockup} />
+        <ProductSection tag="Payment Pools" headline="Ajo, esusu, and group collections, with a live ledger" body="Create a pool, share the invite code in your WhatsApp group, and request contributions. Every member pays through Flutterwave checkout. The activity feed shows who paid, how much, and when, in real time, visible to all members." fee="0.15% per contribution" cta="Create a pool" to="/register" color="#00d4aa" side="right" MockupComponent={PoolMockup} />
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'var(--bg-2)' }}>
-          <ProductSection tag="Payment Links" headline="One link. Card, transfer, or USSD. Automatic records." body="Create a Qreek link in 2 minutes. Share it on WhatsApp or Instagram. Clients open it in the browser, pay through Flutterwave secure checkout, and you get instant confirmation — no bank alert chasing, no manual reconciliation." fee="0.25% per payment" cta="Create a link" to="/register" color="#f5a623" side="left" MockupComponent={LinkMockup} />
+          <ProductSection tag="Payment Links" headline="One link. Card, transfer, or USSD. Automatic records." body="Create a Qreek link in 2 minutes. Share it on WhatsApp or Instagram. Clients open it in the browser, pay through Flutterwave secure checkout, and you get instant confirmation. No bank alert chasing, no manual reconciliation." fee="0.25% per payment" cta="Create a link" to="/register" color="#f5a623" side="left" MockupComponent={LinkMockup} />
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <ProductSection tag="Enterprise Payroll" headline="Pay 500 employees in 4 minutes. 0.2% fee. No subscription." body="Import your employee roster via CSV, review salaries by department, confirm with your PIN, and every salary hits every bank account in parallel. Real-time status per employee. Printable receipt for accounting." fee="0.2% per payroll run" cta="Set up payroll" to="/register" color="#9b59b6" side="right" MockupComponent={PayrollMockup} />

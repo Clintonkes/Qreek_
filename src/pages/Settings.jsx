@@ -154,7 +154,7 @@ export default function Settings() {
       {hasPinFlag === false ? (
         <Section title="Set transaction PIN">
           <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem' }}>
-            You haven't set a transaction PIN yet. Create one — you'll need it to authorise payroll runs and other payments.
+            You haven't set a transaction PIN yet. Create one. You'll need it to authorise payroll runs and other payments.
           </p>
           <form onSubmit={handleSetPin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <Input
@@ -230,7 +230,7 @@ export default function Settings() {
 
       <Section title="Support">
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '0.75rem' }}>
-          Have a question, spotted an issue, or need help with a transaction? Reach us directly — we typically respond within a few hours.
+          Have a question, spotted an issue, or need help with a transaction? Reach us directly. We typically respond within a few hours.
         </p>
         <a
           href="mailto:info@qreekfinance.org"

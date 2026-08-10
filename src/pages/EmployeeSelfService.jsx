@@ -156,7 +156,7 @@ export default function EmployeeSelfService() {
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>{companyName}</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.6 }}>
             {mode === 'invite'
-              ? 'Your employer has invited you to join their payroll system. Fill in your details below — your bank account will be verified in real-time.'
+              ? 'Your employer has invited you to join their payroll system. Fill in your details below. Your bank account will be verified in real-time.'
               : 'Update your payroll information below. Your bank details will be verified in real-time.'}
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function EmployeeSelfService() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-3)', marginTop: '1rem' }}>
-          Secured by Qreek Finance · Your bank details are verified in real-time
+          Secured by Qreek Finance. Your bank details are verified in real-time.
         </p>
       </motion.div>
     </div>

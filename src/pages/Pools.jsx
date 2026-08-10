@@ -142,7 +142,7 @@ export default function Pools() {
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Payment Pools</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
-            Group collections, ajo contributions, and shared payments — all in one pool.
+            Group collections, ajo contributions, and shared payments. All in one pool.
           </p>
         </div>
       </div>

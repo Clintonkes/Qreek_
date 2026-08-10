@@ -238,7 +238,7 @@ export default function EmployeeList() {
         <div>
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>Employee roster</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
-            {employees.filter(e => e.is_active).length} active · Monthly payroll: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalPayroll)}</strong>
+            {employees.filter(e => e.is_active).length} active, monthly payroll: <strong style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{FMT(totalPayroll)}</strong>
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -292,7 +292,7 @@ export default function EmployeeList() {
           <p style={{ fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '1.25rem' }}>
             {company?.invite_link 
               ? 'Share this secure QreekPay link with your team. They can fill in their details and verify their bank accounts directly.'
-              : 'Generate a secure link to invite your team. Employees will fill in their own details — no manual data entry needed.'
+              : 'Generate a secure link to invite your team. Employees will fill in their own details. No manual data entry needed.'
             }
           </p>
           {!company?.invite_link && (
@@ -466,7 +466,7 @@ export default function EmployeeList() {
               {verifiedName && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', background: 'rgba(0,212,170,0.1)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', color: 'var(--teal)', fontSize: '0.85rem' }}>
                   <Check size={16} weight="bold" />
-                  <span><strong>{verifiedName}</strong> — account verified</span>
+                  <span><strong>{verifiedName}</strong>, account verified</span>
                 </div>
               )}
 

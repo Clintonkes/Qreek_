@@ -144,7 +144,7 @@ export default function PayrollRunCreate() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)' }}>Step 1 — Select payroll period</h2>
+              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)' }}>Step 1: Select payroll period</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-2)', display: 'block', marginBottom: '0.35rem' }}>Month</label>
@@ -166,7 +166,7 @@ export default function PayrollRunCreate() {
 
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>Step 2 — Select employees ({selected.length} of {employees.length})</h2>
+              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>Step 2: Select employees ({selected.length} of {employees.length})</h2>
               {loading ? <Spinner size={28} /> : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 'var(--radius) var(--radius) 0 0', border: '1px solid var(--border)', borderBottom: 'none' }}>
@@ -201,7 +201,7 @@ export default function PayrollRunCreate() {
 
           {step === 2 && run && (
             <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>Step 3 — Review & confirm</h2>
+              <h2 style={{ fontSize: '1rem', color: 'var(--text-2)', marginBottom: '1rem' }}>Step 3: Review &amp; confirm</h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 {[['Total gross', FMT(totalGross), 'var(--text)'], [`Fee (${feePercent(QREEK_FEES.payroll)})`, FMT(totalFee), 'var(--red)'], ['Employees receive', FMT(totalNet), 'var(--teal)']].map(([l, v, c]) => (
@@ -226,7 +226,7 @@ export default function PayrollRunCreate() {
                   <Gear size={32} color="var(--amber)" style={{ marginBottom: '0.75rem' }} />
                   <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Set a payroll PIN first</h3>
                   <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-                    You need a payroll transaction PIN to authorise payments. Go to Settings to set one — it's separate from your login PIN.
+                    You need a payroll transaction PIN to authorise payments. Go to Settings to set one. It is separate from your login PIN.
                   </p>
                   <Button onClick={() => navigate('/settings')}>
                     Go to Settings
