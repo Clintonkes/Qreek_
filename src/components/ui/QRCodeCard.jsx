@@ -6,12 +6,20 @@ async function getJsPDF() {
   return jsPDF;
 }
 
-const CARD_W = 400;   // px at 1× scale
-const CARD_H = 520;
-const QR_CSS = 220;
+/* Card dimensions (1× CSS pixels) */
+const CARD_W  = 400;
+const CARD_H  = 460;   // card image height — no button strip drawn on canvas
+const QR_CSS  = 210;
+const BTN_H   = 56;    // native PDF button height below the card image
+const PDF_H   = CARD_H + BTN_H + 16; // total PDF page height
 
 function fmtNgn(v) {
   return v ? `₦${Number(v).toLocaleString('en-NG', { maximumFractionDigits: 0 })}` : '';
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
 }
 
 function rrect(ctx, x, y, w, h, r) {
@@ -25,12 +33,9 @@ function rrect(ctx, x, y, w, h, r) {
 }
 
 /*
- * Draws the full payment card on `canvas`.
- * S = canvas.width / CARD_W — all coordinates scale with it,
- * so the same function works for 1× preview and 2× export.
- *
- * Returns the Y position (in CARD_W units) of the clickable URL strip,
- * so the PDF annotation can be positioned exactly on top of it.
+ * Draws the payment card on `canvas` — without a TAP button strip.
+ * The PDF adds that as a native element below the image so it is
+ * always visible and always correctly positioned.
  */
 async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   const S      = canvas.width / CARD_W;
@@ -42,7 +47,7 @@ async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   const MID    = (CARD_W / 2) * S;
   const QR     = QR_CSS * S;
   const qrX    = ((CARD_W - QR_CSS) / 2) * S;
-  const qrY    = 140 * S;
+  const qrY    = 130 * S;
 
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#ffffff';
@@ -57,25 +62,24 @@ async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   ctx.textAlign    = 'left';
   ctx.font         = `900 ${20 * S}px Arial, sans-serif`;
   ctx.fillStyle    = '#060e1a';
-  ctx.fillText('Qreek', BX, 52 * S);
+  ctx.fillText('Qreek', BX, 50 * S);
   const qw = ctx.measureText('Qreek').width;
   ctx.fillStyle = accent;
-  ctx.fillText('Finance', BX + qw, 52 * S);
+  ctx.fillText('Finance', BX + qw, 50 * S);
 
-  // Link type
   ctx.font      = `700 ${9 * S}px Arial, sans-serif`;
   ctx.fillStyle = accent;
-  ctx.fillText(isPool ? 'POOL COLLECTION' : 'PAYMENT LINK', BX, 72 * S);
+  ctx.fillText(isPool ? 'POOL COLLECTION' : 'PAYMENT LINK', BX, 69 * S);
 
   // Title & amount
   const safeTitle = title.length > 36 ? title.slice(0, 35) + '…' : title;
   ctx.font      = `800 ${15 * S}px Arial, sans-serif`;
   ctx.fillStyle = '#060e1a';
-  ctx.fillText(safeTitle, BX, 98 * S);
+  ctx.fillText(safeTitle, BX, 94 * S);
 
   ctx.font      = `600 ${12 * S}px Arial, sans-serif`;
   ctx.fillStyle = '#888888';
-  ctx.fillText(isFlexible ? 'Flexible amount' : fmtNgn(amount), BX, 120 * S);
+  ctx.fillText(isFlexible ? 'Flexible amount' : fmtNgn(amount), BX, 115 * S);
 
   // QR shadow card
   const pad = 10 * S;
@@ -85,8 +89,8 @@ async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   ctx.fillStyle     = '#f7f7f7';
   rrect(ctx, qrX - pad, qrY - pad, QR + pad * 2, QR + pad * 2, 12 * S);
   ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur  = 0;
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
   ctx.shadowOffsetY = 0;
 
   // QR code
@@ -112,39 +116,22 @@ async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   ctx.textBaseline = 'middle';
   ctx.fillText('Q', cx, cy + Math.round(S));
 
-  // "Scan to pay" label
-  const afterQR = 140 + QR_CSS + 20;
-  ctx.font         = `700 ${11.5 * S}px Arial, sans-serif`;
-  ctx.fillStyle    = '#222222';
+  // Instructions
+  const afterQR = 130 + QR_CSS + 18;
+  ctx.font         = `700 ${11 * S}px Arial, sans-serif`;
+  ctx.fillStyle    = '#333333';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('Scan to pay. No app or account needed.', MID, afterQR * S);
 
-  // ── Tap-to-Pay strip ──
-  // This rectangle becomes the PDF link annotation target.
-  // It is drawn prominently so recipients know to tap it.
-  const stripY = afterQR + 16;   // in CARD_W coordinate units (not scaled)
-  const stripH = 52;
-  ctx.fillStyle   = accent;
-  rrect(ctx, BX, stripY * S, (W - BX * 2), stripH * S, 8 * S);
-  ctx.fill();
-
-  ctx.font         = `900 ${14 * S}px Arial, sans-serif`;
-  ctx.fillStyle    = '#000000';
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('TAP HERE TO PAY  →', MID, (stripY + stripH / 2) * S);
-
-  // URL as small text below strip (for reference / copy-paste)
+  // Payment URL (visible text for reference / Google Lens recognition)
   const displayUrl = url.replace(/^https?:\/\//, '');
-  ctx.font         = `500 ${9 * S}px monospace, Arial`;
+  ctx.font         = `600 ${9.5 * S}px monospace, Arial`;
   ctx.fillStyle    = '#aaaaaa';
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(displayUrl, MID, (stripY + stripH + 16) * S);
+  ctx.fillText(displayUrl, MID, (afterQR + 18) * S);
 
   // Divider
-  const divY = stripY + stripH + 34;
+  const divY = afterQR + 36;
   ctx.strokeStyle = '#eeeeee';
   ctx.lineWidth   = 1 * S;
   ctx.textAlign   = 'left';
@@ -158,42 +145,107 @@ async function renderCard(canvas, { url, title, isPool, isFlexible, amount }) {
   ctx.fillStyle    = '#cccccc';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('Secured by Flutterwave. CBN-licensed processing.', MID, (divY + 20) * S);
+  ctx.fillText('Secured by Flutterwave. CBN-licensed processing.', MID, (divY + 18) * S);
 
   // Bottom accent stripe
   ctx.fillStyle = accent;
   ctx.fillRect(0, H - 8 * S, W, 8 * S);
-
-  // Return strip geometry in CARD_W-unit coordinates for PDF annotation
-  return { stripY, stripH, stripX: 28, stripW: CARD_W - 56 };
 }
 
 /*
- * ── PDF Download ────────────────────────────────────────────────────────────
+ * ── PDF Download ─────────────────────────────────────────────────────────────
+ *
+ * Fix    : TAP HERE TO PAY is now a native jsPDF rectangle + text element
+ *          drawn BELOW the card image — not pixels embedded in the JPEG.
+ * Error  : The button was drawn on the canvas and baked into the JPEG.
+ *          JPEG compression + PDF coordinate-space mismatch meant the button
+ *          was either invisible or its link annotation was offset from it.
+ * Line   : pdf.roundedRect / pdf.text / pdf.link calls below.
+ * Page   : src/components/ui/QRCodeCard.jsx
+ * System : PDF opened on phone, user saw the card but not the button,
+ *          because raster pixels inside a JPEG cannot be interacted with.
+ * Concept: pdf.roundedRect(), pdf.text(), and pdf.link() all operate in the
+ *          same native PDF coordinate space (top-left origin, px units with
+ *          px_scaling hotfix). Every compliant PDF viewer renders and
+ *          hit-tests them in one pass, so the tappable region is always
+ *          exactly where the visible button is drawn.
  */
 async function downloadPdf({ url, title, isPool, isFlexible, amount }) {
-  // Render card at 2× to keep text crisp in the PDF
+  const accent = isPool ? '#f5a623' : '#00d4aa';
+  const [ar, ag, ab] = hexToRgb(accent);
+
+  // Render card at 2× for crisp text
   const c  = document.createElement('canvas');
   c.width  = CARD_W * 2;
   c.height = CARD_H * 2;
-  const strip = await renderCard(c, { url, title, isPool, isFlexible, amount });
+  await renderCard(c, { url, title, isPool, isFlexible, amount });
   const imgData = c.toDataURL('image/jpeg', 0.96);
 
-  // PDF dimensions match card in points (1pt ≈ 1.333px at 96dpi)
   const jsPDF = await getJsPDF();
-  const pdf   = new jsPDF({ unit: 'px', format: [CARD_W, CARD_H], hotfixes: ['px_scaling'] });
+  // Page is slightly taller than the card to hold the native button below
+  const pdf = new jsPDF({ unit: 'px', format: [CARD_W, PDF_H], hotfixes: ['px_scaling'] });
 
-  // Embed the card image
+  // Card image fills the top portion
   pdf.addImage(imgData, 'JPEG', 0, 0, CARD_W, CARD_H);
 
-  // Invisible clickable annotation over the "TAP HERE TO PAY" strip.
-  // jsPDF .link(x, y, w, h, { url }) writes an /Annot /Link /URI entry.
-  // Any PDF viewer on any device will open url when this region is tapped.
-  pdf.link(strip.stripX, strip.stripY, strip.stripW, strip.stripH, { url });
+  // Native PDF button — drawn after the card image so it appears below it
+  const btnX = 28;
+  const btnY = CARD_H + 8;
+  const btnW = CARD_W - 56;
+
+  pdf.setFillColor(ar, ag, ab);
+  pdf.roundedRect(btnX, btnY, btnW, BTN_H, 8, 8, 'F');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(15);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('TAP HERE TO PAY  →', CARD_W / 2, btnY + BTN_H / 2 + 5, { align: 'center' });
+
+  // Link annotation sits exactly on top of the native button — always aligned
+  pdf.link(btnX, btnY, btnW, BTN_H, { url });
 
   pdf.save(`qreek-pay-${isPool ? 'pool' : 'link'}.pdf`);
 }
 
+/* ── Share via native share sheet (mobile) ── */
+async function shareCard({ url, title, isPool, isFlexible, amount }) {
+  const c  = document.createElement('canvas');
+  c.width  = CARD_W * 2;
+  c.height = CARD_H * 2;
+  await renderCard(c, { url, title, isPool, isFlexible, amount });
+  const imgData = c.toDataURL('image/jpeg', 0.96);
+
+  const accent = isPool ? '#f5a623' : '#00d4aa';
+  const [ar, ag, ab] = hexToRgb(accent);
+
+  const jsPDF = await getJsPDF();
+  const pdf   = new jsPDF({ unit: 'px', format: [CARD_W, PDF_H], hotfixes: ['px_scaling'] });
+  pdf.addImage(imgData, 'JPEG', 0, 0, CARD_W, CARD_H);
+
+  const btnX = 28, btnY = CARD_H + 8, btnW = CARD_W - 56;
+  pdf.setFillColor(ar, ag, ab);
+  pdf.roundedRect(btnX, btnY, btnW, BTN_H, 8, 8, 'F');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(15);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('TAP HERE TO PAY  →', CARD_W / 2, btnY + BTN_H / 2 + 5, { align: 'center' });
+  pdf.link(btnX, btnY, btnW, BTN_H, { url });
+
+  const blob = pdf.output('blob');
+  const file = new File([blob], 'qreek-payment-card.pdf', { type: 'application/pdf' });
+
+  if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title: `Pay ${title} via Qreek` });
+  } else {
+    // Desktop: just download
+    const href = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = href;
+    a.download = 'qreek-payment-card.pdf';
+    a.click();
+    URL.revokeObjectURL(href);
+  }
+}
 
 export default function QRCodeCard({ url, title, isPool, isFlexible, amount }) {
   const previewRef = useRef(null);
@@ -209,64 +261,45 @@ export default function QRCodeCard({ url, title, isPool, isFlexible, amount }) {
     renderCard(canvas, data);
   }, [url, title, isPool, isFlexible, amount]);
 
-  const handleDownloadPdf = async () => {
+  const handleDownload = async () => {
     setBusy(true);
     try { await downloadPdf(data); }
     finally { setBusy(false); }
   };
 
-  // Native share sheet (mobile): sends the PDF file via any app the user picks.
-  // WhatsApp receives it as a document with the clickable link inside.
   const handleShare = async () => {
     setBusy(true);
-    try {
-      const c  = document.createElement('canvas');
-      c.width  = CARD_W * 2;
-      c.height = CARD_H * 2;
-      await renderCard(c, data);
-      const imgData = c.toDataURL('image/jpeg', 0.96);
-
-      const jsPDF = await getJsPDF();
-      const pdf   = new jsPDF({ unit: 'px', format: [CARD_W, CARD_H], hotfixes: ['px_scaling'] });
-      pdf.addImage(imgData, 'JPEG', 0, 0, CARD_W, CARD_H);
-      // Strip geometry matches renderCard's stripY = afterQR+16 = (140+220+20)+16 = 396
-      pdf.link(28, 396, CARD_W - 56, 52, { url });
-
-      const pdfBlob = pdf.output('blob');
-      const file    = new File([pdfBlob], 'qreek-payment-card.pdf', { type: 'application/pdf' });
-
-      if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Pay ${title} via Qreek` });
-      } else {
-        // Desktop fallback: just download the PDF
-        const href = URL.createObjectURL(pdfBlob);
-        const a    = document.createElement('a');
-        a.href     = href;
-        a.download = 'qreek-payment-card.pdf';
-        a.click();
-        URL.revokeObjectURL(href);
-      }
-    } catch (err) {
-      if (err?.name !== 'AbortError') console.warn('Share failed:', err);
-    } finally { setBusy(false); }
+    try { await shareCard(data); }
+    catch (err) { if (err?.name !== 'AbortError') console.warn('Share failed:', err); }
+    finally { setBusy(false); }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
 
-      {/* Preview — clicking the card opens checkout */}
+      {/* Preview — click opens checkout in new tab */}
       <a href={url} target="_blank" rel="noopener noreferrer"
-        title="Click to open payment checkout"
         style={{ display: 'block', width: '100%', borderRadius: 12, overflow: 'hidden',
                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)', cursor: 'pointer',
-                 transition: 'transform 0.2s, box-shadow 0.2s' }}
+                 transition: 'transform 0.18s, box-shadow 0.18s' }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 36px rgba(0,0,0,0.22)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'none';             e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)'; }}>
+        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)'; }}>
         <canvas ref={previewRef} style={{ display: 'block', width: '100%', height: 'auto' }} />
       </a>
 
-      {/* Primary — download the PDF */}
-      <button onClick={handleDownloadPdf} disabled={busy}
+      {/* What the PDF looks like */}
+      <div style={{ width: '100%', background: accent + '18', border: `1px solid ${accent}40`,
+                    borderRadius: 'var(--radius)', padding: '0.65rem 1rem',
+                    display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <span style={{ fontSize: '1.1rem' }}>📄</span>
+        <div style={{ fontSize: '0.76rem', color: 'var(--text-2)', lineHeight: 1.55 }}>
+          The PDF has a <strong style={{ color: accent }}>TAP HERE TO PAY</strong> button below the card.
+          Whoever opens it taps that button — they go straight to your checkout.
+        </div>
+      </div>
+
+      {/* Primary: download PDF */}
+      <button onClick={handleDownload} disabled={busy}
         style={{ width: '100%', background: accent, color: '#000', border: 'none',
                  borderRadius: 'var(--radius)', padding: '0.85rem', cursor: busy ? 'wait' : 'pointer',
                  fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.95rem',
@@ -274,12 +307,12 @@ export default function QRCodeCard({ url, title, isPool, isFlexible, amount }) {
         {busy ? '…' : '↓ Download payment card (PDF)'}
       </button>
 
-      <p style={{ fontSize: '0.72rem', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.65, marginTop: '-0.3rem' }}>
-        Save once. Share to anyone on WhatsApp, Telegram, email, anywhere.<br/>
-        They open it and tap <strong style={{ color: 'var(--text-2)' }}>TAP HERE TO PAY</strong> — no account needed.
+      <p style={{ fontSize: '0.71rem', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.65, marginTop: '-0.3rem' }}>
+        Save once to your phone. Share on WhatsApp, Telegram, email, anywhere.<br />
+        No Qreek account needed to pay.
       </p>
 
-      {/* Secondary — native share sheet on mobile */}
+      {/* Secondary: native share sheet */}
       <button onClick={handleShare} disabled={busy}
         style={{ width: '100%', background: 'var(--surface-2)', color: 'var(--text-1)',
                  border: '1px solid var(--border)', borderRadius: 'var(--radius)',
