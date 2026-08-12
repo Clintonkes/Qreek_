@@ -178,6 +178,39 @@ export default function PublicPayment() {
       });
   }, [code, redirectedReference, redirectedStatus, redirectedTransactionId]);
 
+  // Recovery path: Flutterwave's hosted checkout page can lose its state and never
+  // complete its redirect back to us — e.g. a mobile browser backgrounded to finish a
+  // bank transfer, then resumed to a blank page. If we stashed a pending reference
+  // before navigating away, use it to recover on return instead of just showing the pay
+  // form again. The status endpoint reconciles directly with Flutterwave if still pending.
+  useEffect(() => {
+    if (redirectedTransactionId || redirectedReference) return;
+    const pendingRef = sessionStorage.getItem(`qreek:flw:${code}`);
+    if (!pendingRef) return;
+
+    setPaying(true);
+    getLinkPaymentStatus(code, pendingRef)
+      .then(data => {
+        const payment = data.payment || data.transaction || data;
+        setReceipt(payment);
+        setSuccess(true);
+        if (['completed', 'split_settlement'].includes(payment?.payout_status)) {
+          toast.success('Payment and recipient settlement completed!');
+          sessionStorage.removeItem(`qreek:flw:${code}`);
+        } else {
+          toast('Resuming your previous payment. Checking status...');
+        }
+      })
+      .catch(() => {
+        // Stale or unrecoverable reference — drop it and let the payer pay normally.
+        sessionStorage.removeItem(`qreek:flw:${code}`);
+      })
+      .finally(() => {
+        setPaying(false);
+        setLoading(false);
+      });
+  }, [code, redirectedReference, redirectedTransactionId]);
+
   useEffect(() => {
     const txRef = receipt?.reference || redirectedReference;
     const transferDone = receipt?.status === 'completed' && ['completed', 'split_settlement'].includes(receipt?.payout_status);
@@ -375,7 +408,11 @@ export default function PublicPayment() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
       <Spinner size={40} />
       <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
-        {redirectedTransactionId || redirectedReference ? 'Confirming your payment…' : 'Opening payment checkout…'}
+        {redirectedTransactionId || redirectedReference
+          ? 'Confirming your payment…'
+          : sessionStorage.getItem(`qreek:flw:${code}`)
+            ? 'Checking your payment status…'
+            : 'Opening payment checkout…'}
       </p>
     </div>
   );

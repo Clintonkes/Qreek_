@@ -111,7 +111,7 @@ export default function LinkSettlements() {
                 <tr style={{ background: 'var(--surface-2)' }}>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Reference</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Payer</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Amount received</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Qreek Fee</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
@@ -124,7 +124,7 @@ export default function LinkSettlements() {
                     <tr style={{ borderBottom: selectedPayment?.reference === p.reference ? 'none' : '1px solid var(--border)' }}>
                       <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{p.reference}</td>
                       <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.payer_name || p.payer_phone || '-'}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.checkout_amount || p.amount)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{FMT(p.recipient_settled_amount ?? p.recipient_amount ?? p.net)}</td>
                       <td style={{ padding: '0.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{FMT(p.fee || p.qreek_fee)}</td>
                       <td style={{ padding: '0.5rem' }}>{statusLabel(p)}</td>
                       <td style={{ padding: '0.5rem', fontSize: '0.75rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
@@ -174,6 +174,7 @@ export default function LinkSettlements() {
               <DetailItem label="Payer" value={selectedPayment.payer_name || selectedPayment.payer_phone || '-'} />
               <DetailItem label="Checkout amount" value={FMT(selectedPayment.checkout_amount || selectedPayment.amount)} />
               <DetailItem label="Recipient amount" value={FMT(selectedPayment.recipient_amount || selectedPayment.net)} />
+              <DetailItem label="Amount settled" value={FMT(selectedPayment.recipient_settled_amount ?? selectedPayment.recipient_amount ?? selectedPayment.net)} />
               <DetailItem label="Qreek fee" value={FMT(selectedPayment.fee || selectedPayment.qreek_fee)} />
               <DetailItem label="Provider fee" value={FMT(selectedPayment.provider_fee)} />
               <DetailItem label="Status" value={statusLabel(selectedPayment)} />
