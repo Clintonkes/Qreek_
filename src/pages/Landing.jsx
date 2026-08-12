@@ -791,7 +791,7 @@ function Footer() {
         ))}
         <Link to="/register" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Sign up</Link>
         <Link to="/login"    style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Log in</Link>
-        <span>support@qreekfinance.org</span>
+        <a href="mailto:info@qreekfinance.org" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>info@qreekfinance.org</a>
         <span>© 2026 Qreek Finance</span>
       </div>
     </footer>

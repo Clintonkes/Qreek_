@@ -130,7 +130,7 @@ export default function Login() {
                 Too many failed PIN attempts. Your account has been locked for security. Contact support to regain access.
               </p>
             </div>
-            <a href="mailto:support@qreekfinance.org" style={{ background: 'var(--red)', color: '#fff', padding: '0.65rem 1.5rem', borderRadius: 'var(--radius)', fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none' }}>
+            <a href="mailto:info@qreekfinance.org" style={{ background: 'var(--red)', color: '#fff', padding: '0.65rem 1.5rem', borderRadius: 'var(--radius)', fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none' }}>
               Contact support
             </a>
             <Link to="/forgot-pin" style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Try reset PIN instead</Link>

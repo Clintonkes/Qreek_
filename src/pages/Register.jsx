@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
-import { register } from '../api/auth.js';
+import { register, checkPhoneAvailable } from '../api/auth.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import PhoneInput from '../components/ui/PhoneInput.jsx';
@@ -58,13 +58,14 @@ export default function Register() {
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', pin: '', confirmPin: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: '' }));
   };
 
-  const nextStep = (e) => {
+  const nextStep = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.firstName.trim()) errs.firstName = 'First name required';
@@ -80,6 +81,22 @@ export default function Register() {
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
+    }
+
+    // Catch a duplicate phone here, before the user goes on to set a PIN, instead of
+    // only discovering it after the full form is submitted.
+    setCheckingPhone(true);
+    try {
+      const { available } = await checkPhoneAvailable(formatPhoneNumber(form.phone) || form.phone);
+      if (!available) {
+        setErrors({ phone: 'This phone number is already registered.' });
+        return;
+      }
+    } catch {
+      // Availability check is a convenience — if it fails, let registration proceed
+      // and surface the duplicate (if any) on final submit as before.
+    } finally {
+      setCheckingPhone(false);
     }
     setStep(2);
   };
@@ -178,7 +195,7 @@ export default function Register() {
               error={errors.phone}
               hint="International format: include country code (e.g., +1234567890)"
             />
-            <Button type="submit" fullWidth>Continue →</Button>
+            <Button type="submit" fullWidth loading={checkingPhone}>Continue →</Button>
           </form>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

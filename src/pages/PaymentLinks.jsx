@@ -14,7 +14,6 @@ import QRCodeCard from '../components/ui/QRCodeCard.jsx';
 import { getLinks, createLink, deleteLink, updateLink, verifyBankAccount } from '../api/paymentLinks.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import { getBanks } from '../api/payroll.js';
-import { me } from '../api/auth.js';
 import { QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -45,9 +44,8 @@ function DetailItem({ label, value, wide = false }) {
  * @param {Array} props.banks - List of supported banks for deposit routing.
  * @param {Function} props.onCreated - Callback triggered after a link is successfully created.
  */
-function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, savedBank }) {
+function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated }) {
   const isEdit = !!editing;
-  const navigate = useNavigate();
   const [form, setForm]   = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
   const [flexible, setFlexible] = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -96,16 +94,10 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
     if (!form.description.trim())  { toast.error('Description required.'); return; }
     if (!flexible && (!form.amount || +form.amount <= 0)) { toast.error('Enter a fixed amount or enable flexible.'); return; }
 
-    // For new personal links, require a saved bank on the profile — no bank fields in the form.
-    if (!isEdit && !savedBank?.bank_account) {
-      toast.error('Save your bank account in Settings before creating a payment link.');
-      onClose();
-      navigate('/settings');
-      return;
-    }
-
+    // Creating a link always requires the destination bank account; editing only requires
+    // it when the user is actively changing the bank (fields left blank keep the current one).
     const hasBankChange = Boolean(form.bank_account.trim() || form.bank_code);
-    if (isEdit && hasBankChange) {
+    if (!isEdit || hasBankChange) {
       if (!/^\d{10}$/.test(form.bank_account)) { toast.error('Enter a valid 10 digit account number.'); return; }
       if (!form.bank_code) { toast.error('Select a bank.'); return; }
     }
@@ -113,7 +105,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
     setSaving(true);
     try {
       let verifiedAccountName = '';
-      if (isEdit && hasBankChange) {
+      if (!isEdit || hasBankChange) {
         const verified = await verifyBankAccount({
           bank_account: form.bank_account,
           bank_code: form.bank_code,
@@ -127,8 +119,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
         expires_days: form.expires_days ? +form.expires_days : undefined,
         provider: 'flutterwave',
       };
-      // For edits only: send bank fields if the user filled them in (triggers subaccount recreation).
-      if (isEdit && hasBankChange) {
+      if (!isEdit || hasBankChange) {
         payload.bank_account = form.bank_account;
         payload.bank_code = form.bank_code;
       }
@@ -137,7 +128,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
         toast.success(verifiedAccountName ? `Payment link updated. Verified: ${verifiedAccountName}` : 'Payment link updated!');
       } else {
         await createLink(payload);
-        toast.success('Payment link created!');
+        toast.success(verifiedAccountName ? `Payment link created! Verified: ${verifiedAccountName}` : 'Payment link created!');
         setForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '', expires_days: '' });
         onCreated();
       }
@@ -148,8 +139,6 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
       setSaving(false);
     }
   };
-
-  const hasSavedBank = Boolean(savedBank?.bank_account);
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Edit payment link' : 'Create payment link'} maxWidth={520}>
@@ -194,48 +183,39 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
           </div>
         )}
 
-        {/* For new personal links: show the saved bank that will receive payments. */}
-        {!isEdit && (
-          hasSavedBank ? (
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-display)', marginBottom: '0.1rem' }}>Payments settle to</div>
-              <div style={{ color: 'var(--text)', fontWeight: 600 }}>{savedBank.bank_name || 'Saved bank'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-2)' }}>****{(savedBank.bank_account || '').slice(-4)}</div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>To change your bank account, go to <button onClick={() => { onClose(); navigate('/settings'); }} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>Settings</button>.</div>
-            </div>
-          ) : (
-            <div style={{ background: 'rgba(255,71,87,0.08)', border: '1px solid rgba(255,71,87,0.25)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--text-2)' }}>
-              You need to save your bank account before creating a payment link.{' '}
-              <button onClick={() => { onClose(); navigate('/settings'); }} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: 'inherit', padding: 0, textDecoration: 'underline' }}>Go to Settings</button>
-            </div>
-          )
-        )}
-
-        {/* For edits: bank fields are optional — fill them to change the destination bank. */}
-        {isEdit && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="New account number (optional)" value={form.bank_account} onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }} onBlur={verifyBank} placeholder="Leave blank to keep current" style={{ fontFamily: 'var(--font-mono)' }} />
-            <BankSelect
-              label="New bank (optional)"
-              banks={banks}
-              value={form.bank_code}
-              onChange={value => {
-                set('bank_code', value);
-                setBankStatus({ state: 'idle', name: '' });
-                if (/^\d{10}$/.test(form.bank_account) && value) {
-                  verifyBank({ bank_account: form.bank_account, bank_code: value });
-                }
-              }}
-              hint="Leave blank to keep current bank."
-            />
-            <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
-              {bankStatus.state === 'checking' && 'Verifying bank account...'}
-              {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
-              {bankStatus.state === 'failed' && 'Bank account could not be verified.'}
-              {bankStatus.state === 'idle' && (editing?.bank_name ? `Current bank: ${editing.bank_name}${editing.bank_account ? ` (****${editing.bank_account.slice(-4)})` : ''}. Fill both fields above to change.` : 'Fill both fields to change the destination bank.')}
-            </div>
+        {/* Destination bank account: required to create a link, verified with Flutterwave before saving.
+            On edit, fields are optional — leave blank to keep the current bank. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label={isEdit ? 'New account number (optional)' : 'Account number *'}
+            value={form.bank_account}
+            onChange={e => { set('bank_account', e.target.value.replace(/\D/g, '').slice(0, 10)); setBankStatus({ state: 'idle', name: '' }); }}
+            onBlur={verifyBank}
+            placeholder={isEdit ? 'Leave blank to keep current' : '0123456789'}
+            style={{ fontFamily: 'var(--font-mono)' }}
+          />
+          <BankSelect
+            label={isEdit ? 'New bank (optional)' : 'Bank *'}
+            banks={banks}
+            value={form.bank_code}
+            onChange={value => {
+              set('bank_code', value);
+              setBankStatus({ state: 'idle', name: '' });
+              if (/^\d{10}$/.test(form.bank_account) && value) {
+                verifyBank({ bank_account: form.bank_account, bank_code: value });
+              }
+            }}
+            hint={isEdit ? 'Leave blank to keep current bank.' : undefined}
+          />
+          <div style={{ gridColumn: '1 / -1', fontSize: '0.76rem', color: bankStatus.state === 'verified' ? 'var(--green)' : bankStatus.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
+            {bankStatus.state === 'checking' && 'Verifying bank account...'}
+            {bankStatus.state === 'verified' && `Verified: ${bankStatus.name}`}
+            {bankStatus.state === 'failed' && 'Bank account could not be verified.'}
+            {bankStatus.state === 'idle' && (isEdit
+              ? (editing?.bank_name ? `Current bank: ${editing.bank_name}${editing.bank_account ? ` (****${editing.bank_account.slice(-4)})` : ''}. Fill both fields above to change.` : 'Fill both fields to change the destination bank.')
+              : 'This is where payments from this link will be sent.')}
           </div>
-        )}
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <Input label="Expires in days (optional)" type="number" value={form.expires_days} onChange={e => set('expires_days', e.target.value)} placeholder="30" />
@@ -243,7 +223,7 @@ function CreateLinkModal({ open, onClose, banks, onCreated, editing, onUpdated, 
 
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || (!isEdit && !hasSavedBank)}>{saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save changes' : 'Create link')}</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save changes' : 'Create link')}</Button>
         </div>
       </div>
     </Modal>
@@ -396,7 +376,6 @@ export default function PaymentLinks() {
   const navigate = useNavigate();
   const [links,    setLinks]    = useState([]);
   const [banks,    setBanks]    = useState([]);
-  const [savedBank, setSavedBank] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [linksLoaded, setLinksLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -407,11 +386,10 @@ export default function PaymentLinks() {
   const load = () => {
     setLoading(true);
     setLinksLoaded(false);
-    Promise.all([getLinks(), getBanks(), me()])
-      .then(([ld, bd, profile]) => {
+    Promise.all([getLinks(), getBanks()])
+      .then(([ld, bd]) => {
         setLinks(ld.links || []);
         setBanks(bd.banks || []);
-        setSavedBank(profile || null);
       })
       .finally(() => {
         setLoading(false);
@@ -514,7 +492,6 @@ export default function PaymentLinks() {
         onCreated={load}
         editing={editingLink}
         onUpdated={handleUpdated}
-        savedBank={savedBank}
       />
     </AppShell>
   );

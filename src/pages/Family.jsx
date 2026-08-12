@@ -22,7 +22,6 @@ import {
   joinFamily,
 } from '../api/family.js';
 import { verifyBankAccount } from '../api/paymentLinks.js';
-import useAuthStore from '../store/authStore.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 
 const FMT = v => `₦${(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -83,7 +82,6 @@ const MemoFamilyCard = memo(FamilyCard, (prev, next) => prev.family === next.fam
 export default function Family() {
   const navigate = useNavigate();
   const { familyId } = useParams();
-  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(!!familyId);
   const [families, setFamilies] = useState([]);
@@ -104,12 +102,12 @@ export default function Family() {
 
   const [createForm, setCreateForm] = useState({ name: '', description: '' });
   const [joinCode, setJoinCode] = useState('');
-  const [linkForm, setLinkForm] = useState({ title: '', description: '', amount: '' });
+  const [linkForm, setLinkForm] = useState({ title: '', description: '', amount: '', bank_account: '', bank_code: '' });
   const [requestForm, setRequestForm] = useState({ title: '', amount: '', due_date: '', note: '' });
   const [transferForm, setTransferForm] = useState({ beneficiary_name: '', beneficiary_phone: '', amount: '', bank_account: '', bank_code: '', note: '' });
   const [bankCheck, setBankCheck] = useState({ state: 'idle', name: '' });
+  const [linkBankCheck, setLinkBankCheck] = useState({ state: 'idle', name: '' });
 
-  const hasBankDetails = !!user?.bank_account && !!user?.bank_code;
   const selectedFamily = useMemo(() => familyData?.family || families.find(f => f.id === familyId) || null, [familyData?.family, families, familyId]);
 
   const refreshFamilies = async () => {
@@ -196,26 +194,45 @@ export default function Family() {
     }
   };
 
+  const verifyLinkBank = async (override = {}) => {
+    const bankAccount = override.bank_account ?? linkForm.bank_account;
+    const bankCode = override.bank_code ?? linkForm.bank_code;
+    if (!bankAccount || !bankCode || !/^\d{10}$/.test(bankAccount)) {
+      setLinkBankCheck({ state: 'idle', name: '' });
+      return;
+    }
+    setLinkBankCheck({ state: 'checking', name: '' });
+    try {
+      const verified = await verifyBankAccount({ bank_account: bankAccount, bank_code: bankCode });
+      setLinkBankCheck({ state: 'verified', name: verified?.account_name || '' });
+    } catch {
+      setLinkBankCheck({ state: 'failed', name: '' });
+    }
+  };
+
   const handleCreateLink = async (e) => {
     e.preventDefault();
     if (!selectedFamily?.id) return;
-    if (!hasBankDetails) return toast.error('Set your bank details in Settings before creating a family link.');
     if (!linkForm.title.trim()) return toast.error('Link title is required.');
     if (!linkForm.description.trim()) return toast.error('Link description is required.');
     if (linkForm.amount && +linkForm.amount <= 0) return toast.error('Amount must be greater than zero.');
+    if (!/^\d{10}$/.test(linkForm.bank_account)) return toast.error('Enter a valid 10 digit account number.');
+    if (!linkForm.bank_code) return toast.error('Select a bank.');
     try {
+      await verifyBankAccount({ bank_account: linkForm.bank_account, bank_code: linkForm.bank_code });
       const link = await createLink({
         title: linkForm.title.trim(),
         description: linkForm.description.trim(),
         amount: linkForm.amount ? +linkForm.amount : null,
-        bank_account: user.bank_account,
-        bank_code: user.bank_code,
+        bank_account: linkForm.bank_account,
+        bank_code: linkForm.bank_code,
         family_id: selectedFamily.id,
         provider: 'flutterwave',
       });
       toast.success('Family payment link created.');
       setShowLink(false);
-      setLinkForm({ title: '', description: '', amount: '' });
+      setLinkForm({ title: '', description: '', amount: '', bank_account: '', bank_code: '' });
+      setLinkBankCheck({ state: 'idle', name: '' });
       await refreshDetail(selectedFamily.id);
       if (link?.link?.code) window.open(`${window.location.origin}/p/${link.link.code}`, '_blank', 'noreferrer');
     } catch (err) {
@@ -668,20 +685,34 @@ export default function Family() {
 
       <Modal open={showLink} onClose={() => setShowLink(false)} title="Create family contribution link" maxWidth={520}>
         <form onSubmit={handleCreateLink} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {!hasBankDetails && (
-            <div style={{ background: 'var(--amber-faint)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 'var(--radius)', padding: '0.85rem', fontSize: '0.84rem', color: 'var(--text-2)' }}>
-              Set your bank details in Settings before creating a family link.
-            </div>
-          )}
           <Input label="Link title *" value={linkForm.title} onChange={e => setLinkForm(f => ({ ...f, title: e.target.value }))} placeholder={`${family?.name || 'Family'} contributions`} />
           <Input label="Description *" value={linkForm.description} onChange={e => setLinkForm(f => ({ ...f, description: e.target.value }))} placeholder="Contribute for school fees, rent, or emergencies." />
           <Input label="Fixed amount (optional)" type="number" value={linkForm.amount} onChange={e => setLinkForm(f => ({ ...f, amount: e.target.value }))} placeholder="Leave blank for flexible amount" />
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
-            This link will use your stored bank details: <strong>{user?.bank_name || 'No bank saved'}</strong>.
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Account number *" value={linkForm.bank_account} onChange={e => { setLinkForm(f => ({ ...f, bank_account: e.target.value.replace(/\D/g, '').slice(0, 10) })); setLinkBankCheck({ state: 'idle', name: '' }); }} onBlur={verifyLinkBank} placeholder="0123456789" style={{ fontFamily: 'var(--font-mono)' }} />
+            <BankSelect
+              label="Bank *"
+              banks={banks}
+              value={linkForm.bank_code}
+              onChange={value => {
+                setLinkForm(f => ({ ...f, bank_code: value }));
+                setLinkBankCheck({ state: 'idle', name: '' });
+                if (/^\d{10}$/.test(linkForm.bank_account) && value) {
+                  verifyLinkBank({ bank_account: linkForm.bank_account, bank_code: value });
+                }
+              }}
+              hint="Payments into this link settle here. Verified before saving."
+            />
+          </div>
+          <div style={{ fontSize: '0.76rem', color: linkBankCheck.state === 'verified' ? 'var(--green)' : linkBankCheck.state === 'failed' ? 'var(--red)' : 'var(--text-3)' }}>
+            {linkBankCheck.state === 'checking' && 'Verifying bank account...'}
+            {linkBankCheck.state === 'verified' && `Verified: ${linkBankCheck.name}`}
+            {linkBankCheck.state === 'failed' && 'Bank account could not be verified.'}
+            {linkBankCheck.state === 'idle' && 'Bank account will be verified before saving.'}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
             <Button variant="secondary" onClick={() => setShowLink(false)}>Cancel</Button>
-            <Button type="submit" disabled={!hasBankDetails}>Create link</Button>
+            <Button type="submit">Create link</Button>
           </div>
         </form>
       </Modal>

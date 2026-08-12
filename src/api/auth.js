@@ -8,6 +8,15 @@ import client from './client.js';
 export const register = (data) => client.post('/auth/register', data).then(r => r.data);
 
 /**
+ * Fast phone-availability check, used right after the identity step of registration
+ * so a duplicate number is caught before the user goes on to set a PIN.
+ * @param {string} phone - Phone number to check (any format; normalized server-side).
+ * @returns {Promise<{available: boolean}>}
+ */
+export const checkPhoneAvailable = (phone) =>
+  client.get('/auth/check-phone', { params: { phone } }).then(r => r.data);
+
+/**
  * Login API.
  * @param {Object} data - Login credentials (phone, password).
  * @returns {Promise<Object>} The authenticated user data and tokens.
