@@ -28,8 +28,8 @@ export default function LandingNav() {
 
   return (
     <>
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: scrolled ? 'rgba(6,14,26,0.93)' : 'transparent', backdropFilter: scrolled ? 'blur(24px) saturate(180%)' : 'none', borderBottom: scrolled ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'all 0.35s ease', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => goTo('hero')} style={{ ...baseBtn, fontSize: '1.15rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em', padding: 0 }}>
+      <nav className="landing-nav" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: scrolled ? 'rgba(6,14,26,0.93)' : 'transparent', backdropFilter: scrolled ? 'blur(24px) saturate(180%)' : 'none', borderBottom: scrolled ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'all 0.35s ease', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+        <button className="nav-mark" onClick={() => goTo('hero')} style={{ ...baseBtn, fontSize: '1.15rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em', padding: 0, whiteSpace: 'nowrap', flexShrink: 0 }}>
           Qreek<span style={{ color: '#00d4aa' }}>Finance</span>
         </button>
 
@@ -41,9 +41,10 @@ export default function LandingNav() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Link to="/login" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.45rem 0.9rem', borderRadius: 8 }}>Sign in</Link>
-          <Link to="/register" style={{ background: '#00d4aa', color: '#000', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 800, padding: '0.45rem 1.1rem', borderRadius: 8, fontFamily: 'var(--font-display)' }}>Get started</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          {/* Sign in is hidden on narrow phones — it stays reachable in the menu below */}
+          <Link className="nav-signin" to="/login" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, padding: '0.45rem 0.9rem', borderRadius: 8, whiteSpace: 'nowrap' }}>Sign in</Link>
+          <Link className="nav-cta" to="/register" style={{ background: '#00d4aa', color: '#000', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 800, padding: '0.45rem 1.1rem', borderRadius: 8, fontFamily: 'var(--font-display)', whiteSpace: 'nowrap' }}>Get started</Link>
           <button className="mobile-menu-btn" onClick={() => setMenuOpen(o => !o)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', color: 'var(--text-2)', alignItems: 'center' }}>

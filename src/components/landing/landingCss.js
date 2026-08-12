@@ -58,6 +58,15 @@ export const GLOBAL_CSS = `
     .rail-track       { padding: 0 1.25rem 1.25rem !important; }
   }
 
+  /* Narrow phones: the wordmark, Sign in, Get started and the menu button no
+     longer fit on one line, so Sign in drops to the menu and the rest shrink. */
+  @media (max-width: 560px) {
+    .landing-nav { padding: 0 1rem !important; }
+    .nav-mark    { font-size: 1rem !important; }
+    .nav-signin  { display: none !important; }
+    .nav-cta     { font-size: 0.8rem !important; padding: 0.42rem 0.85rem !important; }
+  }
+
   @media (max-width: 480px) {
     .price-row   { grid-template-columns: 1fr !important; }
     .footer-cols { grid-template-columns: 1fr !important; }

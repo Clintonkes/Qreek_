@@ -99,7 +99,9 @@ export default function ModeSwitcher() {
           })}
         </div>
 
-        <div className="modes-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem', alignItems: 'start' }} key={mode.name}>
+        {/* stretch, not start: the photo fills the row so it stays level with the
+            copy column instead of leaving dead space beneath it */}
+        <div className="modes-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem', alignItems: 'stretch' }} key={mode.name}>
 
           <div style={{ animation: 'fadeUp 0.45s ease both' }}>
             <div style={{ color: mode.color, fontSize: '0.7rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>{mode.kicker}</div>
@@ -129,15 +131,15 @@ export default function ModeSwitcher() {
           {/* Photograph for the active mode, with the flow chain across its base */}
           <Photo
             slot={mode.slot}
-            ratio="4 / 3"
+            ratio="auto"
             scrim="panel"
             accent={mode.color}
             radius={20}
             sizes="(max-width: 768px) 100vw, 560px"
-            style={{ border: `1px solid ${mode.color}38`, boxShadow: `0 30px 80px ${mode.color}14`, animation: 'fadeUp 0.45s 0.08s ease both' }}
+            style={{ height: '100%', minHeight: 420, border: `1px solid ${mode.color}38`, boxShadow: `0 30px 80px ${mode.color}14`, animation: 'fadeUp 0.45s 0.08s ease both' }}
           >
-            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '1.1rem 1.25rem', background: 'linear-gradient(180deg, transparent, rgba(6,14,26,0.92))' }}>
-              <div style={{ fontSize: '0.66rem', color: 'var(--text-3)', marginBottom: '0.45rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Flow</div>
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '2.75rem 1.25rem 1.1rem', background: 'linear-gradient(180deg, transparent, rgba(6,14,26,0.82) 42%, rgba(6,14,26,0.97))' }}>
+              <div style={{ fontSize: '0.66rem', color: 'var(--text-2)', marginBottom: '0.45rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Flow</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                 {mode.path.map((step, i) => {
                   const last = i === mode.path.length - 1;
