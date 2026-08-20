@@ -14,8 +14,9 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions } from '../api/paymentLinks.js';
+import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock, CreditCard } from 'phosphor-react';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards } from '../api/paymentLinks.js';
+import { getSavedCards } from '../api/cards.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -23,6 +24,7 @@ import PhoneInput from '../components/ui/PhoneInput.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import { formatPhoneNumber } from '../lib/utils.js';
 import { getCheckoutUrl, getTransactionReference, PAYMENT_PROVIDER, QREEK_FEES, calculateFee, feePercent } from '../lib/payments.js';
+import useAuthStore from '../store/authStore.js';
 import { toast } from 'react-hot-toast';
 
 function timeRemaining(expiresAt) {
@@ -101,6 +103,22 @@ export default function PublicPayment() {
   const [activeTab, setActiveTab] = useState('pay');
   const [paymentError, setPaymentError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const [savedCards, setSavedCards] = useState([]);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [saveCardOptIn, setSaveCardOptIn] = useState(false);
+  const [chargingCard, setChargingCard] = useState(false);
+  const [otpPrompt, setOtpPrompt] = useState(null); // { tx_ref, flw_ref } — the card issuer's charge OTP
+  const [otpValue, setOtpValue] = useState('');
+  const [validatingOtp, setValidatingOtp] = useState(false);
+
+  // Guest saved-card access: a payer who isn't logged in proves they own a
+  // phone number that has saved cards, without a full Qreek login.
+  const [guestCardStage, setGuestCardStage] = useState('idle'); // idle | otp_sent | verified
+  const [checkoutToken, setCheckoutToken] = useState(null);
+  const [requestingCardOtp, setRequestingCardOtp] = useState(false);
+  const [verifyingCardOtp, setVerifyingCardOtp] = useState(false);
+  const [cardOtpValue, setCardOtpValue] = useState('');
 
   useEffect(() => {
     const i = setInterval(() => setNow(Date.now()), 30000);
@@ -124,6 +142,23 @@ export default function PublicPayment() {
       .catch(err => setError(getUserFriendlyError(err, 'This payment link is invalid or has expired.')))
       .finally(() => setLoading(false));
   }, [code]);
+
+  // Saved cards only exist for payers who are actually logged into Qreek — an
+  // anonymous payer typing a name/phone into this public form never gets one.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSavedCards([]);
+      return;
+    }
+    getSavedCards()
+      .then(data => {
+        const cards = data.cards || [];
+        setSavedCards(cards);
+        const preferred = cards.find(c => c.is_default) || cards[0];
+        if (preferred) setSelectedCardId(preferred.id);
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!(link?.pool_id || link?.family_id) || activeTab !== 'ledger') return;
@@ -156,12 +191,15 @@ export default function PublicPayment() {
     if (!redirectedTransactionId && !redirectedReference) return;
 
     setPaying(true);
+    const wantedToSaveCard = sessionStorage.getItem(`qreek:savecard:${code}`) === '1';
     confirmFlutterwaveLinkPayment(code, {
       transaction_id: redirectedTransactionId,
       tx_ref: redirectedReference,
       status: redirectedStatus,
+      save_card: wantedToSaveCard,
     })
       .then(data => {
+        sessionStorage.removeItem(`qreek:savecard:${code}`);
         setReceipt(data.payment || data.transaction || data);
         setSuccess(true);
         const payment = data.payment || data.transaction || data;
@@ -308,6 +346,7 @@ export default function PublicPayment() {
       } else if (checkoutUrl) {
         const reference = getTransactionReference(response);
         if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
+        sessionStorage.setItem(`qreek:savecard:${code}`, isAuthenticated && saveCardOptIn ? '1' : '0');
         sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
           checkout_amount: response.checkout_amount,
           recipient_amount: response.recipient_amount || response.net,
@@ -330,6 +369,109 @@ export default function PublicPayment() {
       setPaymentError(failureMessage);
       toast.error(failureMessage);
       setPaying(false);
+    }
+  };
+
+  /**
+   * handlePayWithSavedCard - One-tap payment using a token saved on a previous
+   * checkout. No redirect to Flutterwave's hosted page. May come back asking
+   * for a one-time code (Nigerian cards typically require this step-up even on
+   * a saved card), in which case otpPrompt takes over the screen.
+   */
+  const handlePayWithSavedCard = async () => {
+    if (!selectedCardId) return;
+    const amount = link.is_flexible ? +form.amount : link.amount;
+    if (link.is_flexible && (!amount || amount < 100)) return toast.error('Minimum payment is ₦100.');
+    const description = form.note.trim() || link.description || link.title;
+
+    setPaymentError('');
+    setChargingCard(true);
+    try {
+      const response = await chargeSavedCard(code, {
+        card_id: selectedCardId,
+        amount: link.is_flexible ? amount : undefined,
+        payment_description: description,
+        checkout_token: checkoutToken || undefined,
+      });
+      if (response.requires_otp) {
+        setOtpPrompt({ tx_ref: response.tx_ref, flw_ref: response.flw_ref });
+        return;
+      }
+      const payment = response.payment || response.transaction || response;
+      setReceipt(payment);
+      setSuccess(true);
+      toast.success('Payment received. Confirming recipient settlement...');
+    } catch (err) {
+      const message = getUserFriendlyError(err, 'Card charge failed.');
+      setPaymentError(message);
+      toast.error(message);
+    } finally {
+      setChargingCard(false);
+    }
+  };
+
+  const handleValidateOtp = async (e) => {
+    e.preventDefault();
+    if (!otpValue.trim()) return toast.error('Enter the code Flutterwave sent you.');
+    setValidatingOtp(true);
+    try {
+      const response = await validateCardOtp(code, {
+        tx_ref: otpPrompt.tx_ref,
+        flw_ref: otpPrompt.flw_ref,
+        otp: otpValue.trim(),
+        checkout_token: checkoutToken || undefined,
+      });
+      const payment = response.payment || response.transaction || response;
+      setReceipt(payment);
+      setSuccess(true);
+      setOtpPrompt(null);
+      toast.success('Payment received. Confirming recipient settlement...');
+    } catch (err) {
+      toast.error(getUserFriendlyError(err, 'That code did not work. Please try again.'));
+    } finally {
+      setValidatingOtp(false);
+    }
+  };
+
+  /**
+   * handleRequestCardOtp / handleVerifyCardOtp - Guest saved-card access.
+   * A payer who isn't logged into Qreek proves they own the phone number
+   * already typed into the form above, without going through a full login.
+   */
+  const handleRequestCardOtp = async () => {
+    if (!form.phone || form.phone.length < 10) return toast.error('Enter your phone number first.');
+    setRequestingCardOtp(true);
+    try {
+      await requestCardCheckoutOtp(code, formatPhoneNumber(form.phone));
+      setGuestCardStage('otp_sent');
+      toast.success('If that number has a saved card, a code has been sent.');
+    } catch (err) {
+      toast.error(getUserFriendlyError(err, 'Could not send a code right now.'));
+    } finally {
+      setRequestingCardOtp(false);
+    }
+  };
+
+  const handleVerifyCardOtp = async (e) => {
+    e.preventDefault();
+    if (!cardOtpValue.trim()) return toast.error('Enter the code we sent you.');
+    setVerifyingCardOtp(true);
+    try {
+      const { checkout_token } = await verifyCardCheckoutOtp(code, formatPhoneNumber(form.phone), cardOtpValue.trim());
+      const { cards } = await getGuestSavedCards(code, checkout_token);
+      if (!cards || cards.length === 0) {
+        toast.error('No saved card found for that number.');
+        setGuestCardStage('idle');
+        return;
+      }
+      setCheckoutToken(checkout_token);
+      setSavedCards(cards);
+      setSelectedCardId((cards.find(c => c.is_default) || cards[0]).id);
+      setGuestCardStage('verified');
+    } catch (err) {
+      toast.error(getUserFriendlyError(err, 'That code did not work.'));
+    } finally {
+      setVerifyingCardOtp(false);
     }
   };
 
@@ -414,6 +556,39 @@ export default function PublicPayment() {
             ? 'Checking your payment status…'
             : 'Opening payment checkout…'}
       </p>
+    </div>
+  );
+
+  if (otpPrompt) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ maxWidth: 400, width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '2.5rem', boxShadow: 'var(--shadow)' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--teal-faint)', color: 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <CreditCard size={30} />
+        </div>
+        <h1 style={{ fontSize: '1.25rem', textAlign: 'center', marginBottom: '0.5rem' }}>Enter your one-time code</h1>
+        <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '1.75rem' }}>
+          Your card issuer sent a code to confirm this charge. Enter it below to finish paying.
+        </p>
+        <form onSubmit={handleValidateOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <Input
+            label="One-time code"
+            value={otpValue}
+            onChange={e => setOtpValue(e.target.value)}
+            placeholder="e.g. 123456"
+            autoFocus
+          />
+          <Button type="submit" disabled={validatingOtp} style={{ width: '100%', justifyContent: 'center', height: 48 }}>
+            {validatingOtp ? 'Verifying…' : 'Confirm payment'}
+          </Button>
+          <button
+            type="button"
+            onClick={() => { setOtpPrompt(null); setOtpValue(''); }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.82rem', cursor: 'pointer', textAlign: 'center' }}
+          >
+            Cancel and try a different card
+          </button>
+        </form>
+      </div>
     </div>
   );
 
@@ -576,6 +751,31 @@ export default function PublicPayment() {
               )}
             </div>
 
+            {(isAuthenticated || guestCardStage === 'verified') && savedCards.length > 0 && !(isGroupLink && isExpired) && activeTab === 'pay' && (
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--teal)' }}>
+                  <CreditCard size={16} /> Pay with a saved card
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {savedCards.map(c => (
+                    <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-2)', cursor: 'pointer' }}>
+                      <input type="radio" name="savedCard" checked={selectedCardId === c.id} onChange={() => setSelectedCardId(c.id)} />
+                      {(c.brand || 'Card').toUpperCase()} •••• {c.last4}{c.exp_month && c.exp_year ? ` — exp ${c.exp_month}/${c.exp_year}` : ''}
+                    </label>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={handlePayWithSavedCard}
+                  disabled={chargingCard || !selectedCardId || (link.is_flexible && !(+form.amount > 0))}
+                  style={{ width: '100%', justifyContent: 'center', height: 48 }}
+                >
+                  {chargingCard ? 'Charging card…' : `Pay ${FMT(link.is_flexible ? +form.amount || 0 : link.amount)} with this card`}
+                </Button>
+                <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-3)' }}>or pay with a new card below</div>
+              </div>
+            )}
+
             {isGroupLink && isExpired && (
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--amber)', borderRadius: 'var(--radius)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '0.5rem' }}>
                 This {link.family_id ? 'family' : 'pool'} link expired on {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-NG') : 'the set date'}. It is unable to accept any new payments.
@@ -592,11 +792,48 @@ export default function PublicPayment() {
                   onChange={e => setForm({...form, name: e.target.value})} 
                   placeholder="e.g. John Doe"
                 />
-                <PhoneInput 
-                  label="Phone Number" 
-                  value={form.phone} 
-                  onChange={v => setForm({...form, phone: v})} 
+                <PhoneInput
+                  label="Phone Number"
+                  value={form.phone}
+                  onChange={v => setForm({...form, phone: v})}
                 />
+
+                {!isAuthenticated && guestCardStage === 'idle' && (
+                  <button
+                    type="button"
+                    onClick={handleRequestCardOtp}
+                    disabled={requestingCardOtp}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: 'var(--teal)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0, alignSelf: 'flex-start' }}
+                  >
+                    <CreditCard size={15} /> {requestingCardOtp ? 'Sending code…' : 'Have a saved card? Verify your phone to use it'}
+                  </button>
+                )}
+
+                {!isAuthenticated && guestCardStage === 'otp_sent' && (
+                  <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-2)' }}>
+                      We texted a code to {form.phone} to confirm you own this number before showing your saved card.
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Input
+                        value={cardOtpValue}
+                        onChange={e => setCardOtpValue(e.target.value)}
+                        placeholder="6-digit code"
+                        style={{ flex: 1 }}
+                      />
+                      <Button type="button" onClick={handleVerifyCardOtp} disabled={verifyingCardOtp} style={{ height: 44 }}>
+                        {verifyingCardOtp ? 'Verifying…' : 'Verify'}
+                      </Button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setGuestCardStage('idle'); setCardOtpValue(''); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
                 <Input 
                   label="Payment description *" 
                   multiline
@@ -607,12 +844,19 @@ export default function PublicPayment() {
                 />
               </div>
 
+              {isAuthenticated && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-2)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={saveCardOptIn} onChange={e => setSaveCardOptIn(e.target.checked)} />
+                  Save this card for faster checkout next time
+                </label>
+              )}
+
               <div style={{ marginTop: '0.5rem' }}>
                 <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-                  {paying ? 'Opening checkout…' : `Continue to ${PAYMENT_PROVIDER.name} →`}
+                  {paying ? 'Opening checkout…' : savedCards.length > 0 ? `Continue with a new card →` : `Continue to ${PAYMENT_PROVIDER.name} →`}
                 </Button>
               </div>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: 0.6 }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secure payment powered by</span>
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>{PAYMENT_PROVIDER.name}</span>

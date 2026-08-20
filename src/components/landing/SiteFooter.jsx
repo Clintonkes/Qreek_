@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { goTo } from './landingCss';
 import { CREDITS } from './images';
 
@@ -21,6 +21,7 @@ const COLUMNS = [
     items: [
       { label: 'How it works', scroll: 'how-it-works' },
       { label: 'Pricing',      scroll: 'pricing' },
+      { label: 'FAQ',          to: '/faq' },
       { label: 'Sign up',      to: '/register' },
       { label: 'Log in',       to: '/login' },
     ],
@@ -43,6 +44,19 @@ const COLUMNS = [
 ];
 
 export default function SiteFooter() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // These scroll targets only exist on the landing page — from anywhere else
+  // (e.g. /faq), navigate home with the section as a hash instead.
+  const handleScrollClick = (id) => {
+    if (location.pathname === '/') {
+      goTo(id);
+    } else {
+      navigate(`/#${id}`);
+    }
+  };
+
   return (
     <footer style={{ background: 'var(--bg-2)', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '3.5rem 2rem 2rem' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -64,7 +78,7 @@ export default function SiteFooter() {
                 if (item.to)     return <Link key={item.label} to={item.to} style={linkStyle}>{item.label}</Link>;
                 if (item.href)   return <a key={item.label} href={item.href} style={linkStyle}>{item.label}</a>;
                 if (item.static) return <span key={item.label} style={{ ...linkStyle, cursor: 'default' }}>{item.label}</span>;
-                return <button key={item.label} onClick={() => goTo(item.scroll)} style={linkStyle}>{item.label}</button>;
+                return <button key={item.label} onClick={() => handleScrollClick(item.scroll)} style={linkStyle}>{item.label}</button>;
               })}
             </div>
           ))}

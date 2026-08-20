@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { GLOBAL_CSS } from '../components/landing/landingCss';
 import LandingNav from '../components/landing/LandingNav';
 import Hero from '../components/landing/Hero';
@@ -17,6 +18,17 @@ import LinkMockup from '../components/landing/mockups/LinkMockup';
 import PayrollMockup from '../components/landing/mockups/PayrollMockup';
 
 export default function Landing() {
+  const location = useLocation();
+
+  // Arriving from another page (e.g. FAQ) with a section in the hash — scroll
+  // to it once the page has laid out, instead of landing at the top silently.
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.slice(1);
+    const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    return () => clearTimeout(t);
+  }, [location.hash]);
+
   return (
     <div style={{ background: 'var(--bg)', color: 'var(--text)', overflowX: 'clip' }}>
       <style>{GLOBAL_CSS}</style>

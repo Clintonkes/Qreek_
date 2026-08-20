@@ -22,6 +22,7 @@ import Register from './pages/Register.jsx';
 import ForgotPin from './pages/ForgotPin.jsx';
 
 const Landing = lazy(() => import('./pages/Landing.jsx'));
+const FAQ = lazy(() => import('./pages/FAQ.jsx'));
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Pools = lazy(() => import('./pages/Pools.jsx'));
 const PoolDetail = lazy(() => import('./pages/PoolDetail.jsx'));
@@ -116,6 +117,7 @@ export default function App() {
         <Routes>
           <Route element={<PublicPageShell />}>
             <Route path="/"           element={<Landing />} />
+            <Route path="/faq"        element={<FAQ />} />
             <Route path="/login"      element={<Login />} />
             <Route path="/register"   element={<Register />} />
             <Route path="/forgot-pin" element={<ForgotPin />} />

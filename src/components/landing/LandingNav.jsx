@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { List, X } from 'phosphor-react';
 import { goTo } from './landingCss';
 
@@ -19,12 +19,25 @@ const baseBtn = {
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 48);
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
   }, []);
+
+  // Section links only exist on the landing page itself. From anywhere else
+  // (e.g. /faq), navigate home with the section as a hash and let Landing.jsx
+  // scroll to it once mounted, instead of silently doing nothing.
+  const handleSectionClick = (id) => {
+    if (location.pathname === '/') {
+      goTo(id);
+    } else {
+      navigate(`/#${id}`);
+    }
+  };
 
   return (
     <>
@@ -35,10 +48,13 @@ export default function LandingNav() {
 
         <div className="desktop-nav" style={{ gap: '0.2rem' }}>
           {SECTIONS.map(([id, label]) => (
-            <button key={id} onClick={() => goTo(id)} style={baseBtn}
+            <button key={id} onClick={() => handleSectionClick(id)} style={baseBtn}
               onMouseEnter={e => e.currentTarget.style.color = '#00d4aa'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}>{label}</button>
           ))}
+          <Link to="/faq" style={{ ...baseBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#00d4aa'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}>FAQ</Link>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
@@ -56,9 +72,11 @@ export default function LandingNav() {
       {menuOpen && (
         <div style={{ position: 'fixed', top: 64, left: 0, right: 0, zIndex: 190, background: 'rgba(6,14,26,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
           {SECTIONS.map(([id, label]) => (
-            <button key={id} onClick={() => { goTo(id); setMenuOpen(false); }}
+            <button key={id} onClick={() => { handleSectionClick(id); setMenuOpen(false); }}
               style={{ ...baseBtn, fontSize: '1rem', padding: '0.75rem 0.5rem', textAlign: 'left' }}>{label}</button>
           ))}
+          <Link to="/faq" onClick={() => setMenuOpen(false)}
+            style={{ ...baseBtn, fontSize: '1rem', padding: '0.75rem 0.5rem', textAlign: 'left', textDecoration: 'none', display: 'block' }}>FAQ</Link>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <Link to="/login" onClick={() => setMenuOpen(false)} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', color: 'var(--text)', fontSize: '0.9rem', fontWeight: 600, padding: '0.75rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>Sign in</Link>
             <Link to="/register" onClick={() => setMenuOpen(false)} style={{ flex: 1, textAlign: 'center', textDecoration: 'none', color: '#000', background: '#00d4aa', fontSize: '0.9rem', fontWeight: 800, padding: '0.75rem', borderRadius: 10, fontFamily: 'var(--font-display)' }}>Get started</Link>

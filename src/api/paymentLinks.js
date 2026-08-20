@@ -54,6 +54,57 @@ export const confirmFlutterwaveLinkPayment = (code, d) =>
   client.post(`/payment-links/pay/${code}/flutterwave/confirm`, d).then(r => r.data);
 
 /**
+ * Guest saved-card entry point: sends a 6-digit code to a phone number if (and
+ * only if) it belongs to a Qreek account with a saved card. Always resolves
+ * with the same generic message either way — the backend never reveals
+ * whether the number is a Qreek user, to avoid enumeration.
+ * @param {string} code - The payment link code.
+ * @param {string} phone
+ */
+export const requestCardCheckoutOtp = (code, phone) =>
+  client.post(`/payment-links/pay/${code}/saved-card/request-otp`, { phone }).then(r => r.data);
+
+/**
+ * Verifies the code from requestCardCheckoutOtp. On success returns a
+ * short-lived checkout_token — proof of phone ownership only, not a login —
+ * used to list and charge that phone's saved cards for this one checkout.
+ * @param {string} code - The payment link code.
+ * @param {string} phone
+ * @param {string} otp
+ */
+export const verifyCardCheckoutOtp = (code, phone, otp) =>
+  client.post(`/payment-links/pay/${code}/saved-card/verify-otp`, { phone, otp }).then(r => r.data);
+
+/**
+ * Lists a phone-verified guest's saved cards using their checkout_token.
+ * @param {string} code - The payment link code.
+ * @param {string} checkoutToken
+ */
+export const getGuestSavedCards = (code, checkoutToken) =>
+  client.post(`/payment-links/pay/${code}/saved-card/cards`, { checkout_token: checkoutToken }).then(r => r.data);
+
+/**
+ * Pays a link with a previously saved card — no redirect to Flutterwave's hosted
+ * checkout. Requires the payer to be logged into Qreek. May return
+ * { requires_otp: true, tx_ref, flw_ref } if Flutterwave needs a one-time code,
+ * in which case call validateCardOtp next.
+ * @param {string} code - The payment link code.
+ * @param {Object} d - { card_id, amount, payment_description }.
+ * @returns {Promise<Object>} Either a completed payment record or an OTP prompt.
+ */
+export const chargeSavedCard = (code, d) =>
+  client.post(`/payment-links/pay/${code}/charge-saved-card`, d).then(r => r.data);
+
+/**
+ * Completes a saved-card charge that came back pending an OTP step-up.
+ * @param {string} code - The payment link code.
+ * @param {Object} d - { tx_ref, flw_ref, otp }.
+ * @returns {Promise<Object>} The completed payment record.
+ */
+export const validateCardOtp = (code, d) =>
+  client.post(`/payment-links/pay/${code}/validate-card-otp`, d).then(r => r.data);
+
+/**
  * Reads the current collection and recipient payout status for a public link payment.
  * @param {string} code - The payment link code.
  * @param {string} txRef - The Qreek/Flutterwave transaction reference.
