@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { goTo } from './landingCss';
-import { CREDITS } from './images';
 
 const linkStyle = { color: 'var(--text-3)', textDecoration: 'none', fontSize: '0.83rem', lineHeight: 2.1, display: 'block', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'var(--font-display)', cursor: 'pointer' };
 const headStyle = { fontSize: '0.66rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text)', marginBottom: '0.85rem' };
@@ -63,11 +62,14 @@ export default function SiteFooter() {
 
         <div className="footer-cols" style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4, 1fr)', gap: '2.5rem', marginBottom: '2.5rem' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.15rem', marginBottom: '0.75rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.15rem', marginBottom: '0.25rem' }}>
               Qreek<span style={{ color: '#00d4aa' }}>Finance</span>
             </div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#00d4aa', letterSpacing: '0.04em', marginBottom: '0.85rem' }}>
+              A product of IEKA Enterprises
+            </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', lineHeight: 1.75, maxWidth: 320, margin: 0 }}>
-              All payments processed by Flutterwave Technology Solutions Limited, a CBN-licensed Payment Solution Provider. Qreek Finance does not hold, custody, or transmit funds.
+              IEKA Enterprises is registered with the Corporate Affairs Commission (CAC), Nigeria. All payments processed by Flutterwave Technology Solutions Limited, a CBN-licensed Payment Solution Provider. Qreek Finance does not hold, custody, or transmit funds.
             </p>
           </div>
 
@@ -84,11 +86,8 @@ export default function SiteFooter() {
           ))}
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', fontSize: '0.74rem', color: 'var(--text-3)' }}>
-          <span>© 2026 Qreek Finance</span>
-          <span style={{ maxWidth: 640, textAlign: 'right', lineHeight: 1.6 }}>
-            Photography by {CREDITS.join(', ')} on Unsplash.
-          </span>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem', fontSize: '0.74rem', color: 'var(--text-3)' }}>
+          <span>© 2026 IEKA Enterprises. All rights reserved.</span>
         </div>
       </div>
     </footer>
