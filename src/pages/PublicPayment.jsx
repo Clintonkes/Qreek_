@@ -818,7 +818,7 @@ export default function PublicPayment() {
                       <Input
                         value={cardOtpValue}
                         onChange={e => setCardOtpValue(e.target.value)}
-                        placeholder="6-digit code"
+                        placeholder="6-character code"
                         style={{ flex: 1 }}
                       />
                       <Button type="button" onClick={handleVerifyCardOtp} disabled={verifyingCardOtp} style={{ height: 44 }}>

@@ -121,7 +121,7 @@ export default function ForgotPin() {
           <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Reset your PIN</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>
             {step === 1 && "We'll send a one-time code to your registered phone."}
-            {step === 2 && "Enter the 6-digit code we sent to your phone."}
+            {step === 2 && "Enter the 6-character code we sent to your phone."}
             {step === 3 && "Choose a new PIN for your account."}
           </p>
         </div>
@@ -170,11 +170,10 @@ export default function ForgotPin() {
             <Input
               label="OTP code"
               type="text"
-              inputMode="numeric"
               maxLength={6}
               value={otp}
-              onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setErrors(e => ({ ...e, otp: '' })); }}
-              placeholder="123456"
+              onChange={e => { setOtp(e.target.value.replace(/[^a-zA-Z0-9]/g, '')); setErrors(e => ({ ...e, otp: '' })); }}
+              placeholder="a1b2c3"
               error={errors.otp}
               autoFocus
               style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.25em', fontSize: '1.25rem', textAlign: 'center' }}
