@@ -1,0 +1,7 @@
+# Qreek Finance
+
+> Qreek is the trust infrastructure for communal and informal payments in Nigeria: payment pools for ajo/thrift groups, shareable payment links for merchants, and payroll for enterprises. Built on Flutterwave; Qreek never holds user funds.
+
+- [Home](https://qreekfinance.org/): Product overview
+- [FAQ](https://qreekfinance.org/faq): Common questions about how Qreek works
+- [Register](https://qreekfinance.org/register): Create a Qreek account

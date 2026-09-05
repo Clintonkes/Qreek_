@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /pools
+Disallow: /settings
+Disallow: /enterprise
+Disallow: /payment-links
+Disallow: /p/
+Disallow: /invite/
+Disallow: /family
+Disallow: /forgot-pin
+
+Sitemap: https://qreekfinance.org/sitemap.xml
