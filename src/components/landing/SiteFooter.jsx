@@ -71,6 +71,9 @@ export default function SiteFooter() {
             <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', lineHeight: 1.75, maxWidth: 320, margin: 0 }}>
               IEKA Enterprises is registered with the Corporate Affairs Commission (CAC), Nigeria. All payments processed by Flutterwave Technology Solutions Limited, a CBN-licensed Payment Solution Provider. Qreek Finance does not hold, custody, or transmit funds.
             </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', lineHeight: 1.75, maxWidth: 320, margin: '0.85rem 0 0' }}>
+              No. 170 Hilltop Road, Abakaliki, Ebonyi State, Nigeria.
+            </p>
           </div>
 
           {COLUMNS.map(col => (

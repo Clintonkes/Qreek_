@@ -11,7 +11,7 @@ const SLIDES = [
   {
     tag: 'Payment Pools',
     lines: ['Your ajo group,', 'now with a', 'live ledger.'],
-    sub: 'Every member sees every naira. Who paid, how much, and when. Powered by Flutterwave.',
+    sub: 'Qreek gives your Nigerian ajo group a live payment ledger. Every member sees every naira, who paid, how much, and when. Powered by Flutterwave.',
     cta: 'Create a pool',
     accent: '#00d4aa',
     slot: 'heroPool',
@@ -20,7 +20,7 @@ const SLIDES = [
   {
     tag: 'Payment Links',
     lines: ['One link.', 'Any payment.', 'Instant receipt.'],
-    sub: 'Create a link in 2 minutes. Clients pay via card, transfer, or USSD. No Qreek account needed.',
+    sub: 'Create a Qreek payment link in 2 minutes. Clients across Nigeria pay via card, transfer, or USSD. No Qreek account needed.',
     cta: 'Create a link',
     accent: '#f5a623',
     slot: 'heroLink',
@@ -29,7 +29,7 @@ const SLIDES = [
   {
     tag: 'Enterprise Payroll',
     lines: ['500 salaries.', '4 minutes.', 'No subscription.'],
-    sub: 'Import your team, approve with your PIN, and every salary hits every bank account in parallel.',
+    sub: 'Qreek imports your team, you approve with your PIN, and every salary hits every Nigerian bank account in parallel.',
     cta: 'Set up payroll',
     accent: '#9b59b6',
     slot: 'heroPayroll',
