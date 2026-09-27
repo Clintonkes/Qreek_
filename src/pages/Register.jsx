@@ -1,10 +1,9 @@
-// Register.jsx collects a new user's basic identity and PIN, then sends them to login
-// so the first authenticated step mirrors the same sign-in flow used afterward.
+// Register.jsx — 3-step registration: identity → phone OTP → PIN
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
-import { register, checkPhoneAvailable } from '../api/auth.js';
+import { register, checkPhoneAvailable, sendSignupOtp, verifySignupOtp } from '../api/auth.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import PhoneInput from '../components/ui/PhoneInput.jsx';
@@ -42,29 +41,22 @@ function StepDots({ current, total }) {
   );
 }
 
-/**
- * Register component - Manages the new user registration lifecycle.
- * Implements a two-step funnel:
- * 1. Identity & Contact: Collects names and an international phone number (validated/normalized).
- * 2. Security: Collects and confirms a numeric PIN (4-6 digits).
- * Includes deduplication logic to handle existing phone numbers and
- * auto-navigates to login upon successful account creation.
- *
- * @returns {JSX.Element}
- */
 export default function Register() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', pin: '', confirmPin: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', otp: '', pin: '', confirmPin: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
+  const [signupVerifyToken, setSignupVerifyToken] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: '' }));
   };
 
+  // Step 1 → Step 2: validate identity, check availability, send OTP
   const nextStep = async (e) => {
     e.preventDefault();
     const errs = {};
@@ -72,41 +64,72 @@ export default function Register() {
     if (!form.lastName.trim()) errs.lastName = 'Last name required';
     if (!form.phone.trim()) {
       errs.phone = 'Phone number required';
-    } else {
-      // Validate international phone format
-      if (!validatePhoneNumber(form.phone)) {
-        errs.phone = 'Invalid phone number. Include country code (e.g., +1234567890)';
-      }
+    } else if (!validatePhoneNumber(form.phone)) {
+      errs.phone = 'Invalid phone number. Include country code (e.g., +2348012345678)';
     }
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-    // Catch a duplicate phone here, before the user goes on to set a PIN, instead of
-    // only discovering it after the full form is submitted.
     setCheckingPhone(true);
     try {
-      const { available } = await checkPhoneAvailable(formatPhoneNumber(form.phone) || form.phone);
+      const normalised = formatPhoneNumber(form.phone) || form.phone;
+      const { available } = await checkPhoneAvailable(normalised);
       if (!available) {
         setErrors({ phone: 'This phone number is already registered.' });
         return;
       }
-    } catch {
-      // Availability check is a convenience — if it fails, let registration proceed
-      // and surface the duplicate (if any) on final submit as before.
+      await sendSignupOtp(normalised);
+      startResendCooldown();
+      setStep(2);
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Could not send verification code. Try again.';
+      toast.error(msg);
     } finally {
       setCheckingPhone(false);
     }
-    setStep(2);
   };
 
+  const startResendCooldown = () => {
+    setResendCooldown(60);
+    const tick = setInterval(() => {
+      setResendCooldown(n => { if (n <= 1) { clearInterval(tick); return 0; } return n - 1; });
+    }, 1000);
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    const normalised = formatPhoneNumber(form.phone) || form.phone;
+    try {
+      await sendSignupOtp(normalised);
+      startResendCooldown();
+      toast.success('New code sent.');
+    } catch {
+      toast.error('Could not resend. Try again.');
+    }
+  };
+
+  // Step 2 → Step 3: verify OTP
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    if (!form.otp.trim()) { setErrors({ otp: 'Enter the code sent to your number' }); return; }
+    setLoading(true);
+    try {
+      const normalised = formatPhoneNumber(form.phone) || form.phone;
+      const { verify_token } = await verifySignupOtp(normalised, form.otp.trim());
+      setSignupVerifyToken(verify_token);
+      setStep(3);
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Invalid or expired code.';
+      setErrors({ otp: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 3: create account
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate phone format again before sending
     if (!validatePhoneNumber(form.phone)) {
-      setErrors({ phone: 'Invalid phone number. Include country code (e.g., +1234567890)' });
+      setErrors({ phone: 'Invalid phone number format' });
       setStep(1);
       return;
     }
@@ -116,14 +139,10 @@ export default function Register() {
       setStep(1);
       return;
     }
-
     const errs = {};
     if (!form.pin || form.pin.length < 4) errs.pin = 'PIN must be at least 4 digits';
     if (form.pin !== form.confirmPin) errs.confirmPin = 'PINs do not match';
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
     try {
@@ -132,16 +151,19 @@ export default function Register() {
         firstName: form.firstName,
         lastName: form.lastName,
         pin: form.pin,
+        signup_verify_token: signupVerifyToken,
       });
       sessionStorage.setItem('qreek_signup_phone', data.user?.phone || normalizedPhone);
       toast.success('Account created. Log in with your phone number and PIN.');
       navigate('/login', { replace: true, state: { phone: data.user?.phone || normalizedPhone, fromSignup: true } });
     } catch (err) {
       const msg = err.response?.data?.detail || 'Registration failed';
-      // Check if error is about phone already registered/duplicate
       const msgLower = msg.toLowerCase();
       if (msgLower.includes('phone') && (msgLower.includes('already') || msgLower.includes('registered') || msgLower.includes('exist') || msgLower.includes('duplicate'))) {
         setErrors({ phone: msg });
+        setStep(1);
+      } else if (msgLower.includes('verified') || msgLower.includes('verification')) {
+        toast.error('Phone verification expired. Please start again.');
         setStep(1);
       } else {
         toast.error(msg);
@@ -180,9 +202,9 @@ export default function Register() {
           <h1 style={{ fontSize: '1.3rem' }}>Create account</h1>
         </div>
 
-        <StepDots current={step} total={2} />
+        <StepDots current={step} total={3} />
 
-        {step === 1 ? (
+        {step === 1 && (
           <form onSubmit={nextStep} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <Input label="First name" value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Emeka" error={errors.firstName} autoFocus />
@@ -193,11 +215,41 @@ export default function Register() {
               value={form.phone}
               onChange={v => set('phone', v)}
               error={errors.phone}
-              hint="International format: include country code (e.g., +1234567890)"
+              hint="International format: include country code (e.g., +2348012345678)"
             />
             <Button type="submit" fullWidth loading={checkingPhone}>Continue →</Button>
           </form>
-        ) : (
+        )}
+
+        {step === 2 && (
+          <form onSubmit={verifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-2)', textAlign: 'center', margin: 0 }}>
+              A 6-character code was sent to <strong style={{ color: 'var(--text)' }}>{form.phone}</strong>. Enter it below.
+            </p>
+            <Input
+              label="Verification code"
+              value={form.otp}
+              onChange={e => set('otp', e.target.value.toLowerCase())}
+              placeholder="e.g. a3k9z2"
+              maxLength={6}
+              error={errors.otp}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <Button variant="secondary" type="button" onClick={() => setStep(1)} style={{ flex: 1 }}>Back</Button>
+              <Button type="submit" loading={loading} style={{ flex: 2 }}>Verify →</Button>
+            </div>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
+              Didn't receive it?{' '}
+              {resendCooldown > 0
+                ? <span style={{ color: 'var(--text-3)' }}>Resend in {resendCooldown}s</span>
+                : <button type="button" onClick={handleResend} style={{ background: 'none', border: 'none', color: 'var(--teal)', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}>Resend code</button>
+              }
+            </p>
+          </form>
+        )}
+
+        {step === 3 && (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <Input
               label="Set PIN"
@@ -222,7 +274,7 @@ export default function Register() {
               error={errors.confirmPin}
             />
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <Button variant="secondary" onClick={() => setStep(1)} style={{ flex: 1 }}>Back</Button>
+              <Button variant="secondary" type="button" onClick={() => setStep(2)} style={{ flex: 1 }}>Back</Button>
               <Button type="submit" loading={loading} style={{ flex: 2 }}>Create account</Button>
             </div>
           </form>
@@ -236,4 +288,3 @@ export default function Register() {
     </div>
   );
 }
-

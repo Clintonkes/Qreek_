@@ -15,7 +15,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock, CreditCard } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards } from '../api/paymentLinks.js';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, initInlinePayment, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards, initBankTransfer, initUssd, chargeCardDirect, validateCardDirectOtp } from '../api/paymentLinks.js';
 import { getSavedCards } from '../api/cards.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
@@ -112,6 +112,35 @@ export default function PublicPayment() {
   const [otpValue, setOtpValue] = useState('');
   const [validatingOtp, setValidatingOtp] = useState(false);
 
+  // ── Native inline payment state ─────────────────────────────────────────────
+  // payMethod: 'card' | 'bank_transfer' | 'ussd'
+  const [payMethod, setPayMethod] = useState('card');
+  // card form
+  const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', pin: '' });
+  const [cardStep, setCardStep] = useState('form'); // 'form' | 'pin' | 'otp'
+  const [directOtpPrompt, setDirectOtpPrompt] = useState(null); // { tx_ref, flw_ref }
+  const [directOtp, setDirectOtp] = useState('');
+  const [submittingDirectCard, setSubmittingDirectCard] = useState(false);
+  // bank transfer
+  const [bankTransferDetails, setBankTransferDetails] = useState(null); // returned virtual account
+  const [bankTransferCountdown, setBankTransferCountdown] = useState(0);
+  const bankTransferTimerRef = useRef(null);
+  // ussd
+  const [ussdBank, setUssdBank] = useState('');
+  const [ussdDetails, setUssdDetails] = useState(null); // returned ussd code
+  const USSD_BANKS = [
+    { code: '044', name: 'Access Bank (*901#)' },
+    { code: '058', name: 'GTBank (*737#)' },
+    { code: '033', name: 'United Bank for Africa (*919#)' },
+    { code: '011', name: 'First Bank (*894#)' },
+    { code: '032', name: 'Union Bank (*826#)' },
+    { code: '221', name: 'Stanbic IBTC (*909#)' },
+    { code: '070', name: 'Fidelity Bank (*770#)' },
+    { code: '057', name: 'Zenith Bank (*966#)' },
+    { code: '215', name: 'Unity Bank (*7799#)' },
+    { code: '232', name: 'Sterling Bank (*822#)' },
+  ];
+
   // Guest saved-card access: a payer who isn't logged in proves they own a
   // phone number that has saved cards, without a full Qreek login.
   const [guestCardStage, setGuestCardStage] = useState('idle'); // idle | otp_sent | verified
@@ -123,6 +152,18 @@ export default function PublicPayment() {
   useEffect(() => {
     const i = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(i);
+  }, []);
+
+  // Load Flutterwave Inline SDK once so window.FlutterwaveCheckout() is available.
+  // Card data entered in the modal goes directly from the browser to Flutterwave —
+  // it never passes through Qreek's servers.
+  useEffect(() => {
+    if (document.getElementById('flw-inline-sdk')) return;
+    const script = document.createElement('script');
+    script.id = 'flw-inline-sdk';
+    script.src = 'https://checkout.flutterwave.com/v3.js';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
   const redirectedTransactionId = searchParams.get('transaction_id');
@@ -278,96 +319,233 @@ export default function PublicPayment() {
     };
   }, [code, receipt?.payout_status, receipt?.reference, receipt?.status, redirectedReference, success]);
 
-  /**
-   * handlePay - Orchestrates the payment checkout flow.
-   * Flow: Validates form data -> prepares amount -> triggers Flutterwave checkout -> 
-   * handles success (shows success UI/CTA) or failure (shows toast).
-   * @param {React.FormEvent} e - Form submission event.
-   */
   // Computed for group links (pools and family): even when expired, resolve succeeds
-  // (see _get_live_link for_payment=false) so we can always show the data/ledger.
-  // Only block the actual pay action.
+  // so we can always show the data/ledger. Only block the actual pay action.
   const isGroupLink = link ? !!(link.pool_id || link.family_id) : false;
   const isExpired = link ? !!(link.expires_at && new Date(link.expires_at) < new Date()) : false;
 
-  const handlePay = async (e) => {
-    e.preventDefault();
-    setPaymentError('');
-    if (!form.name.trim()) return toast.error('Please enter your name.');
-    if (!form.phone || form.phone.length < 10) return toast.error('Please enter a valid phone number.');
+  const _validateCommonFields = () => {
+    if (!form.name.trim()) { toast.error('Please enter your name.'); return false; }
+    if (!form.phone || form.phone.length < 10) { toast.error('Please enter a valid phone number.'); return false; }
+    if (!form.note.trim()) { toast.error('Please enter a payment description.'); return false; }
     const amount = link.is_flexible ? +form.amount : link.amount;
-    if (!amount || amount < 100) return toast.error('Minimum payment is ₦100.');
-    if (!form.note.trim()) return toast.error('Please enter a payment description.');
+    if (!amount || amount < 100) { toast.error('Minimum payment is ₦100.'); return false; }
+    if (isGroupLink && isExpired) { toast.error('This pool link has expired and no longer accepts payments.'); return false; }
+    return true;
+  };
 
-    if (isGroupLink && isExpired) {
-      return toast.error('This pool link has expired and no longer accepts payments. All records remain visible.');
-    }
-
+  // ── Bank transfer ──────────────────────────────────────────────────────────
+  const handleBankTransfer = async (e) => {
+    e.preventDefault();
+    if (!_validateCommonFields()) return;
+    setPaymentError('');
     setPaying(true);
     try {
-      // Always generate a fresh idempotency key for each pay submission.
-      // This allows the same payer (same phone/amount/desc) to make *multiple independent payments*
-      // to the same link (like depositing to the same bank account number multiple times).
-      // The key is only for deduplicating *retries of the exact same payment attempt* (e.g. network retry
-      // of this POST with the same key). Previous "sticky per-profile key" caused subsequent payments
-      // to hit "idempotent.recorded" for old completed txs (see backend pay_link idempotency logic and
-      // the checkout.idempotent.recorded event in logs), returning no/new checkout_url and triggering
-      // frontend "Missing Flutterwave checkout URL" or showing old receipt instead of new checkout.
+      const result = await initBankTransfer(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        amount: link.is_flexible ? +form.amount : undefined,
+        payment_description: form.note.trim(),
+      });
+      if (result.already_paid) { setSuccess(true); toast.success('Already paid!'); return; }
+      setBankTransferDetails(result);
+      const secs = result.expiry_seconds || 1800;
+      setBankTransferCountdown(secs);
+      if (bankTransferTimerRef.current) clearInterval(bankTransferTimerRef.current);
+      bankTransferTimerRef.current = setInterval(() => {
+        setBankTransferCountdown(c => {
+          if (c <= 1) { clearInterval(bankTransferTimerRef.current); return 0; }
+          return c - 1;
+        });
+      }, 1000);
+      // Poll status until paid or countdown expires
+      const txRef = result.tx_ref;
+      const pollId = setInterval(async () => {
+        try {
+          const statusData = await getLinkPaymentStatus(code, txRef);
+          const payment = statusData.payment || statusData.transaction || statusData;
+          if (['completed', 'split_settlement', 'processing'].includes(payment?.status) || payment?.payout_status === 'completed') {
+            clearInterval(pollId);
+            clearInterval(bankTransferTimerRef.current);
+            setReceipt(payment);
+            setSuccess(true);
+            toast.success('Bank transfer received!');
+          }
+        } catch {}
+      }, 5000);
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Could not initialise bank transfer.');
+      setPaymentError(msg);
+      toast.error(msg);
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // ── USSD ───────────────────────────────────────────────────────────────────
+  const handleUssd = async (e) => {
+    e.preventDefault();
+    if (!_validateCommonFields()) return;
+    if (!ussdBank) { toast.error('Select your bank for USSD.'); return; }
+    setPaymentError('');
+    setPaying(true);
+    try {
+      const result = await initUssd(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        amount: link.is_flexible ? +form.amount : undefined,
+        payment_description: form.note.trim(),
+        account_bank: ussdBank,
+      });
+      if (result.already_paid) { setSuccess(true); toast.success('Already paid!'); return; }
+      setUssdDetails(result);
+      // Poll status
+      const txRef = result.tx_ref;
+      const pollId = setInterval(async () => {
+        try {
+          const statusData = await getLinkPaymentStatus(code, txRef);
+          const payment = statusData.payment || statusData.transaction || statusData;
+          if (['completed', 'split_settlement', 'processing'].includes(payment?.status) || payment?.payout_status === 'completed') {
+            clearInterval(pollId);
+            setReceipt(payment);
+            setSuccess(true);
+            toast.success('USSD payment received!');
+          }
+        } catch {}
+      }, 5000);
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Could not initialise USSD charge.');
+      setPaymentError(msg);
+      toast.error(msg);
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // ── Card direct charge ─────────────────────────────────────────────────────
+  const handleCardCharge = async (e, opts = {}) => {
+    e?.preventDefault();
+    if (!_validateCommonFields()) return;
+    const { pin } = opts;
+    setPaymentError('');
+    setSubmittingDirectCard(true);
+    try {
+      const [month, year] = (cardForm.expiry || '').replace(/\s/g, '').split('/');
+      const payload = {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        amount: link.is_flexible ? +form.amount : undefined,
+        payment_description: form.note.trim(),
+        card_number: cardForm.number.replace(/\s/g, ''),
+        cvv: cardForm.cvv,
+        expiry_month: month || '',
+        expiry_year: year ? (year.length === 2 ? `20${year}` : year) : '',
+        ...(pin ? { pin } : {}),
+      };
+      const result = await chargeCardDirect(code, payload);
+
+      if (result.already_paid) { setSuccess(true); toast.success('Already paid!'); return; }
+
+      if (result.status === 'pin') {
+        setCardStep('pin');
+        return;
+      }
+      if (result.status === 'otp') {
+        setDirectOtpPrompt({ tx_ref: result.tx_ref, flw_ref: result.flw_ref });
+        setCardStep('otp');
+        return;
+      }
+      if (result.status === 'redirect') {
+        // 3DS authentication — open in same tab
+        sessionStorage.setItem(`qreek:flw:${code}`, result.tx_ref);
+        window.location.assign(result.redirect_url);
+        return;
+      }
+      if (result.status === 'success') {
+        const payment = result.payment || result.transaction || result;
+        setReceipt(payment);
+        setSuccess(true);
+        const done = ['completed', 'split_settlement'].includes(payment?.payout_status);
+        toast.success(done ? 'Payment and settlement completed!' : 'Payment received. Confirming settlement...');
+        return;
+      }
+      throw new Error(result.message || 'Unexpected card charge response.');
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Card charge failed.');
+      setPaymentError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmittingDirectCard(false);
+    }
+  };
+
+  const handleCardPinSubmit = (e) => {
+    e.preventDefault();
+    handleCardCharge(null, { pin: cardForm.pin });
+  };
+
+  const handleDirectOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (!directOtp.trim()) return toast.error('Enter the OTP code.');
+    setSubmittingDirectCard(true);
+    try {
+      const result = await validateCardDirectOtp(code, {
+        tx_ref: directOtpPrompt.tx_ref,
+        flw_ref: directOtpPrompt.flw_ref,
+        otp: directOtp.trim(),
+      });
+      const payment = result.payment || result.transaction || result;
+      setReceipt(payment);
+      setSuccess(true);
+      setDirectOtpPrompt(null);
+      setCardStep('form');
+      toast.success('Payment received. Confirming settlement...');
+    } catch (err) {
+      toast.error(getUserFriendlyError(err, 'OTP did not match. Try again.'));
+    } finally {
+      setSubmittingDirectCard(false);
+    }
+  };
+
+  const handlePay = (e) => {
+    if (payMethod === 'bank_transfer') return handleBankTransfer(e);
+    if (payMethod === 'ussd') return handleUssd(e);
+    return handleCardCharge(e);
+  };
+
+  /**
+   * Fallback: redirect to Flutterwave hosted checkout. Used when the Inline SDK
+   * has not yet loaded (rare — script loads on mount). Kept so no payment ever
+   * silently fails due to a slow CDN.
+   */
+  const handlePayHosted = async (e) => {
+    e.preventDefault();
+    setPaying(true);
+    try {
       const idempotencyKey = crypto.randomUUID();
       const response = await payLink(code, {
         name: form.name.trim(),
         payer_name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
         payer_phone: formatPhoneNumber(form.phone),
-        amount,
+        amount: link.is_flexible ? +form.amount : link.amount,
         payment_description: form.note.trim(),
         provider: 'flutterwave',
         redirect_url: `${window.location.origin}/p/${code}`,
         idempotency_key: idempotencyKey,
       });
       const checkoutUrl = getCheckoutUrl(response);
-      const payment = response.payment || response.transaction || response;
-
-      const isAlreadyProcessed = payment?.status === 'completed' ||
-        ['completed', 'split_settlement'].includes(payment?.payout_status);
-      const isPendingSettlement = payment?.payout_status === 'pending' ||
-        payment?.status === 'payout_pending' || payment?.status === 'processing';
-
-      if (isAlreadyProcessed || isPendingSettlement) {
-        // Idempotent hit on a tx that's already charged or in settlement.
-        // Show receipt/success UI + let polling keep it fresh. Do not redirect to (stale) checkout.
-        setReceipt(payment || response);
-        setSuccess(true);
-        if (isAlreadyProcessed) {
-          toast.success('Payment already completed!');
-        } else {
-          toast('Payment is being processed. Monitoring settlement...');
-        }
-      } else if (checkoutUrl) {
+      if (checkoutUrl) {
         const reference = getTransactionReference(response);
         if (reference) sessionStorage.setItem(`qreek:flw:${code}`, reference);
         sessionStorage.setItem(`qreek:savecard:${code}`, isAuthenticated && saveCardOptIn ? '1' : '0');
-        sessionStorage.setItem(`qreek:quote:${reference || code}`, JSON.stringify({
-          checkout_amount: response.checkout_amount,
-          recipient_amount: response.recipient_amount || response.net,
-          fee: response.fee,
-          provider_fee_estimate: response.provider_fee_estimate,
-        }));
         window.location.assign(checkoutUrl);
       } else {
         throw new Error('Missing Flutterwave checkout URL from backend.');
       }
     } catch (err) {
-      const status = err?.response?.status;
-      const failureMessage =
-        status === 502 && isGroupLink
-          ? 'This pool link cannot accept payments right now because the recipient bank setup failed earlier. The pool owner needs to edit the bank details to refresh the subaccount.'
-          : status === 502
-            ? 'The payment service could not prepare this checkout right now. Please try again shortly.'
-            : getUserFriendlyError(err, 'Payment failed.');
-
-      setPaymentError(failureMessage);
-      toast.error(failureMessage);
+      setPaymentError(getUserFriendlyError(err, 'Payment failed.'));
+      toast.error(getUserFriendlyError(err, 'Payment failed.'));
       setPaying(false);
     }
   };
@@ -785,11 +963,12 @@ export default function PublicPayment() {
 
             {!(isGroupLink && isExpired) && activeTab === 'pay' && (
             <>
+              {/* ── Payer identity fields ──────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Input 
-                  label="Your Full Name" 
-                  value={form.name} 
-                  onChange={e => setForm({...form, name: e.target.value})} 
+                <Input
+                  label="Your Full Name"
+                  value={form.name}
+                  onChange={e => setForm({...form, name: e.target.value})}
                   placeholder="e.g. John Doe"
                 />
                 <PhoneInput
@@ -834,32 +1013,254 @@ export default function PublicPayment() {
                     </button>
                   </div>
                 )}
-                <Input 
-                  label="Payment description *" 
+
+                <Input
+                  label="Payment description *"
                   multiline
                   rows={2}
-                  value={form.note} 
-                  onChange={e => setForm({...form, note: e.target.value})} 
+                  value={form.note}
+                  onChange={e => setForm({...form, note: e.target.value})}
                   placeholder="What is this payment for?"
                 />
               </div>
 
-              {isAuthenticated && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-2)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={saveCardOptIn} onChange={e => setSaveCardOptIn(e.target.checked)} />
-                  Save this card for faster checkout next time
-                </label>
-              )}
+              {/* ── Payment method tabs ────────────────────────────────── */}
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
+                  {[
+                    { id: 'card', label: 'Card' },
+                    { id: 'bank_transfer', label: 'Bank Transfer' },
+                    { id: 'ussd', label: 'USSD' },
+                  ].map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => { setPayMethod(m.id); setPaymentError(''); setBankTransferDetails(null); setUssdDetails(null); setCardStep('form'); }}
+                      style={{
+                        padding: '0.55rem 0.5rem',
+                        borderRadius: 'var(--radius)',
+                        border: `1px solid ${payMethod === m.id ? 'var(--teal)' : 'var(--border)'}`,
+                        background: payMethod === m.id ? 'var(--teal-faint)' : 'var(--surface-2)',
+                        color: payMethod === m.id ? 'var(--teal)' : 'var(--text-2)',
+                        fontWeight: 600,
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
 
-              <div style={{ marginTop: '0.5rem' }}>
-                <Button type="submit" disabled={paying} style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-                  {paying ? 'Opening checkout…' : savedCards.length > 0 ? `Continue with a new card →` : `Continue to ${PAYMENT_PROVIDER.name} →`}
-                </Button>
+                {/* ── Card tab ────────────────────────────────────────── */}
+                {payMethod === 'card' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {cardStep === 'form' && (
+                      <>
+                        <Input
+                          label="Card number"
+                          value={cardForm.number}
+                          onChange={e => {
+                            const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                            setCardForm(f => ({ ...f, number: raw.replace(/(.{4})/g, '$1 ').trim() }));
+                          }}
+                          placeholder="0000 0000 0000 0000"
+                          inputMode="numeric"
+                        />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                          <Input
+                            label="Expiry (MM/YY)"
+                            value={cardForm.expiry}
+                            onChange={e => {
+                              let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                              if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+                              setCardForm(f => ({ ...f, expiry: v }));
+                            }}
+                            placeholder="MM/YY"
+                            inputMode="numeric"
+                          />
+                          <Input
+                            label="CVV"
+                            value={cardForm.cvv}
+                            onChange={e => setCardForm(f => ({ ...f, cvv: e.target.value.replace(/\D/g,'').slice(0,4) }))}
+                            placeholder="•••"
+                            type="password"
+                            inputMode="numeric"
+                          />
+                        </div>
+                        {isAuthenticated && (
+                          <label style={{
+                            display: 'flex', alignItems: 'center', gap: '0.65rem',
+                            padding: '0.65rem 0.9rem',
+                            background: saveCardOptIn ? 'rgba(0,212,170,0.08)' : 'var(--surface-2)',
+                            border: `1px solid ${saveCardOptIn ? 'var(--teal-border)' : 'var(--border)'}`,
+                            borderRadius: 'var(--radius)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}>
+                            <input type="checkbox" checked={saveCardOptIn} onChange={e => setSaveCardOptIn(e.target.checked)} style={{ flexShrink: 0, accentColor: 'var(--teal)', width: 16, height: 16 }} />
+                            <div>
+                              <div style={{ fontSize: '0.83rem', fontWeight: 600, color: saveCardOptIn ? 'var(--teal)' : 'var(--text)' }}>Save this card to my Qreek account</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>One-tap checkout on future Qreek payment links</div>
+                            </div>
+                          </label>
+                        )}
+                        <Button
+                          type="button"
+                          onClick={handleCardCharge}
+                          disabled={submittingDirectCard || !cardForm.number || !cardForm.expiry || !cardForm.cvv}
+                          style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem', marginTop: '0.25rem' }}
+                        >
+                          {submittingDirectCard ? 'Processing…' : `Pay ${FMT(link.is_flexible ? +form.amount || 0 : link.amount)}`}
+                        </Button>
+                      </>
+                    )}
+
+                    {cardStep === 'pin' && (
+                      <form onSubmit={handleCardPinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', textAlign: 'center', padding: '0.5rem 0' }}>
+                          Your bank requires your card PIN to authorise this payment.
+                        </div>
+                        <Input
+                          label="Card PIN"
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={cardForm.pin}
+                          onChange={e => setCardForm(f => ({ ...f, pin: e.target.value.replace(/\D/g,'').slice(0,4) }))}
+                          placeholder="••••"
+                          autoFocus
+                        />
+                        <Button type="submit" disabled={submittingDirectCard || cardForm.pin.length < 4} style={{ width: '100%', justifyContent: 'center', height: 48 }}>
+                          {submittingDirectCard ? 'Processing…' : 'Confirm with PIN'}
+                        </Button>
+                        <button type="button" onClick={() => setCardStep('form')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
+                          ← Back
+                        </button>
+                      </form>
+                    )}
+
+                    {cardStep === 'otp' && (
+                      <form onSubmit={handleDirectOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', textAlign: 'center', padding: '0.5rem 0' }}>
+                          Your card issuer sent a one-time code to your registered phone number. Enter it below.
+                        </div>
+                        <Input
+                          label="One-time code"
+                          value={directOtp}
+                          onChange={e => setDirectOtp(e.target.value)}
+                          placeholder="e.g. 123456"
+                          autoFocus
+                        />
+                        <Button type="submit" disabled={submittingDirectCard || !directOtp.trim()} style={{ width: '100%', justifyContent: 'center', height: 48 }}>
+                          {submittingDirectCard ? 'Verifying…' : 'Confirm payment'}
+                        </Button>
+                        <button type="button" onClick={() => { setCardStep('form'); setDirectOtpPrompt(null); setDirectOtp(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
+                          Cancel and try again
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Bank Transfer tab ────────────────────────────────── */}
+                {payMethod === 'bank_transfer' && !bankTransferDetails && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem', fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                      A temporary bank account will be generated for this payment. Transfer the exact amount to that account and we will confirm automatically.
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleBankTransfer}
+                      disabled={paying}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                    >
+                      {paying ? 'Generating account…' : 'Get account number'}
+                    </Button>
+                  </div>
+                )}
+
+                {payMethod === 'bank_transfer' && bankTransferDetails && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Transfer to this account</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {[
+                          ['Bank', bankTransferDetails.account_bank || '—'],
+                          ['Account name', bankTransferDetails.account_name || 'Qreek Pay'],
+                          ['Account number', bankTransferDetails.account_number || '—'],
+                          ['Amount', FMT(bankTransferDetails.checkout_amount)],
+                        ].map(([label, val]) => (
+                          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', borderBottom: '1px solid rgba(0,212,170,0.15)', paddingBottom: '0.4rem' }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>{label}</span>
+                            <strong style={{ fontFamily: label === 'Account number' ? 'var(--font-mono)' : 'inherit', fontSize: '0.85rem', letterSpacing: label === 'Account number' ? '0.05em' : 0 }}>{val}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: bankTransferCountdown < 120 ? 'var(--red)' : 'var(--text-3)' }}>
+                      <Clock size={14} />
+                      Account expires in {Math.floor(bankTransferCountdown / 60)}:{String(bankTransferCountdown % 60).padStart(2, '0')}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-2)' }}>
+                      <Spinner size={14} /> Waiting for transfer confirmation…
+                    </div>
+                    <button type="button" onClick={() => setBankTransferDetails(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
+                      Generate a new account number
+                    </button>
+                  </div>
+                )}
+
+                {/* ── USSD tab ─────────────────────────────────────────── */}
+                {payMethod === 'ussd' && !ussdDetails && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem' }}>Your bank</label>
+                      <select
+                        value={ussdBank}
+                        onChange={e => setUssdBank(e.target.value)}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '0.88rem' }}
+                      >
+                        <option value="">Select your bank…</option>
+                        {USSD_BANKS.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleUssd}
+                      disabled={paying || !ussdBank}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                    >
+                      {paying ? 'Generating code…' : 'Get USSD code'}
+                    </Button>
+                  </div>
+                )}
+
+                {payMethod === 'ussd' && ussdDetails && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--teal)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Dial this code on your phone</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.6rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--teal)', marginBottom: '0.5rem' }}>
+                        {ussdDetails.payment_code || ussdDetails.note || '—'}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
+                        Dial the code, follow the prompts, and enter your bank PIN to confirm {FMT(ussdDetails.checkout_amount)}.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-2)' }}>
+                      <Spinner size={14} /> Waiting for USSD confirmation…
+                    </div>
+                    <button type="button" onClick={() => setUssdDetails(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
+                      ← Try a different bank
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: 0.6 }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secure payment powered by</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Secured by</span>
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--teal)' }}>{PAYMENT_PROVIDER.name}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>· card data never stored by Qreek</span>
               </div>
             </>
           )}

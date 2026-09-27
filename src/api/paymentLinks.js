@@ -43,6 +43,34 @@ export const getPublicLinkContributions = (code, page = 1, perPage = 25) =>
 export const payLink     = (code, d)=> client.post(`/payment-links/pay/${code}`, d).then(r => r.data);
 
 /**
+ * Inline-payment initialisation. Creates the transaction record and returns the
+ * Flutterwave Inline SDK config (public_key, tx_ref, amount, subaccounts, customer).
+ * The frontend passes this directly to window.FlutterwaveCheckout() — no redirect.
+ * After the in-page callback fires, confirm with confirmFlutterwaveLinkPayment().
+ * @param {string} code - The payment link code.
+ * @param {Object} d - { name, phone, amount?, payment_description, idempotency_key? }
+ * @returns {Promise<Object>} Flutterwave Inline SDK config.
+ */
+export const initInlinePayment = (code, d) =>
+  client.post(`/payment-links/pay/${code}/inline-init`, d).then(r => r.data);
+
+/** Native bank transfer charge — returns { tx_ref, account_number, account_bank, account_name, expiry_seconds, checkout_amount, recipient_amount } */
+export const initBankTransfer = (code, d) =>
+  client.post(`/payment-links/pay/${code}/bank-transfer/init`, d).then(r => r.data);
+
+/** Native USSD charge — returns { tx_ref, flw_ref, payment_code, note, checkout_amount } */
+export const initUssd = (code, d) =>
+  client.post(`/payment-links/pay/${code}/ussd/init`, d).then(r => r.data);
+
+/** Native card direct charge — returns { status: 'success'|'otp'|'pin'|'redirect', ... } */
+export const chargeCardDirect = (code, d) =>
+  client.post(`/payment-links/pay/${code}/card/charge`, d).then(r => r.data);
+
+/** Validates OTP step-up from chargeCardDirect — returns { status: 'success', payment } */
+export const validateCardDirectOtp = (code, d) =>
+  client.post(`/payment-links/pay/${code}/card/validate`, d).then(r => r.data);
+
+/**
  * Confirms a Flutterwave checkout redirect or webhook-backed payment.
  * The backend must verify tx_ref, transaction_id, amount, currency, and status
  * against Flutterwave before marking the Qreek ledger entry as paid.

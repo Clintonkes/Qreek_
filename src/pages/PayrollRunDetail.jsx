@@ -39,6 +39,16 @@ export default function PayrollRunDetail() {
     getPayrollRun(runId).then(d => setData(d)).finally(() => setLoading(false));
   }, [runId]);
 
+  // Derived state must be declared before useEffects that list them as deps to avoid TDZ.
+  const run = data?.run || null;
+  const entries = data?.entries || [];
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleEntries = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return entries.slice(start, start + PAGE_SIZE);
+  }, [entries, currentPage]);
+
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
@@ -177,15 +187,6 @@ export default function PayrollRunDetail() {
     win.document.close();
     win.print();
   };
-
-  const run = data?.run || null;
-  const entries = data?.entries || [];
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const visibleEntries = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return entries.slice(start, start + PAGE_SIZE);
-  }, [entries, currentPage]);
 
   useEffect(() => {
     setPage(1);

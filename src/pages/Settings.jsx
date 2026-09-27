@@ -14,14 +14,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CreditCard, Trash } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
 import CopyButton from '../components/ui/CopyButton.jsx';
+import Spinner from '../components/ui/Spinner.jsx';
 import useAuthStore from '../store/authStore.js';
 import { changePin, hasPin, setPin } from '../api/auth.js';
 import { setCompanyPaymentPin, hasCompanyPaymentPin } from '../api/payroll.js';
+import { getSavedCards, deleteSavedCard } from '../api/cards.js';
 
 /**
  * Section component - A structural wrapper for categorizing setting groups.
@@ -61,10 +64,28 @@ export default function Settings() {
   const [savingPayPin, setSavingPayPin] = useState(false);
   const [hasPayPinFlag, setHasPayPinFlag] = useState(null);
 
+  const [cards, setCards] = useState([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [deletingCard, setDeletingCard] = useState(null);
+
   useEffect(() => {
     hasPin().then(r => setHasPinFlag(r.has_pin)).catch(() => setHasPinFlag(false));
     hasCompanyPaymentPin().then(r => setHasPayPinFlag(r.has_payment_pin)).catch(() => setHasPayPinFlag(false));
+    getSavedCards().then(r => setCards(r.cards || [])).catch(() => setCards([])).finally(() => setCardsLoading(false));
   }, []);
+
+  const handleDeleteCard = async (cardId) => {
+    setDeletingCard(cardId);
+    try {
+      await deleteSavedCard(cardId);
+      setCards(prev => prev.filter(c => c.id !== cardId));
+      toast.success('Card removed.');
+    } catch {
+      toast.error('Could not remove card. Try again.');
+    } finally {
+      setDeletingCard(null);
+    }
+  };
 
   const handleSetPin = async (e) => {
     e.preventDefault();
@@ -214,6 +235,44 @@ export default function Settings() {
             {hasPayPinFlag ? 'Change payroll PIN' : 'Set payroll PIN'}
           </Button>
         </form>
+      </Section>
+
+      <Section title="Saved payment cards">
+        <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.6 }}>
+          Cards you saved during checkout appear here. When you visit a Qreek payment link while logged in, these cards let you pay in one tap without re-entering your details.
+        </p>
+        {cardsLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem' }}><Spinner size={24} /></div>
+        ) : cards.length === 0 ? (
+          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--text-3)', fontSize: '0.85rem' }}>
+            <CreditCard size={20} />
+            No saved cards yet. When you pay via a Qreek link, check "Save this card for faster checkout" to add one.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {cards.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem' }}>
+                <CreditCard size={20} color="var(--teal)" style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                    {(c.brand || 'Card').toUpperCase()} •••• {c.last4}
+                  </div>
+                  {c.exp_month && c.exp_year && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Expires {c.exp_month}/{c.exp_year}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDeleteCard(c.id)}
+                  disabled={deletingCard === c.id}
+                  style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: '0.25rem', display: 'flex', opacity: deletingCard === c.id ? 0.5 : 1 }}
+                  title="Remove card"
+                >
+                  <Trash size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section title="Referral">

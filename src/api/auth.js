@@ -16,6 +16,12 @@ export const register = (data) => client.post('/auth/register', data).then(r => 
 export const checkPhoneAvailable = (phone) =>
   client.get('/auth/check-phone', { params: { phone } }).then(r => r.data);
 
+export const sendSignupOtp = (phone) =>
+  client.post('/auth/send-signup-otp', { phone }).then(r => r.data);
+
+export const verifySignupOtp = (phone, otp) =>
+  client.post('/auth/verify-signup-otp', { phone, otp }).then(r => r.data);
+
 /**
  * Login API.
  * @param {Object} data - Login credentials (phone, password).
