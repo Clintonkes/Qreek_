@@ -23,7 +23,7 @@
         "legalName": "IEKA Enterprises",
         "url": "https://qreekfinance.org/",
         "logo": "https://qreekfinance.org/favicon.svg",
-        "description": "Qreek Finance is a Nigerian fintech company for group and business payments. It offers payment pools for ajo savings groups, payment links for merchants, and payroll for businesses. Built on Flutterwave. Qreek never holds user funds.",
+        "description": "Qreek Finance is a Nigerian fintech company for group and business payments. It offers payment pools for ajo savings groups, payment links for merchants and freelancers, and payroll for businesses. Built on Flutterwave. Qreek never holds user funds.",
         "address": {
           "@type": "PostalAddress",
           "addressCountry": "NG"
@@ -37,7 +37,6 @@
     <link rel="dns-prefetch" href="https://qreek-finance.onrender.com" />
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <!-- First hero photograph. Without this it waits on the JS bundle, since the app is a SPA shell. -->
     <link
       rel="preload"
       as="image"
@@ -46,6 +45,20 @@
       imagesizes="100vw"
       fetchpriority="high"
     />
+    <style>
+      /* Visually hide SEO prerender content until React mounts and replaces #root.
+         Crawlers index the text; users never see it flash on screen. */
+      #root > h1,
+      #root > p {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    </style>
   </head>
   <body>
     <div id="root">

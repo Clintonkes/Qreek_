@@ -14,7 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Trash } from 'phosphor-react';
+import { CreditCard, Trash, Plus, X } from 'phosphor-react';
 import { toast } from 'react-hot-toast';
 import AppShell from '../components/layout/AppShell.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -24,7 +24,7 @@ import Spinner from '../components/ui/Spinner.jsx';
 import useAuthStore from '../store/authStore.js';
 import { changePin, hasPin, setPin } from '../api/auth.js';
 import { setCompanyPaymentPin, hasCompanyPaymentPin } from '../api/payroll.js';
-import { getSavedCards, deleteSavedCard } from '../api/cards.js';
+import { getSavedCards, deleteSavedCard, setDefaultCard, addCard, validateAddCardOtp } from '../api/cards.js';
 
 /**
  * Section component - A structural wrapper for categorizing setting groups.
@@ -67,6 +67,15 @@ export default function Settings() {
   const [cards, setCards] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(true);
   const [deletingCard, setDeletingCard] = useState(null);
+  const [settingDefault, setSettingDefault] = useState(null);
+
+  // Add-card flow state
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [addCardForm, setAddCardForm] = useState({ number: '', expiry: '', cvv: '', pin: '' });
+  const [addCardStep, setAddCardStep] = useState('form'); // 'form' | 'pin' | 'otp'
+  const [addCardOtp, setAddCardOtp] = useState('');
+  const [addCardFlwRef, setAddCardFlwRef] = useState('');
+  const [submittingCard, setSubmittingCard] = useState(false);
 
   useEffect(() => {
     hasPin().then(r => setHasPinFlag(r.has_pin)).catch(() => setHasPinFlag(false));
@@ -84,6 +93,87 @@ export default function Settings() {
       toast.error('Could not remove card. Try again.');
     } finally {
       setDeletingCard(null);
+    }
+  };
+
+  const handleSetDefault = async (cardId) => {
+    setSettingDefault(cardId);
+    try {
+      await setDefaultCard(cardId);
+      setCards(prev => prev.map(c => ({ ...c, is_default: c.id === cardId })));
+    } catch {
+      toast.error('Could not update default card.');
+    } finally {
+      setSettingDefault(null);
+    }
+  };
+
+  const resetAddCard = () => {
+    setShowAddCard(false);
+    setAddCardForm({ number: '', expiry: '', cvv: '', pin: '' });
+    setAddCardStep('form');
+    setAddCardOtp('');
+    setAddCardFlwRef('');
+  };
+
+  const handleAddCard = async (e, opts = {}) => {
+    e?.preventDefault();
+    const { pin } = opts;
+    setSubmittingCard(true);
+    try {
+      const [month, year] = (addCardForm.expiry || '').replace(/\s/g, '').split('/');
+      const result = await addCard({
+        card_number:  addCardForm.number.replace(/\s/g, ''),
+        cvv:          addCardForm.cvv,
+        expiry_month: month || '',
+        expiry_year:  year ? (year.length === 2 ? `20${year}` : year) : '',
+        ...(pin ? { pin } : {}),
+      });
+
+      if (result.status === 'pin') {
+        setAddCardStep('pin');
+        return;
+      }
+      if (result.status === 'otp') {
+        setAddCardFlwRef(result.flw_ref);
+        setAddCardStep('otp');
+        return;
+      }
+      if (result.status === 'redirect') {
+        window.location.assign(result.url);
+        return;
+      }
+      if (result.status === 'success') {
+        if (result.card) setCards(prev => [result.card, ...prev]);
+        toast.success('Card added successfully.');
+        resetAddCard();
+        return;
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Card verification failed. Check your details and try again.');
+    } finally {
+      setSubmittingCard(false);
+    }
+  };
+
+  const handleAddCardPinSubmit = (e) => {
+    e.preventDefault();
+    handleAddCard(null, { pin: addCardForm.pin });
+  };
+
+  const handleAddCardOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (!addCardOtp.trim()) return toast.error('Enter the OTP code.');
+    setSubmittingCard(true);
+    try {
+      const result = await validateAddCardOtp({ flw_ref: addCardFlwRef, otp: addCardOtp.trim() });
+      if (result.card) setCards(prev => [result.card, ...prev]);
+      toast.success('Card added successfully.');
+      resetAddCard();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'OTP did not match. Try again.');
+    } finally {
+      setSubmittingCard(false);
     }
   };
 
@@ -239,39 +329,176 @@ export default function Settings() {
 
       <Section title="Saved payment cards">
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.6 }}>
-          Cards you saved during checkout appear here. When you visit a Qreek payment link while logged in, these cards let you pay in one tap without re-entering your details.
+          Cards saved here are used for one-tap checkout on any Qreek payment link while you are logged in. A ₦50 card-verification charge is made when you add a card directly.
         </p>
+
         {cardsLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem' }}><Spinner size={24} /></div>
-        ) : cards.length === 0 ? (
-          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--text-3)', fontSize: '0.85rem' }}>
-            <CreditCard size={20} />
-            No saved cards yet. When you pay via a Qreek link, check "Save this card for faster checkout" to add one.
-          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {cards.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem' }}>
-                <CreditCard size={20} color="var(--teal)" style={{ flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
-                    {(c.brand || 'Card').toUpperCase()} •••• {c.last4}
-                  </div>
-                  {c.exp_month && c.exp_year && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Expires {c.exp_month}/{c.exp_year}</div>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleDeleteCard(c.id)}
-                  disabled={deletingCard === c.id}
-                  style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: '0.25rem', display: 'flex', opacity: deletingCard === c.id ? 0.5 : 1 }}
-                  title="Remove card"
-                >
-                  <Trash size={18} />
-                </button>
+          <>
+            {cards.length === 0 && !showAddCard && (
+              <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                <CreditCard size={20} />
+                No saved cards yet. Add one below or save during checkout.
               </div>
-            ))}
-          </div>
+            )}
+
+            {cards.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
+                {cards.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--surface-2)', border: `1px solid ${c.is_default ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: '0.75rem 1rem' }}>
+                    <CreditCard size={20} color={c.is_default ? 'var(--teal)' : 'var(--text-3)'} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {(c.brand || 'Card').toUpperCase()} •••• {c.last4}
+                        {c.is_default && <span style={{ fontSize: '0.68rem', background: 'var(--teal-faint)', color: 'var(--teal)', border: '1px solid var(--teal-border)', borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 700 }}>Default</span>}
+                      </div>
+                      {c.exp_month && c.exp_year && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Expires {c.exp_month}/{c.exp_year}{c.bank ? ` · ${c.bank}` : ''}</div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {!c.is_default && (
+                        <button
+                          onClick={() => handleSetDefault(c.id)}
+                          disabled={settingDefault === c.id}
+                          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-3)', cursor: 'pointer', padding: '0.25rem 0.55rem', fontSize: '0.72rem', opacity: settingDefault === c.id ? 0.5 : 1 }}
+                          title="Set as default"
+                        >
+                          Set default
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteCard(c.id)}
+                        disabled={deletingCard === c.id}
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: '0.25rem', display: 'flex', opacity: deletingCard === c.id ? 0.5 : 1 }}
+                        title="Remove card"
+                      >
+                        <Trash size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!showAddCard && (
+              <button
+                type="button"
+                onClick={() => { setShowAddCard(true); setAddCardStep('form'); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface-2)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', color: 'var(--teal)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', width: '100%', justifyContent: 'center' }}
+              >
+                <Plus size={16} /> Add a card
+              </button>
+            )}
+
+            {showAddCard && (
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--teal)' }}>
+                    {addCardStep === 'form' && 'Add a new card'}
+                    {addCardStep === 'pin' && 'Enter your card PIN'}
+                    {addCardStep === 'otp' && 'Enter your one-time code'}
+                  </div>
+                  <button type="button" onClick={resetAddCard} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0.2rem', display: 'flex' }}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {addCardStep === 'form' && (
+                  <form onSubmit={handleAddCard} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <Input
+                      label="Card number"
+                      value={addCardForm.number}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                        setAddCardForm(f => ({ ...f, number: raw.replace(/(.{4})/g, '$1 ').trim() }));
+                      }}
+                      placeholder="0000 0000 0000 0000"
+                      inputMode="numeric"
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <Input
+                        label="Expiry (MM/YY)"
+                        value={addCardForm.expiry}
+                        onChange={e => {
+                          let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+                          setAddCardForm(f => ({ ...f, expiry: v }));
+                        }}
+                        placeholder="MM/YY"
+                        inputMode="numeric"
+                      />
+                      <Input
+                        label="CVV"
+                        type="password"
+                        inputMode="numeric"
+                        value={addCardForm.cvv}
+                        onChange={e => setAddCardForm(f => ({ ...f, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                        placeholder="•••"
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', lineHeight: 1.5, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '0.5rem 0.75rem' }}>
+                      A ₦50 verification charge confirms the card is active and enables tokenised one-tap checkout. Your card number and CVV are encrypted directly to Flutterwave — Qreek never stores them.
+                    </div>
+                    <Button
+                      type="submit"
+                      loading={submittingCard}
+                      disabled={!addCardForm.number || !addCardForm.expiry || !addCardForm.cvv}
+                      variant="secondary"
+                    >
+                      Verify and save card (₦50 fee)
+                    </Button>
+                  </form>
+                )}
+
+                {addCardStep === 'pin' && (
+                  <form onSubmit={handleAddCardPinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
+                      Your bank requires your card PIN to authorise the ₦50 verification charge.
+                    </p>
+                    <Input
+                      label="Card PIN"
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={addCardForm.pin}
+                      onChange={e => setAddCardForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                      placeholder="••••"
+                      autoFocus
+                    />
+                    <Button type="submit" loading={submittingCard} disabled={addCardForm.pin.length < 4} variant="secondary">
+                      Confirm PIN
+                    </Button>
+                    <button type="button" onClick={() => setAddCardStep('form')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
+                      ← Back
+                    </button>
+                  </form>
+                )}
+
+                {addCardStep === 'otp' && (
+                  <form onSubmit={handleAddCardOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
+                      Your card issuer sent a one-time code to your registered phone number or email. Enter it below to complete verification.
+                    </p>
+                    <Input
+                      label="One-time code"
+                      value={addCardOtp}
+                      onChange={e => setAddCardOtp(e.target.value)}
+                      placeholder="e.g. 123456"
+                      autoFocus
+                    />
+                    <Button type="submit" loading={submittingCard} disabled={!addCardOtp.trim()} variant="secondary">
+                      Confirm
+                    </Button>
+                    <button type="button" onClick={resetAddCard} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
+                      Cancel
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </>
         )}
       </Section>
 
