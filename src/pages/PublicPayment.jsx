@@ -113,8 +113,8 @@ export default function PublicPayment() {
   const [validatingOtp, setValidatingOtp] = useState(false);
 
   // ── Native inline payment state ─────────────────────────────────────────────
-  // payMethod: 'card' | 'bank_transfer' | 'ussd'
-  const [payMethod, setPayMethod] = useState('card');
+  // payMethod: 'bank_transfer' | 'ussd'  (card hidden until Flutterwave enables Direct Charge)
+  const [payMethod, setPayMethod] = useState('bank_transfer');
   // card form
   const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', pin: '' });
   const [cardStep, setCardStep] = useState('form'); // 'form' | 'pin' | 'otp'
@@ -510,7 +510,6 @@ export default function PublicPayment() {
   const handlePay = (e) => {
     if (payMethod === 'bank_transfer') return handleBankTransfer(e);
     if (payMethod === 'ussd') return handleUssd(e);
-    return handleCardCharge(e);
   };
 
   /**
@@ -683,8 +682,8 @@ export default function PublicPayment() {
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{payoutDone ? 'Payment Completed!' : 'Payment Received'}</h1>
         <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>
           {payoutDone
-            ? `You've paid ${FMT(amount)}. ${link.title} receives ${FMT(recipientAmount)}.`
-            : `${FMT(amount)} has been accepted by Flutterwave. The recipient's share is being settled directly to their bank account.`}
+            ? `You’ve paid ${FMT(amount)}. ${link.title} receives ${FMT(recipientAmount)}.`
+            : `${FMT(amount)} has been accepted by Flutterwave. The recipient’s share is being settled directly to their bank account.`}
         </p>
 
         <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -966,13 +965,13 @@ export default function PublicPayment() {
               {/* ── Payer identity fields ──────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Input
-                  label="Your Full Name"
+                  label="Your full name"
                   value={form.name}
                   onChange={e => setForm({...form, name: e.target.value})}
                   placeholder="e.g. John Doe"
                 />
                 <PhoneInput
-                  label="Phone Number"
+                  label="Phone number"
                   value={form.phone}
                   onChange={v => setForm({...form, phone: v})}
                 />
@@ -1026,9 +1025,8 @@ export default function PublicPayment() {
 
               {/* ── Payment method tabs ────────────────────────────────── */}
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
                   {[
-                    { id: 'card', label: 'Card' },
                     { id: 'bank_transfer', label: 'Bank Transfer' },
                     { id: 'ussd', label: 'USSD' },
                   ].map(m => (
@@ -1051,117 +1049,6 @@ export default function PublicPayment() {
                     </button>
                   ))}
                 </div>
-
-                {/* ── Card tab ────────────────────────────────────────── */}
-                {payMethod === 'card' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {cardStep === 'form' && (
-                      <>
-                        <Input
-                          label="Card number"
-                          value={cardForm.number}
-                          onChange={e => {
-                            const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
-                            setCardForm(f => ({ ...f, number: raw.replace(/(.{4})/g, '$1 ').trim() }));
-                          }}
-                          placeholder="0000 0000 0000 0000"
-                          inputMode="numeric"
-                        />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                          <Input
-                            label="Expiry (MM/YY)"
-                            value={cardForm.expiry}
-                            onChange={e => {
-                              let v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                              if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
-                              setCardForm(f => ({ ...f, expiry: v }));
-                            }}
-                            placeholder="MM/YY"
-                            inputMode="numeric"
-                          />
-                          <Input
-                            label="CVV"
-                            value={cardForm.cvv}
-                            onChange={e => setCardForm(f => ({ ...f, cvv: e.target.value.replace(/\D/g,'').slice(0,4) }))}
-                            placeholder="•••"
-                            type="password"
-                            inputMode="numeric"
-                          />
-                        </div>
-                        {isAuthenticated && (
-                          <label style={{
-                            display: 'flex', alignItems: 'center', gap: '0.65rem',
-                            padding: '0.65rem 0.9rem',
-                            background: saveCardOptIn ? 'rgba(0,212,170,0.08)' : 'var(--surface-2)',
-                            border: `1px solid ${saveCardOptIn ? 'var(--teal-border)' : 'var(--border)'}`,
-                            borderRadius: 'var(--radius)',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}>
-                            <input type="checkbox" checked={saveCardOptIn} onChange={e => setSaveCardOptIn(e.target.checked)} style={{ flexShrink: 0, accentColor: 'var(--teal)', width: 16, height: 16 }} />
-                            <div>
-                              <div style={{ fontSize: '0.83rem', fontWeight: 600, color: saveCardOptIn ? 'var(--teal)' : 'var(--text)' }}>Save this card to my Qreek account</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>One-tap checkout on future Qreek payment links</div>
-                            </div>
-                          </label>
-                        )}
-                        <Button
-                          type="button"
-                          onClick={handleCardCharge}
-                          disabled={submittingDirectCard || !cardForm.number || !cardForm.expiry || !cardForm.cvv}
-                          style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem', marginTop: '0.25rem' }}
-                        >
-                          {submittingDirectCard ? 'Processing…' : `Pay ${FMT(link.is_flexible ? +form.amount || 0 : link.amount)}`}
-                        </Button>
-                      </>
-                    )}
-
-                    {cardStep === 'pin' && (
-                      <form onSubmit={handleCardPinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', textAlign: 'center', padding: '0.5rem 0' }}>
-                          Your bank requires your card PIN to authorise this payment.
-                        </div>
-                        <Input
-                          label="Card PIN"
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={cardForm.pin}
-                          onChange={e => setCardForm(f => ({ ...f, pin: e.target.value.replace(/\D/g,'').slice(0,4) }))}
-                          placeholder="••••"
-                          autoFocus
-                        />
-                        <Button type="submit" disabled={submittingDirectCard || cardForm.pin.length < 4} style={{ width: '100%', justifyContent: 'center', height: 48 }}>
-                          {submittingDirectCard ? 'Processing…' : 'Confirm with PIN'}
-                        </Button>
-                        <button type="button" onClick={() => setCardStep('form')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
-                          ← Back
-                        </button>
-                      </form>
-                    )}
-
-                    {cardStep === 'otp' && (
-                      <form onSubmit={handleDirectOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', textAlign: 'center', padding: '0.5rem 0' }}>
-                          Your card issuer sent a one-time code to your registered phone number. Enter it below.
-                        </div>
-                        <Input
-                          label="One-time code"
-                          value={directOtp}
-                          onChange={e => setDirectOtp(e.target.value)}
-                          placeholder="e.g. 123456"
-                          autoFocus
-                        />
-                        <Button type="submit" disabled={submittingDirectCard || !directOtp.trim()} style={{ width: '100%', justifyContent: 'center', height: 48 }}>
-                          {submittingDirectCard ? 'Verifying…' : 'Confirm payment'}
-                        </Button>
-                        <button type="button" onClick={() => { setCardStep('form'); setDirectOtpPrompt(null); setDirectOtp(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' }}>
-                          Cancel and try again
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                )}
 
                 {/* ── Bank Transfer tab ────────────────────────────────── */}
                 {payMethod === 'bank_transfer' && !bankTransferDetails && (
