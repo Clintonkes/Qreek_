@@ -15,7 +15,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock, CreditCard } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, initInlinePayment, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards, initBankTransfer, initUssd, chargeCardDirect, validateCardDirectOtp } from '../api/paymentLinks.js';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, initInlinePayment, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards, requestBankTransferOtp, initBankTransfer, initUssd, chargeCardDirect, validateCardDirectOtp } from '../api/paymentLinks.js';
 import { getSavedCards } from '../api/cards.js';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
@@ -113,16 +113,18 @@ export default function PublicPayment() {
   const [validatingOtp, setValidatingOtp] = useState(false);
 
   // ── Native inline payment state ─────────────────────────────────────────────
-  // payMethod: 'bank_transfer' | 'ussd'  (card hidden until Flutterwave enables Direct Charge)
+  // payMethod: 'card' | 'bank_transfer' | 'ussd'
   const [payMethod, setPayMethod] = useState('bank_transfer');
-  // card form
+  // card form (used for Flutterwave Inline modal — shown for users without saved cards)
   const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', pin: '' });
-  const [cardStep, setCardStep] = useState('form'); // 'form' | 'pin' | 'otp'
-  const [directOtpPrompt, setDirectOtpPrompt] = useState(null); // { tx_ref, flw_ref }
+  const [cardStep, setCardStep] = useState('form');
+  const [directOtpPrompt, setDirectOtpPrompt] = useState(null);
   const [directOtp, setDirectOtp] = useState('');
   const [submittingDirectCard, setSubmittingDirectCard] = useState(false);
-  // bank transfer
-  const [bankTransferDetails, setBankTransferDetails] = useState(null); // returned virtual account
+  // bank transfer — OTP step before virtual account generation
+  const [btOtpStep, setBtOtpStep] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'verifying'
+  const [btOtp, setBtOtp] = useState('');
+  const [bankTransferDetails, setBankTransferDetails] = useState(null);
   const [bankTransferCountdown, setBankTransferCountdown] = useState(0);
   const bankTransferTimerRef = useRef(null);
   // ussd
@@ -335,20 +337,43 @@ export default function PublicPayment() {
   };
 
   // ── Bank transfer ──────────────────────────────────────────────────────────
-  const handleBankTransfer = async (e) => {
-    e.preventDefault();
+  const handleRequestBtOtp = async () => {
     if (!_validateCommonFields()) return;
     setPaymentError('');
+    setBtOtpStep('sending');
+    try {
+      await requestBankTransferOtp(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+      });
+      setBtOtpStep('sent');
+      toast.success('Code sent to your phone.');
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Could not send code.');
+      setPaymentError(msg);
+      toast.error(msg);
+      setBtOtpStep('idle');
+    }
+  };
+
+  const handleBankTransfer = async () => {
+    if (!_validateCommonFields()) return;
+    if (!btOtp.trim()) { toast.error('Enter the code sent to your phone.'); return; }
+    setPaymentError('');
+    setBtOtpStep('verifying');
     setPaying(true);
     try {
       const result = await initBankTransfer(code, {
         name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
+        otp: btOtp.trim(),
         amount: link.is_flexible ? +form.amount : undefined,
         payment_description: form.note.trim(),
       });
       if (result.already_paid) { setSuccess(true); toast.success('Already paid!'); return; }
       setBankTransferDetails(result);
+      setBtOtpStep('idle');
+      setBtOtp('');
       const secs = result.expiry_seconds || 1800;
       setBankTransferCountdown(secs);
       if (bankTransferTimerRef.current) clearInterval(bankTransferTimerRef.current);
@@ -358,7 +383,6 @@ export default function PublicPayment() {
           return c - 1;
         });
       }, 1000);
-      // Poll status until paid or countdown expires
       const txRef = result.tx_ref;
       const pollId = setInterval(async () => {
         try {
@@ -377,6 +401,7 @@ export default function PublicPayment() {
       const msg = getUserFriendlyError(err, 'Could not initialise bank transfer.');
       setPaymentError(msg);
       toast.error(msg);
+      setBtOtpStep('sent');
     } finally {
       setPaying(false);
     }
@@ -510,6 +535,60 @@ export default function PublicPayment() {
   const handlePay = (e) => {
     if (payMethod === 'bank_transfer') return handleBankTransfer(e);
     if (payMethod === 'ussd') return handleUssd(e);
+  };
+
+  const handlePayWithInline = async () => {
+    if (!_validateCommonFields()) return;
+    if (!window.FlutterwaveCheckout) {
+      return handlePayHosted({ preventDefault: () => {} });
+    }
+    setPaymentError('');
+    setPaying(true);
+    try {
+      const idempotencyKey = crypto.randomUUID();
+      const config = await initInlinePayment(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        amount: link.is_flexible ? +form.amount : undefined,
+        payment_description: form.note.trim(),
+        idempotency_key: idempotencyKey,
+        redirect_url: `${window.location.origin}/p/${code}`,
+      });
+      setPaying(false);
+      window.FlutterwaveCheckout({
+        ...config,
+        callback: (response) => {
+          if (response.status === 'successful' || response.status === 'completed') {
+            setPaying(true);
+            confirmFlutterwaveLinkPayment(code, {
+              transaction_id: response.transaction_id,
+              tx_ref: response.tx_ref,
+              status: response.status,
+            })
+              .then(data => {
+                const payment = data.payment || data.transaction || data;
+                setReceipt(payment);
+                setSuccess(true);
+                toast.success('Payment received!');
+              })
+              .catch(err => {
+                setPaymentError(getUserFriendlyError(err, 'Payment confirmation failed.'));
+                toast.error(getUserFriendlyError(err, 'Payment confirmation failed.'));
+              })
+              .finally(() => setPaying(false));
+          } else {
+            setPaymentError('Payment was not completed.');
+            toast.error('Payment was not completed.');
+          }
+        },
+        onclose: () => setPaying(false),
+      });
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Could not open card payment.');
+      setPaymentError(msg);
+      toast.error(msg);
+      setPaying(false);
+    }
   };
 
   /**
@@ -964,17 +1043,19 @@ export default function PublicPayment() {
             <>
               {/* ── Payer identity fields ──────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Input
-                  label="Your full name"
-                  value={form.name}
-                  onChange={e => setForm({...form, name: e.target.value})}
-                  placeholder="e.g. John Doe"
-                />
-                <PhoneInput
-                  label="Phone number"
-                  value={form.phone}
-                  onChange={v => setForm({...form, phone: v})}
-                />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                  <Input
+                    label="Your full name"
+                    value={form.name}
+                    onChange={e => setForm({...form, name: e.target.value})}
+                    placeholder="e.g. John Doe"
+                  />
+                  <PhoneInput
+                    label="Phone number"
+                    value={form.phone}
+                    onChange={v => setForm({...form, phone: v})}
+                  />
+                </div>
 
                 {!isAuthenticated && guestCardStage === 'idle' && (
                   <button
@@ -1025,45 +1106,100 @@ export default function PublicPayment() {
 
               {/* ── Payment method tabs ────────────────────────────────── */}
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
-                  {[
-                    { id: 'bank_transfer', label: 'Bank Transfer' },
-                    { id: 'ussd', label: 'USSD' },
-                  ].map(m => (
-                    <button
-                      key={m.id}
+                {(() => {
+                  const hasSavedCards = savedCards.length > 0 && (isAuthenticated || guestCardStage === 'verified');
+                  const tabs = hasSavedCards
+                    ? [{ id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }]
+                    : [{ id: 'card', label: 'Card' }, { id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }];
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length},1fr)`, gap: '0.4rem', marginBottom: '1rem' }}>
+                      {tabs.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => { setPayMethod(m.id); setPaymentError(''); setBankTransferDetails(null); setUssdDetails(null); setCardStep('form'); setBtOtpStep('idle'); setBtOtp(''); }}
+                          style={{
+                            padding: '0.55rem 0.5rem',
+                            borderRadius: 'var(--radius)',
+                            border: `1px solid ${payMethod === m.id ? 'var(--teal)' : 'var(--border)'}`,
+                            background: payMethod === m.id ? 'var(--teal-faint)' : 'var(--surface-2)',
+                            color: payMethod === m.id ? 'var(--teal)' : 'var(--text-2)',
+                            fontWeight: 600,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* ── Card tab (Flutterwave Inline — no redirect) ───────── */}
+                {payMethod === 'card' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <Button
                       type="button"
-                      onClick={() => { setPayMethod(m.id); setPaymentError(''); setBankTransferDetails(null); setUssdDetails(null); setCardStep('form'); }}
-                      style={{
-                        padding: '0.55rem 0.5rem',
-                        borderRadius: 'var(--radius)',
-                        border: `1px solid ${payMethod === m.id ? 'var(--teal)' : 'var(--border)'}`,
-                        background: payMethod === m.id ? 'var(--teal-faint)' : 'var(--surface-2)',
-                        color: payMethod === m.id ? 'var(--teal)' : 'var(--text-2)',
-                        fontWeight: 600,
-                        fontSize: '0.78rem',
-                        cursor: 'pointer',
-                      }}
+                      onClick={handlePayWithInline}
+                      disabled={paying}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
                     >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
+                      {paying ? 'Opening card payment…' : `Pay ${FMT(link.is_flexible ? +form.amount || 0 : link.amount)} by card`}
+                    </Button>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.5 }}>
+                      A secure card form will appear on this page. Your card details go directly to Flutterwave — never to Qreek.
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Bank Transfer tab ────────────────────────────────── */}
                 {payMethod === 'bank_transfer' && !bankTransferDetails && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem', fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
-                      A temporary bank account will be generated for this payment. Transfer the exact amount to that account and we will confirm automatically.
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={handleBankTransfer}
-                      disabled={paying}
-                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
-                    >
-                      {paying ? 'Generating account…' : 'Get account number'}
-                    </Button>
+                    {btOtpStep === 'idle' && (
+                      <Button
+                        type="button"
+                        onClick={handleRequestBtOtp}
+                        disabled={btOtpStep === 'sending'}
+                        style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                      >
+                        Send me a code
+                      </Button>
+                    )}
+                    {btOtpStep === 'sending' && (
+                      <Button type="button" disabled style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
+                        Sending code…
+                      </Button>
+                    )}
+                    {(btOtpStep === 'sent' || btOtpStep === 'verifying') && (
+                      <>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                          A 6-digit code was sent to your phone. Enter it below to generate your transfer account.
+                        </div>
+                        <Input
+                          label="Verification code"
+                          value={btOtp}
+                          onChange={e => setBtOtp(e.target.value)}
+                          placeholder="e.g. 123456"
+                          autoFocus
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleBankTransfer}
+                          disabled={btOtpStep === 'verifying' || paying}
+                          style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                        >
+                          {btOtpStep === 'verifying' ? 'Verifying…' : 'Get account number'}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => { setBtOtpStep('idle'); setBtOtp(''); }}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}
+                        >
+                          Resend code
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
 

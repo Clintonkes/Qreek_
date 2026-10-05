@@ -54,7 +54,11 @@ export const payLink     = (code, d)=> client.post(`/payment-links/pay/${code}`,
 export const initInlinePayment = (code, d) =>
   client.post(`/payment-links/pay/${code}/inline-init`, d).then(r => r.data);
 
-/** Native bank transfer charge — returns { tx_ref, account_number, account_bank, account_name, expiry_seconds, checkout_amount, recipient_amount } */
+/** Sends a 6-digit OTP to the payer's phone before generating the virtual bank account */
+export const requestBankTransferOtp = (code, d) =>
+  client.post(`/payment-links/pay/${code}/bank-transfer/otp`, d).then(r => r.data);
+
+/** Native bank transfer charge — OTP required; returns { tx_ref, account_number, account_bank, account_name, expiry_seconds, checkout_amount, recipient_amount } */
 export const initBankTransfer = (code, d) =>
   client.post(`/payment-links/pay/${code}/bank-transfer/init`, d).then(r => r.data);
 
