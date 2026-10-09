@@ -62,6 +62,14 @@ export const requestBankTransferOtp = (code, d) =>
 export const initBankTransfer = (code, d) =>
   client.post(`/payment-links/pay/${code}/bank-transfer/init`, d).then(r => r.data);
 
+/** Nigerian bank account direct debit — returns { tx_ref, flw_ref, auth_model, redirect_url, message, checkout_amount } */
+export const initAccountCharge = (code, d) =>
+  client.post(`/payment-links/pay/${code}/account/init`, d).then(r => r.data);
+
+/** Validates the OTP step for an account debit — returns { status, payment } */
+export const validateAccountCharge = (code, d) =>
+  client.post(`/payment-links/pay/${code}/account/validate`, d).then(r => r.data);
+
 /** Native USSD charge — returns { tx_ref, flw_ref, payment_code, note, checkout_amount } */
 export const initUssd = (code, d) =>
   client.post(`/payment-links/pay/${code}/ussd/init`, d).then(r => r.data);

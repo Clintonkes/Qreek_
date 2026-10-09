@@ -15,8 +15,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { PaperPlaneTilt, CheckCircle, Warning, User, Phone, Bank, ArrowRight, ListBullets, Clock, CreditCard } from 'phosphor-react';
-import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, initInlinePayment, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards, requestBankTransferOtp, initBankTransfer, initUssd, chargeCardDirect, validateCardDirectOtp } from '../api/paymentLinks.js';
+import { confirmFlutterwaveLinkPayment, getLinkPaymentStatus, resolveLink, payLink, initInlinePayment, getPublicLinkContributions, chargeSavedCard, validateCardOtp, requestCardCheckoutOtp, verifyCardCheckoutOtp, getGuestSavedCards, requestBankTransferOtp, initBankTransfer, initUssd, chargeCardDirect, validateCardDirectOtp, initAccountCharge, validateAccountCharge } from '../api/paymentLinks.js';
 import { getSavedCards } from '../api/cards.js';
+import { listBanks } from '../api/auth.js';
+import BankSelect from '../components/ui/BankSelect.jsx';
 import { getUserFriendlyError } from '../lib/utils.js';
 import Button from '../components/ui/Button.jsx';
 import Input from '../components/ui/Input.jsx';
@@ -143,6 +145,15 @@ export default function PublicPayment() {
     { code: '232', name: 'Sterling Bank (*822#)' },
   ];
 
+  // account debit (debit_ng_account)
+  const [accountForm, setAccountForm] = useState({ account_number: '', account_bank: '' });
+  const [accountStep, setAccountStep] = useState('idle'); // 'idle' | 'submitting' | 'otp' | 'validating'
+  const [accountFlwRef, setAccountFlwRef] = useState('');
+  const [accountTxRef, setAccountTxRef]   = useState('');
+  const [accountOtp, setAccountOtp]       = useState('');
+  const [accountMsg, setAccountMsg]       = useState('');
+  const [banks, setBanks] = useState([]);
+
   // Guest saved-card access: a payer who isn't logged in proves they own a
   // phone number that has saved cards, without a full Qreek login.
   const [guestCardStage, setGuestCardStage] = useState('idle'); // idle | otp_sent | verified
@@ -154,6 +165,10 @@ export default function PublicPayment() {
   useEffect(() => {
     const i = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(i);
+  }, []);
+
+  useEffect(() => {
+    listBanks().then(data => setBanks(data.banks || data || [])).catch(() => {});
   }, []);
 
   // Load Flutterwave Inline SDK once so window.FlutterwaveCheckout() is available.
@@ -531,6 +546,66 @@ export default function PublicPayment() {
   const handlePay = (e) => {
     if (payMethod === 'bank_transfer') return handleBankTransfer(e);
     if (payMethod === 'ussd') return handleUssd(e);
+    if (payMethod === 'bank_account') return accountStep === 'otp' ? handleAccountValidate() : handleAccountInit();
+  };
+
+  const handleAccountInit = async () => {
+    if (!_validateCommonFields()) return;
+    if (!accountForm.account_number.trim() || accountForm.account_number.trim().length !== 10) {
+      return toast.error('Enter a valid 10-digit account number.');
+    }
+    if (!accountForm.account_bank) {
+      return toast.error('Select your bank.');
+    }
+    setPaymentError('');
+    setAccountStep('submitting');
+    try {
+      const result = await initAccountCharge(code, {
+        name: form.name.trim(),
+        phone: formatPhoneNumber(form.phone),
+        account_number: accountForm.account_number.trim(),
+        account_bank: accountForm.account_bank,
+        amount: link.is_flexible ? +form.amount : undefined,
+        payment_description: form.note.trim(),
+      });
+      if (result.already_paid) { setSuccess(true); toast.success('Already paid!'); return; }
+      if (result.auth_model === 'internet_banking' && result.redirect_url) {
+        sessionStorage.setItem(`qreek:flw:${code}`, result.tx_ref);
+        window.location.assign(result.redirect_url);
+        return;
+      }
+      setAccountTxRef(result.tx_ref);
+      setAccountFlwRef(result.flw_ref);
+      setAccountMsg(result.message || 'Enter the OTP sent to your phone.');
+      setAccountStep('otp');
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'Could not initiate account charge.');
+      setPaymentError(msg);
+      toast.error(msg);
+      setAccountStep('idle');
+    }
+  };
+
+  const handleAccountValidate = async () => {
+    if (!accountOtp.trim()) return toast.error('Enter the OTP sent to your phone.');
+    setPaymentError('');
+    setAccountStep('validating');
+    try {
+      const result = await validateAccountCharge(code, {
+        tx_ref: accountTxRef,
+        flw_ref: accountFlwRef,
+        otp: accountOtp.trim(),
+      });
+      const payment = result.payment || result.transaction || result;
+      setReceipt(payment);
+      setSuccess(true);
+      toast.success('Payment received!');
+    } catch (err) {
+      const msg = getUserFriendlyError(err, 'OTP did not match. Try again.');
+      setPaymentError(msg);
+      toast.error(msg);
+      setAccountStep('otp');
+    }
   };
 
   const handlePayWithInline = async () => {
@@ -1105,15 +1180,15 @@ export default function PublicPayment() {
                 {(() => {
                   const hasSavedCards = savedCards.length > 0 && (isAuthenticated || guestCardStage === 'verified');
                   const tabs = hasSavedCards
-                    ? [{ id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }]
-                    : [{ id: 'card', label: 'Card' }, { id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }];
+                    ? [{ id: 'bank_account', label: 'Bank Account' }, { id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }]
+                    : [{ id: 'card', label: 'Card' }, { id: 'bank_account', label: 'Bank Account' }, { id: 'bank_transfer', label: 'Bank Transfer' }, { id: 'ussd', label: 'USSD' }];
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length},1fr)`, gap: '0.4rem', marginBottom: '1rem' }}>
                       {tabs.map(m => (
                         <button
                           key={m.id}
                           type="button"
-                          onClick={() => { setPayMethod(m.id); setPaymentError(''); setBankTransferDetails(null); setUssdDetails(null); setCardStep('form'); setBtOtpStep('idle'); setBtOtp(''); }}
+                          onClick={() => { setPayMethod(m.id); setPaymentError(''); setBankTransferDetails(null); setUssdDetails(null); setCardStep('form'); setBtOtpStep('idle'); setBtOtp(''); setAccountStep('idle'); setAccountOtp(''); }}
                           style={{
                             padding: '0.55rem 0.5rem',
                             borderRadius: 'var(--radius)',
@@ -1146,6 +1221,68 @@ export default function PublicPayment() {
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.5 }}>
                       A secure card form will appear on this page. Your card details go directly to Flutterwave — never to Qreek.
                     </div>
+                  </div>
+                )}
+
+                {/* ── Bank Account tab (direct debit — debit_ng_account) ── */}
+                {payMethod === 'bank_account' && accountStep !== 'otp' && accountStep !== 'validating' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <Input
+                      label="Your account number"
+                      value={accountForm.account_number}
+                      onChange={e => setAccountForm(f => ({ ...f, account_number: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                      placeholder="10-digit account number"
+                      inputMode="numeric"
+                    />
+                    <BankSelect
+                      label="Your bank"
+                      banks={banks}
+                      value={accountForm.account_bank}
+                      onChange={code => setAccountForm(f => ({ ...f, account_bank: code }))}
+                      placeholder="Select your bank"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAccountInit}
+                      disabled={accountStep === 'submitting'}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                    >
+                      {accountStep === 'submitting' ? 'Initiating payment…' : `Pay ${FMT(link.is_flexible ? +form.amount || 0 : link.amount)}`}
+                    </Button>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.5 }}>
+                      Flutterwave will send an OTP to the phone number tied to your bank account to authorise this debit.
+                    </div>
+                  </div>
+                )}
+
+                {payMethod === 'bank_account' && (accountStep === 'otp' || accountStep === 'validating') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ background: 'var(--teal-faint)', border: '1px solid var(--teal-border)', borderRadius: 'var(--radius)', padding: '0.85rem', fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                      {accountMsg}
+                    </div>
+                    <Input
+                      label="OTP"
+                      value={accountOtp}
+                      onChange={e => setAccountOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                      placeholder="Enter OTP"
+                      inputMode="numeric"
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAccountValidate}
+                      disabled={accountStep === 'validating'}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                    >
+                      {accountStep === 'validating' ? 'Verifying…' : 'Confirm payment'}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => { setAccountStep('idle'); setAccountOtp(''); setPaymentError(''); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}
+                    >
+                      ← Change account details
+                    </button>
                   </div>
                 )}
 
