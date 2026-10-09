@@ -358,15 +358,12 @@ export default function PublicPayment() {
 
   const handleBankTransfer = async () => {
     if (!_validateCommonFields()) return;
-    if (!btOtp.trim()) { toast.error('Enter the code sent to your phone.'); return; }
     setPaymentError('');
-    setBtOtpStep('verifying');
     setPaying(true);
     try {
       const result = await initBankTransfer(code, {
         name: form.name.trim(),
         phone: formatPhoneNumber(form.phone),
-        otp: btOtp.trim(),
         amount: link.is_flexible ? +form.amount : undefined,
         payment_description: form.note.trim(),
       });
@@ -401,7 +398,6 @@ export default function PublicPayment() {
       const msg = getUserFriendlyError(err, 'Could not initialise bank transfer.');
       setPaymentError(msg);
       toast.error(msg);
-      setBtOtpStep('sent');
     } finally {
       setPaying(false);
     }
@@ -1156,50 +1152,14 @@ export default function PublicPayment() {
                 {/* ── Bank Transfer tab ────────────────────────────────── */}
                 {payMethod === 'bank_transfer' && !bankTransferDetails && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {btOtpStep === 'idle' && (
-                      <Button
-                        type="button"
-                        onClick={handleRequestBtOtp}
-                        disabled={btOtpStep === 'sending'}
-                        style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
-                      >
-                        Send me a code
-                      </Button>
-                    )}
-                    {btOtpStep === 'sending' && (
-                      <Button type="button" disabled style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}>
-                        Sending code…
-                      </Button>
-                    )}
-                    {(btOtpStep === 'sent' || btOtpStep === 'verifying') && (
-                      <>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
-                          A 6-digit code was sent to your phone. Enter it below to generate your transfer account.
-                        </div>
-                        <Input
-                          label="Verification code"
-                          value={btOtp}
-                          onChange={e => setBtOtp(e.target.value)}
-                          placeholder="e.g. 123456"
-                          autoFocus
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleBankTransfer}
-                          disabled={btOtpStep === 'verifying' || paying}
-                          style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
-                        >
-                          {btOtpStep === 'verifying' ? 'Verifying…' : 'Get account number'}
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => { setBtOtpStep('idle'); setBtOtp(''); }}
-                          style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}
-                        >
-                          Resend code
-                        </button>
-                      </>
-                    )}
+                    <Button
+                      type="button"
+                      onClick={handleBankTransfer}
+                      disabled={paying}
+                      style={{ width: '100%', justifyContent: 'center', height: 52, fontSize: '1.05rem' }}
+                    >
+                      {paying ? 'Generating account…' : 'Get account number'}
+                    </Button>
                   </div>
                 )}
 
