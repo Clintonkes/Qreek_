@@ -462,8 +462,8 @@ function ProtectionTab({ poolId, pool }) {
         <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {[
             `All payments are processed by ${PAYMENT_PROVIDER.name}. Qreek never holds funds.`,
-            'Funds go directly from the payer\'s bank to the recipient\'s bank. The admin cannot intercept them.',
-            'Every transaction is recorded on Qreek\'s immutable ledger and visible to all pool members.',
+            "Funds go directly from the payer’s bank to the recipient’s bank. The admin cannot intercept them.",
+            "Every transaction is recorded on Qreek’s immutable ledger and visible to all pool members.",
             'Admin changes are logged with timestamp and visible to all members.',
             'You can report any suspicious activity below and our support team will respond within 24 hours.',
           ].map((item, i) => <li key={i} style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.65 }}>{item}</li>)}

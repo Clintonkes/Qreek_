@@ -110,12 +110,12 @@ export default function Pools() {
     // Client-side guard: check if this code belongs to a pool the user already owns
     const owned = pools.find(p => p.invite_code === trimmed && p.role === 'admin');
     if (owned) {
-      setCodeErr(`You created "${owned.name}" — you're already the admin.`);
+      setCodeErr(`You created “${owned.name}” — you’re already the admin.`);
       return;
     }
     const member = pools.find(p => p.invite_code === trimmed);
     if (member) {
-      setCodeErr(`You're already in "${member.name}".`);
+      setCodeErr(`You’re already in “${member.name}”.`);
       return;
     }
 

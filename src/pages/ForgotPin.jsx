@@ -120,7 +120,7 @@ export default function ForgotPin() {
           </div>
           <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Reset your PIN</h1>
           <p style={{ color: 'var(--text-2)', fontSize: '0.88rem' }}>
-            {step === 1 && "We'll send a one-time code to your registered phone."}
+            {step === 1 && "We’ll send a one-time code to your registered phone."}
             {step === 2 && "Enter the 6-character code we sent to your phone."}
             {step === 3 && "Choose a new PIN for your account."}
           </p>
@@ -179,7 +179,7 @@ export default function ForgotPin() {
               style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.25em', fontSize: '1.25rem', textAlign: 'center' }}
             />
             <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', textAlign: 'center' }}>
-              Didn't receive it?{' '}
+              Didn’t receive it?{' '}
               <button type="button" onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'var(--font-body)' }}>
                 Resend
               </button>

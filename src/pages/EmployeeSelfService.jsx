@@ -137,7 +137,7 @@ export default function EmployeeSelfService() {
           <h1 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{mode === 'invite' ? 'Welcome aboard!' : 'Details saved!'}</h1>
           <p style={{ color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
             {mode === 'invite'
-              ? `Your information has been submitted to ${companyName}'s payroll system.`
+              ? `Your information has been submitted to ${companyName}’s payroll system.`
               : 'Your information has been updated in the company payroll system.'}
           </p>
           <Button onClick={() => navigate('/')}>Go to home</Button>

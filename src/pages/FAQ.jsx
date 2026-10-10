@@ -32,8 +32,8 @@ const GROUPS = [
         a: "No. Anyone can pay a Qreek Payment Link or Pool contribution as a guest — enter your name, phone, and pay by card, bank transfer, or USSD. You only need an account to create your own links and pools, or to save a card for faster checkout next time.",
       },
       {
-        q: "What's the difference between a Pool and a Payment Link?",
-        a: "A Pool is for a group collecting together — an ajo circle, a church fund, a family — everyone sees a live ledger of who's paid. A Payment Link is for one person or business collecting on their own, like an invoice you can share anywhere.",
+        q: "What’s the difference between a Pool and a Payment Link?",
+        a: "A Pool is for a group collecting together — an ajo circle, a church fund, a family — everyone sees a live ledger of who’s paid. A Payment Link is for one person or business collecting on their own, like an invoice you can share anywhere.",
       },
     ],
   },
@@ -43,7 +43,7 @@ const GROUPS = [
     items: [
       {
         q: 'How much does Qreek charge?',
-        a: "0.15% per contribution on Pool and Family links, 0.25% per payment on personal Payment Links, and 0.2% per payroll run. No monthly subscription, no setup fee. Flutterwave's own processing fee applies separately and is always shown before you confirm.",
+        a: "0.15% per contribution on Pool and Family links, 0.25% per payment on personal Payment Links, and 0.2% per payroll run. No monthly subscription, no setup fee. Flutterwave’s own processing fee applies separately and is always shown before you confirm.",
       },
       {
         q: 'Who actually processes my payment?',
@@ -51,7 +51,7 @@ const GROUPS = [
       },
       {
         q: 'What happens if a payment fails or gets stuck?',
-        a: "Nothing is deducted unless Flutterwave confirms the charge succeeded. If a payment shows as pending, Qreek automatically re-checks with Flutterwave in the background until it settles — you don't need to do anything.",
+        a: "Nothing is deducted unless Flutterwave confirms the charge succeeded. If a payment shows as pending, Qreek automatically re-checks with Flutterwave in the background until it settles — you don’t need to do anything.",
       },
     ],
   },
@@ -61,19 +61,19 @@ const GROUPS = [
     items: [
       {
         q: 'Can I save my card for faster checkout next time?',
-        a: "Yes — after paying a link once, you can opt in to save the card. Next time you're sent a link, you can pay with one tap instead of going through Flutterwave's full checkout page.",
+        a: "Yes — after paying a link once, you can opt in to save the card. Next time you’re sent a link, you can pay with one tap instead of going through Flutterwave’s full checkout page.",
       },
       {
         q: 'Is it safe to save my card on Qreek?',
-        a: "Qreek never sees or stores your card number, expiry, or CVV. Saving a card only stores a secure, one-time token from Flutterwave — the same infrastructure banks use — so even Qreek can't reconstruct your card details from it.",
+        a: "Qreek never sees or stores your card number, expiry, or CVV. Saving a card only stores a secure, one-time token from Flutterwave — the same infrastructure banks use — so even Qreek can’t reconstruct your card details from it.",
       },
       {
         q: 'Can I use a saved card without logging into my Qreek account?',
-        a: "Yes. On the checkout page, enter the phone number your card is saved under and we'll text you a one-time code. Enter that code and your saved cards appear — no password, no full login, just proof the phone is yours.",
+        a: "Yes. On the checkout page, enter the phone number your card is saved under and we’ll text you a one-time code. Enter that code and your saved cards appear — no password, no full login, just proof the phone is yours.",
       },
       {
         q: 'Why do I sometimes get a second code from my bank?',
-        a: "Some Nigerian cards require your bank's own one-time code on every charge, even a saved one — that's a card network rule, not something Qreek or Flutterwave can skip. You'll see a second prompt for that code if your bank requires it.",
+        a: "Some Nigerian cards require your bank’s own one-time code on every charge, even a saved one — that’s a card network rule, not something Qreek or Flutterwave can skip. You’ll see a second prompt for that code if your bank requires it.",
       },
       {
         q: 'How do I remove a saved card?',
@@ -91,7 +91,7 @@ const GROUPS = [
       },
       {
         q: 'Does Qreek hold my money?',
-        a: "No. Qreek has zero fund custody — payments settle directly from Flutterwave to the recipient's bank account. Qreek's fee is deducted automatically as part of that settlement, not held separately.",
+        a: "No. Qreek has zero fund custody — payments settle directly from Flutterwave to the recipient’s bank account. Qreek’s fee is deducted automatically as part of that settlement, not held separately.",
       },
       {
         q: 'Who can see my payment history?',

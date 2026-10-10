@@ -240,7 +240,7 @@ export default function Register() {
               <Button type="submit" loading={loading} style={{ flex: 2 }}>Verify →</Button>
             </div>
             <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
-              Didn't receive it?{' '}
+              Didn’t receive it?{' '}
               {resendCooldown > 0
                 ? <span style={{ color: 'var(--text-3)' }}>Resend in {resendCooldown}s</span>
                 : <button type="button" onClick={handleResend} style={{ background: 'none', border: 'none', color: 'var(--teal)', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}>Resend code</button>
